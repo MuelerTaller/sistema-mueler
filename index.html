@@ -1,10 +1,7 @@
 <!doctype html>
-<html lang="es">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="robots" content="noindex">
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"></head><body>
 <title>Mueler Taller</title>
+<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -241,13 +238,40 @@ select.falta{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 8
 .dropzone{display:grid;gap:10px;border-radius:var(--r)}
 details.recuento summary{cursor:pointer;font:600 11px var(--f-body);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .panel>header .sum{font:600 14px var(--f-mono)}
+.stickhead{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--barh,56px));z-index:15;background:var(--bg);padding:10px 0;margin-block:-10px;box-shadow:0 0 0 100vmax var(--bg);clip-path:inset(0 -100vmax -1px);border-bottom:1px solid var(--line)}
+table.plt td{vertical-align:top;padding-block:10px} table.plt .qty{font:800 22px var(--f-display);font-variant-numeric:tabular-nums;line-height:1.1}
+table.plt td.n .note{font-family:var(--f-body);white-space:normal;max-width:170px;margin-left:auto} table.plt .proy{display:grid;gap:2px;font-size:13px;min-width:130px} table.plt select,table.plt input.nro{min-width:110px;max-width:160px}
+.optl{font-size:12.5px;color:var(--muted);margin-top:2px}
+.provgrp{border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:grid;gap:10px;background:var(--panel2)}
+.plgrid{display:grid;gap:14px} details.fsec>summary{display:flex;gap:8px 12px;align-items:baseline;justify-content:space-between;flex-wrap:wrap;cursor:pointer;list-style:none} details.fsec>summary::-webkit-details-marker{display:none} details.fsec>summary h3::before{content:'▸ ';color:var(--muted)} details.fsec[open]>summary h3::before{content:'▾ '} .fnotas{padding:0 2px} .fnotas textarea{min-height:34px;font-size:13px} .plcard .proy{display:grid;gap:2px;font-size:13px;margin-top:4px}
+.plcard{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:var(--r);padding:10px 14px;display:grid;gap:8px}
+.plcard.e-pedido{border-left-color:var(--accent)} .plcard.e-confirmado{border-left-color:var(--t2)} .plcard.e-recibido{border-left-color:var(--ok)}
+.pltop{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start} .plq{text-align:right;display:grid;gap:2px;justify-items:end}
+.plq .qty{font:800 26px var(--f-display);font-variant-numeric:tabular-nums;line-height:1.05} .plq .note{max-width:200px}
+.plrow{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:flex-end} .plrow .field{min-width:140px} .plrow input.nro{width:190px}
+.plbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center} .plinfo{display:flex;flex-wrap:wrap;gap:2px 14px;align-items:baseline} .plinfo .proy{display:flex!important;flex-wrap:wrap;gap:2px 10px;margin:0!important}
+.plbar input.nro.sm{width:180px;padding:4px 8px;font-size:12.5px}
+.dd{position:relative} .dd>summary{list-style:none} .dd>summary::-webkit-details-marker{display:none} .dd[open]>summary{border-color:var(--ink)}
+.ddpop{position:absolute;right:0;top:calc(100% + 6px);z-index:30;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.22);padding:12px;display:grid;gap:10px;justify-items:start;width:max-content;min-width:240px;max-width:min(380px,calc(100vw - 32px))}
+.plbar .ddpop{left:0;right:auto} .ddpop .field{width:100%} .ddpop .btn{white-space:normal;text-align:left} .seg button:disabled{cursor:default;opacity:.6}
+.provgrp>header{display:flex;flex-wrap:wrap;gap:6px 12px;justify-content:space-between;align-items:baseline}
+.segbig button{padding:8px 16px;font-size:13.5px} table.segt td{vertical-align:top;padding-block:8px} table.segt .proy{display:grid;gap:2px;font-size:12.5px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.tile{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:var(--r);padding:12px 14px;display:grid;gap:1px;text-align:left;cursor:pointer;font:inherit;color:var(--ink)}
+.tile b{font:800 28px var(--f-display);line-height:1.05} .tile span{font-weight:700} .tile small{color:var(--muted);font-size:12px} .tile.cero{border-left-color:var(--line);opacity:.7} .tile:hover{border-color:var(--muted)}
+.infila{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);flex-wrap:wrap} .panel>.infila:last-child{border-bottom:0}
+body.taller #b-nuevo,body.taller #b-abrir,body.taller #tab-precios,body.taller #tab-usuarios,body.taller #b-backup,body.taller [data-act="imp-json"],body.taller [data-act="nuevo"],body.taller .pcard .tot{display:none!important}
+body.taller #view-pres button[data-act]:not([data-act="sel"]):not([data-act="sect"]):not([data-act="ver"]):not([data-act="dl-csv"]),body.taller #view-pres #drop,body.taller #view-pres .sum,body.taller #side,body.taller #resumen,body.taller #view-pres .stepper button{display:none!important}
+body.taller .medit{grid-template-columns:1fr} body.taller #view-pres input,body.taller #view-pres select,body.taller #view-pres textarea{pointer-events:none;background:var(--panel2)}
+body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 
 <header class="bar"><div class="in">
   <div class="brand">Mueler Taller <small>Presupuestos y proyectos</small></div>
   <nav class="tabs" role="tablist">
-    <button role="tab" id="tab-lista" aria-selected="true" data-view="lista">Presupuestos</button>
+    <button role="tab" id="tab-inicio" aria-selected="true" data-view="inicio">Inicio</button>
+    <button role="tab" id="tab-lista" aria-selected="false" data-view="lista">Presupuestos</button>
     <button role="tab" id="tab-pres" aria-selected="false" data-view="pres" disabled>Presupuesto</button>
     <button role="tab" id="tab-proy" aria-selected="false" data-view="proy">Proyectos</button>
     <button role="tab" id="tab-ped" aria-selected="false" data-view="ped">Compras</button>
@@ -255,13 +279,16 @@ details.recuento summary{cursor:pointer;font:600 11px var(--f-body);letter-spaci
   </nav>
   <div class="spacer"></div>
   <span class="savest" id="savest"></span>
-  <div class="cfgmenu"><button class="btn" id="b-config" aria-haspopup="menu" aria-expanded="false">⚙ Configuración</button><div class="cfgpop" id="cfgpop" role="menu" hidden><button role="menuitem" id="tab-cat" data-view="cat"><b>Catálogo de herrajes</b><span>Lista All Sur, marcas y códigos</span></button><button role="menuitem" id="tab-precios" data-view="precios"><b>Precios y taller</b><span>Placas, cantos, mano de obra y recargos</span></button><button role="menuitem" id="b-backup"><b>Copia de seguridad</b><span>Bajar o subir todos los datos</span></button></div></div>
+  <div class="cfgmenu"><button class="btn" id="b-config" aria-haspopup="menu" aria-expanded="false">⚙ Configuración</button><div class="cfgpop" id="cfgpop" role="menu" hidden><button role="menuitem" id="tab-cat" data-view="cat"><b>Catálogo de herrajes</b><span>Lista All Sur, marcas y códigos</span></button><button role="menuitem" id="tab-precios" data-view="precios"><b>Precios y taller</b><span>Placas, cantos, mano de obra y recargos</span></button><button role="menuitem" id="tab-usuarios" data-view="usuarios"><b>Usuarios</b><span>Quién entra y quién ve precios</span></button><button role="menuitem" id="b-backup"><b>Copia de seguridad</b><span>Bajar o subir todos los datos</span></button></div></div>
+  <button class="btn" id="b-user" hidden title="Cerrar sesión o cambiar de usuario"></button>
   <button class="btn" id="b-abrir">Abrir archivo</button>
   <button class="btn primary" id="b-nuevo">+ Nuevo presupuesto</button>
 </div></header>
 
 <main class="wrap">
-  <section class="view" id="view-lista"></section>
+  <section class="view" id="view-inicio"></section>
+  <section class="view" id="view-lista" hidden></section>
+  <section class="view" id="view-usuarios" hidden></section>
   <section class="view" id="view-pres" hidden></section>
   <section class="view" id="view-proy" hidden></section>
   <section class="view" id="view-ped" hidden></section>
@@ -1036,7 +1063,7 @@ const $ = id => document.getElementById(id);
 const N = Calc.N;
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const fmt = (n, d = 0) => Number(n || 0).toLocaleString('es-AR', { minimumFractionDigits: d, maximumFractionDigits: d });
-const money = n => '$ ' + fmt(Math.round(n || 0));
+const money = n => (typeof USR !== 'undefined' && !ESADMIN()) ? '—' : '$ ' + fmt(Math.round(n || 0));
 const pct = x => fmt((x || 0) * 100, 0) + '%';
 const uid = Builder.uid;
 const clone = o => JSON.parse(JSON.stringify(o));
@@ -1055,7 +1082,7 @@ let PRES = [];          // lista de presupuestos (resumen)
 let P = null;           // presupuesto abierto
 let MS = {};            // muebles del presupuesto abierto
 let SEL = null;         // mueble elegido
-let VIEW = 'lista';
+let VIEW = 'inicio';
 let OPEN = {};          // grupos con placas desplegadas
 let SECT = null;        // sector elegido
 const _PCW = new WeakMap();
@@ -1168,9 +1195,9 @@ function svgPlaca(g, b, items) {
 
 /* ---------------- Navegación ---------------- */
 function show(v) {
-  VIEW = v; ['lista', 'pres', 'proy', 'ped', 'cat', 'precios', 'opti'].forEach(x => { $('view-' + x).hidden = x !== v; $('tab-' + x).setAttribute('aria-selected', x === v); });
+  VIEW = v; if (!ESADMIN() && (v === 'precios' || v === 'usuarios')) v = 'inicio'; VIEW = v; ['inicio', 'lista', 'pres', 'proy', 'ped', 'cat', 'precios', 'usuarios', 'opti'].forEach(x => { $('view-' + x).hidden = x !== v; $('tab-' + x).setAttribute('aria-selected', x === v); });
   $('tab-pres').disabled = !P;
-  if (v === 'lista') renderLista(); if (v === 'pres') renderPres(); if (v === 'precios') renderPrecios(); if (v === 'proy') renderProy(); if (v === 'ped') renderPed(); if (v === 'cat') renderCat(); if (v === 'opti') ensureOpti(); $('b-config').classList.toggle('on', v === 'cat' || v === 'precios'); $('cfgpop').hidden = true; $('b-config').setAttribute('aria-expanded', 'false'); $('b-nuevo').hidden = !['lista', 'pres'].includes(v); $('b-abrir').hidden = !['lista', 'pres'].includes(v);
+  if (v === 'lista') renderLista(); if (v === 'pres') renderPres(); if (v === 'precios') renderPrecios(); if (v === 'proy') renderProy(); if (v === 'ped') renderPed(); if (v === 'cat') renderCat(); if (v === 'inicio') renderInicio(); if (v === 'usuarios') renderUsuarios(); if (v === 'opti') ensureOpti(); $('b-config').classList.toggle('on', v === 'cat' || v === 'precios' || v === 'usuarios'); $('cfgpop').hidden = true; $('b-config').setAttribute('aria-expanded', 'false'); $('b-nuevo').hidden = !['lista', 'pres'].includes(v); $('b-abrir').hidden = !['lista', 'pres'].includes(v);
   window.scrollTo(0, 0);
 }
 document.querySelector('nav.tabs').addEventListener('click', e => { const b = e.target.closest('button[data-view]'); if (b && !b.disabled) show(b.dataset.view); });
@@ -1354,7 +1381,7 @@ function renderMueble0() {
   if (!M) { el.innerHTML = `<div class="empty"><b>${P.orden.length ? 'Elegí un mueble de la lista.' : 'Este presupuesto todavía no tiene muebles.'}</b><span>Exportá desde OpenCutList el Excel (CSV) de cada mueble y arrastralo arriba. El calculador separa las placas por material, optimiza, cuenta cortes, metros de canto, correderas y bisagras.</span></div>`; return; }
   const R = calcM(M);
   const f = document.activeElement && document.activeElement.id, sx = window.scrollX, sy = window.scrollY;
-  el.innerHTML = `<div class="medit"><div class="mmain">${secDatos(M, R)}${secPlacas(M, R)}${secCantos(M, R)}${secHerrajes(M, R)}${secMec(M, R)}${secTerceros(M, R)}${secVariantes(M, R)}${secPlanilla(M, R)}</div><aside class="side" id="side"></aside></div>`;
+  el.innerHTML = `<div class="medit"><div class="mmain">${secDatos(M, R)}${secPlacas(M, R)}${secCantos(M, R)}${secHerrajes(M, R)}${ESADMIN() ? secMec(M, R) + secTerceros(M, R) + secVariantes(M, R) + secPlanilla(M, R) : ''}</div><aside class="side" id="side"></aside></div>`;
   renderSide(M, R);
   if (f) { const n = $(f); if (n) { RESTORING = true; n.focus(); RESTORING = false; if (n.setSelectionRange && n.type === 'text') { const l = n.value.length; try { n.setSelectionRange(l, l); } catch (e) { } } } }
   window.scrollTo(sx, sy);
@@ -2232,8 +2259,8 @@ function lineaDesde(art, cant, com, linea) {
 const CATH = []; CAT.forEach(p => { marcasDe(p).forEach(m => { const pr = precioMarca(p, m); CATH.push({ n: nomCat(p, m), p: pr, cat: 'ALL SUR · ' + p.k, allsur: true }); }); });
 function lineaTxt(h) { const p = CATP[h.prod]; if (!p) return h.art || '—'; const a = CATA[h.cod]; return `${p.n} · ${h.marca}${a && a.a.col ? ' · ' + a.a.col : ''}`; }
 /* ---- Líneas de pedido (herrajes y cantos) ---- */
-const TIPOS = { herrajes: { t: 'Herrajes', pre: 'H', prov: 'All Sur', u: 'u.' }, cantos: { t: 'Cantos', pre: 'C', prov: 'Del Carril', u: 'm' }, placas: { t: 'Placas', pre: 'P', prov: 'Dilegno', u: 'placas' } };
-const PROVS_PLACA = ['Dilegno', 'Alnora', 'Trumar'];
+const TIPOS = { herrajes: { t: 'Herrajes', pre: 'H', prov: 'All Sur', u: 'u.' }, cantos: { t: 'Cantos', pre: 'C', prov: 'Del Carril', u: 'm' }, placas: { t: 'Madera', pre: 'P', prov: 'Dilegno', u: 'placas' } };
+const PROVS_PLACA = ['Dilegno', 'Alnora', 'Trumar', 'Dac Maderas'];
 const PROVS_CANTO = ['Del Carril', 'Alnora', 'Dilegno'];
 const MEDIDAS = ['0,45x22', '0,45x45', '0,45x50', '2x22', '2x45', 'Enchapado 22', 'Enchapado 45'];
 const tipoDe = p => p.tipo || 'herrajes';
@@ -2252,6 +2279,11 @@ const pedDe = id => PEDS.find(p => p.id === id);
 const ESTPED = { borrador: { t: 'En armado', c: 'e1' }, enviado: { t: 'Pedido', c: 'e3' }, recibido: { t: 'Recibido', c: 'e4' } };
 function lineaEst(h, T) {
   if (!h.ped) return null; const p = pedDe(h.ped); if (!p) return null;
+  if (T === 'placas') { const it = (p.items || []).find(i => i.cod === lineaCod(h, T)); if (it) { const e = itEst(it, p);
+    if (N(it.deStock) >= N(it.req) && N(it.req) > 0) return { t: 'De stock', c: 'e4', p };
+    if (e === 'recibido') return it.recib != null && N(it.recib) < N(it.pedir) ? { t: 'Faltante ' + numPed(p), c: 'e2', p } : { t: 'En taller', c: 'e4', p };
+    if (e === 'pedido' || e === 'confirmado') return { t: 'Pedido ' + numPed(p) + (it.nroProv ? ' · ' + it.nroProv : ''), c: 'e3', p };
+    return { t: 'En armado ' + numPed(p), c: 'e1', p }; } }
   if (p.estado === 'recibido') { const corto = explotar(lineaCod(h, T), 1, T).some(c => { const it = (p.items || []).find(i => i.cod === c.cod); return it && it.recib != null && N(it.recib) < N(it.pedir); }); return corto ? { t: 'Faltante ' + numPed(p), c: 'e2', p } : { t: 'En taller', c: 'e4', p }; }
   { const it = (p.items || []).find(i => i.cod === lineaCod(h, T)); if (it && N(it.deStock) >= N(it.req) && N(it.req) > 0) return { t: 'De stock', c: 'e4', p }; }
   if (p.estado === 'enviado') return { t: 'Pedido ' + numPed(p), c: 'e3', p };
@@ -2367,11 +2399,11 @@ function renderProyLista() {
   const list = PROYS.filter(p => !q || [p.num, p.obra, p.cliente, p.arq, p.presNum].join(' ').toLowerCase().includes(q));
   const bar = (t, a, n) => `<span class="av"><span class="lbl">${t}</span><span class="bar"><i style="width:${n ? Math.round(a / n * 100) : 0}%"></i></span><span class="avn">${a}/${n}</span></span>`;
   v.innerHTML = `<div class="row" style="justify-content:space-between"><h2>Proyectos en curso</h2>
-    <input type="search" id="pr-q" placeholder="Buscar por número, obra o cliente" value="${esc(PQ)}" style="width:260px" aria-label="Buscar proyecto"></div>
+    <div class="row"><input type="search" id="pr-q" placeholder="Buscar por número, obra o cliente" value="${esc(PQ)}" style="width:260px" aria-label="Buscar proyecto"><button class="btn" data-pa="nuevo-sp">+ Proyecto sin presupuesto</button></div></div>
     ${list.length ? `<div class="list">${list.map(p => { const r = resumenProy(p); return `<button class="pcard prcard" data-pa="abrir" data-id="${esc(p.id)}">
       <span class="num">${esc(p.num)}</span>
       <span style="display:grid;gap:5px;min-width:0"><span class="t">${esc(p.obra || 'Sin nombre de obra')}</span>
-        <span class="s">${esc([p.cliente, p.arq].filter(Boolean).join(' · ') || '—')} · Presupuesto ${esc(p.presNum || '—')}${p.presVersion ? ' ' + esc(p.presVersion) : ''} · ${r.n} módulo${r.n === 1 ? '' : 's'} · aprobado ${esc(p.fechaAprob || '')}</span>
+        <span class="s">${esc([p.cliente, p.arq].filter(Boolean).join(' · ') || '—')} · ${p.sinPres ? 'Sin presupuesto' : 'Presupuesto ' + esc(p.presNum || '—')}${p.presVersion ? ' ' + esc(p.presVersion) : ''} · ${r.n} módulo${r.n === 1 ? '' : 's'} · aprobado ${esc(p.fechaAprob || '')}</span>
         <span class="avz">${bar('Diseño', r.dis, r.n)}${bar('Madera', r.mad, r.n)}${bar('Cantos', r.can, r.n)}${bar('Herrajes', r.her, r.n)}${bar('Armado', r.arm, r.n)}${bar('Instalación', r.ins, r.n)}</span></span>
       ${r.para ? `<span class="chip e2">${r.para} para pedir</span>` : '<span></span>'}</button>`; }).join('')}</div>`
       : `<div class="empty"><b>${PROYS.length ? 'No hay proyectos que coincidan con la búsqueda.' : 'Todavía no hay proyectos.'}</b><span>Abrí un presupuesto, pasalo a estado Aprobado y tocá “Crear proyecto”. El primer número es el 391.</span></div>`}`;
@@ -2397,7 +2429,7 @@ function renderProyDet() {
   const secs = [...new Set(ms.map(m => m.sector))];
   const para = ms.filter(m => ['herrajes', 'cantos', 'placas'].some(T => estadoT(m, T).t === 'Para pedir')).length;
   const selE = (m, i, k) => `<td>${psel(`modulos.${i}.${k}`, m[k], EST[k].l, { cls: 'est ' + estCls(k, m[k]), label: EST[k].t + ' ' + (m.cod || '') })}</td>`;
-  v.innerHTML = `<div class="row" style="justify-content:space-between"><div class="row"><button class="btn" data-pa="volver">← Proyectos</button><h2 id="pr-tit">Proyecto ${esc(p.num)} · ${esc(p.obra || '')}</h2></div>
+  v.innerHTML = `<div class="row stickhead" style="justify-content:space-between"><div class="row"><button class="btn" data-pa="volver">← Proyectos</button><h2 id="pr-tit">Proyecto ${esc(p.num)} · ${esc(p.obra || '')}</h2></div>
       ${para ? `<button class="btn primary" data-pa="ir-compras">${para} módulo${para === 1 ? '' : 's'} listo${para === 1 ? '' : 's'} para pedir →</button>` : ''}</div>
     <div class="prhead">
       <div class="field"><label class="lbl">Nº proyecto</label>${pin('num', p.num, { label: 'Número de proyecto' })}</div>
@@ -2405,9 +2437,10 @@ function renderProyDet() {
       <div class="field"><label class="lbl">Cliente</label>${pin('cliente', p.cliente, { label: 'Cliente' })}</div>
       <div class="field"><label class="lbl">Arquitecto/a o estudio</label>${pin('arq', p.arq, { label: 'Arquitecto' })}</div>
       <div class="field"><label class="lbl">Aprobado</label>${pin('fechaAprob', p.fechaAprob, { label: 'Fecha de aprobación' })}</div>
-      <div class="field"><label class="lbl">Presupuesto</label><button class="btn" data-pa="ver-pres" ${PRES.some(x => x.id === p.presId) ? '' : 'disabled'}>${esc(p.presNum || '—')}${p.presVersion ? ' ' + esc(p.presVersion) : ''} →</button></div>
+      <div class="field"><label class="lbl">Presupuesto</label><button class="btn" data-pa="ver-pres" ${PRES.some(x => x.id === p.presId) ? '' : 'disabled'}>${p.sinPres ? 'Sin presupuesto' : esc(p.presNum || '—')}${p.presVersion ? ' ' + esc(p.presVersion) : ''} →</button></div>
     </div>
-    <div class="panel"><header><h2>Tablero de módulos</h2><span class="note">Tocá un módulo para abrir su ficha. Cantos y Herrajes se actualizan solos con los pedidos.</span></header>
+    <div class="panel"><header><h2>Tablero de módulos</h2><div class="row"><span class="note">Tocá un módulo para abrir su ficha.</span><button class="btn sm" data-pa="mod-csv">+ Módulos desde CSV</button><button class="btn sm" data-pa="mod-mano">+ Módulo a mano</button></div></header>
+    ${!(p.modulos || []).length ? '<div class="empty"><b>Este proyecto todavía no tiene módulos.</b><span>Cargá los CSV de OpenCutList (uno por módulo: M01, M02…) o agregalos a mano.</span></div>' : ''}
     <div class="tbox"><table class="t prt"><thead><tr><th>Módulo</th><th>Materiales</th><th>Diseño</th><th>Madera</th><th>Cantos</th><th>Herrajes</th><th>Armado</th><th>Instalación</th></tr></thead><tbody>
     ${secs.map(s => `${secs.length > 1 || s ? `<tr class="secrow"><td colspan="8">${esc(s || 'Sin sector')}</td></tr>` : ''}${ms.map((m, i) => m.sector !== s ? '' : `<tr class="click ${PSEL === m.id ? 'sel' : ''}" data-pa="mod" data-id="${esc(m.id)}">
       <td><b>${esc(m.cod || '—')}</b> ${esc(m.desc || '')}${m.opcion ? ` <span class="tag op">Opción</span>` : ''}${m.csv ? ' <span class="tag">CSV</span>' : ''}</td>
@@ -2415,7 +2448,7 @@ function renderProyDet() {
       ${selE(m, i, 'estDiseno')}<td>${chip(estadoT(m, 'placas'))}</td><td>${chip(estadoT(m, 'cantos'))}</td><td>${chip(estadoT(m, 'herrajes'))}</td>${selE(m, i, 'estArmado')}${selE(m, i, 'estInstal')}</tr>`).join('')}`).join('')}
     </tbody></table></div></div>
     <div id="pr-ficha"></div>
-    <div class="panel"><header><h2>Notas del proyecto</h2></header><textarea data-pf="notas" rows="3" aria-label="Notas del proyecto">${esc(p.notas || '')}</textarea></div>
+    <div class="panel"><header><h2>Notas del proyecto</h2></header><textarea data-pf="notas" rows="2" aria-label="Notas del proyecto">${esc(p.notas || '')}</textarea></div>
     <div class="row" style="justify-content:flex-end"><button class="btn sm danger" data-pa="del">Borrar proyecto</button></div>
     <datalist id="dl-mel">${MELAMINAS().map(x => `<option value="${esc(x)}">`).join('')}</datalist>`;
   renderFicha();
@@ -2543,21 +2576,21 @@ function renderFicha() {
       <div class="field"><label class="lbl">Agarre</label>${psel(b + 'agarre', m.agarre, AGARRES, { label: 'Agarre' })}</div>
       <div class="field"><label class="lbl">Color laqueado</label>${pin(b + 'laqueado', m.laqueado, { ph: 'Ej: SW9085', label: 'Color laqueado' })}</div>
     </div><span class="note">Las definiciones salen de la misma base de placas del Optimizador (con espesor, MDF o aglo y medida de placa).</span></div>
-    <div class="panel"><header><h3>2 · Despiece del CSV definitivo</h3>${m.csv ? chip(estadoT(m, 'placas')) : ''}</header>${despieceHTML(m, i)}</div>
-    <div class="panel"><header><h3>3 · Cantos</h3><div class="row">${mCant ? `<span class="sum">${fmt(mCant)} m</span>` : ''}${chip(ce)}</div></header>
+    <details class="panel fsec" ${!m.csv || estadoT(m, 'placas').c === 'e2' ? 'open' : ''}><summary><h3>2 · Despiece del CSV definitivo</h3>${m.csv ? chip(estadoT(m, 'placas')) : '<span class="chip e2">Sin CSV</span>'}</summary>${despieceHTML(m, i)}</details>
+    <details class="panel fsec" ${ce.c === 'e2' ? 'open' : ''}><summary><h3>3 · Cantos</h3><div class="row">${mCant ? `<span class="sum">${fmt(mCant)} m</span>` : ''}${chip(ce)}</div></summary>
       ${(m.cantos || []).length ? `<div class="tbox"><table class="t hert"><thead><tr><th>Melamina (el canto coincide con ella)</th><th>Medida</th><th class="n">Metros</th><th>Comentario</th><th></th></tr></thead><tbody>${m.cantos.map((c, j) => cantoRow(c, b, j)).join('')}</tbody></table></div>`
         : `<p class="note" style="margin:0">${m.csv ? 'El CSV no trae cantos.' : 'Se completan solos al cargar el CSV: metros por material y medida.'}</p>`}
-      <div class="row"><button class="btn sm" data-pa="add-canto">+ Canto a mano</button><span class="note">Para lo que no sale del despiece, como 0,45x50 en estantes flotantes o regruesos de tapa.</span></div></div>
-    <div class="panel"><header><h3>4 · Herrajes</h3>${chip(he)}</header>
+      <div class="row"><button class="btn sm" data-pa="add-canto">+ Canto a mano</button><span class="note">Para lo que no sale del despiece, como 0,45x50 en estantes flotantes o regruesos de tapa.</span></div></details>
+    <details class="panel fsec" ${he.c === 'e2' ? 'open' : ''}><summary><h3>4 · Herrajes</h3>${chip(he)}</summary>
       ${m.herrajesTxt ? `<span class="note">Texto del presupuesto: ${esc(m.herrajesTxt)}</span>` : ''}
       <div class="tbox"><table class="t hert"><thead><tr><th>Herraje (catálogo All Sur)</th><th>Marca</th><th>Color · código</th><th class="n">Cant.</th><th>Comentario</th><th></th></tr></thead><tbody>
       ${(m.herrajes || []).map((h, j) => herrajeRow(h, b, j)).join('') || '<tr><td colspan="6" class="note">Sin herrajes.</td></tr>'}
       </tbody></table></div>
       <div class="row"><button class="btn sm" data-pa="add-h">+ Herraje</button>${(m.herrajes || []).some(h => !h.prod) ? '<span class="note falta-t">Hay herrajes sin elegir del catálogo: no se pueden pedir hasta elegirlos.</span>' : ''}</div>
-      ${recuentoHTML(m)}</div>
+      ${recuentoHTML(m)}</details>
     ${m.estDiseno !== 'Listo' && [...(m.herrajes || []), ...(m.cantos || [])].some(h => !h.ped) ? '<div class="hint">Cuando el diseño esté <b>Listo</b>, los cantos y herrajes de este módulo quedan disponibles en <b>Compras</b> para sumarlos al pedido.</div>' : ''}
-    <div class="panel"><header><h3>5 · Notas</h3></header><div class="grid2"><div class="field"><label class="lbl">Comentarios</label><textarea data-pf="${b}coment" rows="3" aria-label="Comentarios">${esc(m.coment || '')}</textarea></div>
-    <div class="field"><label class="lbl">Notas para el armador</label><textarea data-pf="${b}notas" rows="3" aria-label="Notas para el armador">${esc(m.notas || '')}</textarea></div></div></div></div>`;
+    <div class="fnotas grid2"><div class="field"><label class="lbl">Comentarios</label><textarea data-pf="${b}coment" rows="1" aria-label="Comentarios">${esc(m.coment || '')}</textarea></div>
+    <div class="field"><label class="lbl">Notas para el armador</label><textarea data-pf="${b}notas" rows="1" aria-label="Notas para el armador">${esc(m.notas || '')}</textarea></div></div></div>`;
   el.querySelectorAll('details').forEach((d, k) => { if (opens[k] != null) d.open = opens[k]; });
 }
 async function cargarPiezas(m) {
@@ -2616,7 +2649,10 @@ $('view-proy').addEventListener('click', async e => {
   if (a === 'ver-ped') { await flushPR(); const p = pedDe(b.dataset.id); if (p) { CTIPO = tipoDe(p); PED = clone(p); show('ped'); } }
   if (a === 'mod') { PSEL = PSEL === b.dataset.id ? null : b.dataset.id; renderProyDet(); if (PSEL) $('pr-ficha').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   if (a === 'cerrar-ficha') { PSEL = null; renderProyDet(); }
-  if (a === 'dis' && m) { m.estDiseno = b.dataset.v; savePR(); renderProyDet(); updTabs(); }
+  if (a === 'nuevo-sp') { nuevoProyManualDlg(); return; }
+  if (a === 'mod-mano') { agregarModuloDlg(); return; }
+  if (a === 'mod-csv') { fModCsv.click(); return; }
+  if (a === 'dis' && m) { const era = m.estDiseno; m.estDiseno = b.dataset.v; savePR(); renderProyDet(); updTabs(); if (b.dataset.v === 'Listo' && era !== 'Listo') autoSumar(PR.id, m.id); }
   if (a === 'csv') fCsvP.click();
   if (a === 'ver-placas' && m) { const k = m.id + '|' + b.dataset.ocl; OPENF[k] = !OPENF[k]; renderFicha(); }
   if (a === 'opti' && m) optiFicha(m, +b.dataset.k);
@@ -2642,7 +2678,7 @@ $('view-proy').addEventListener('change', e => {
   if (t.tagName === 'SELECT') {
     setPath(PR, path, t.value);
     if (/\.marca$/.test(path)) { const h = getPath(PR, path.replace(/\.marca$/, '')); h.cod = artsDe(CATP[h.prod], h.marca)[0].c; }
-    savePR(); if (/^modulos\.\d+\.est/.test(path) || /\.(marca|cod)$/.test(path)) renderProyDet(); if (/estDiseno$/.test(path)) updTabs(); return;
+    savePR(); if (/^modulos\.\d+\.est/.test(path) || /\.(marca|cod)$/.test(path)) renderProyDet(); if (/estDiseno$/.test(path)) { updTabs(); if (t.value === 'Listo') { const mm = PR.modulos[+path.split('.')[1]]; if (mm) autoSumar(PR.id, mm.id); } } return;
   }
   if (/(frenteDef|estrDef|\.color)$/.test(path)) { const v = t.value.trim(); if (v && !MELAMINAS().includes(v)) { MEL_EXTRA.push(v); LS.set('mueler_mel_extra', MEL_EXTRA); if (DB && typeof DB.doc === 'function') { try { DB.doc('config/listas').set({ melaminas: MEL_EXTRA, upd: Date.now() }).catch(() => { }); } catch (er) { } } } }
 });
@@ -2662,7 +2698,7 @@ function consolidar(origen, prev, T) {
   prev = prev || []; const map = new Map();
   origen.forEach(o => explotar(o.cod, o.cant, T).forEach(x => { const it = map.get(x.cod) || Object.assign({ cod: x.cod, req: 0 }, itemInfo(x.cod, T)); it.req += x.cant; map.set(x.cod, it); }));
   if (T === 'placas') map.forEach(it => { it.req = Math.ceil(it.req - 1e-6); });
-  return [...map.values()].map(it => { const pv = prev.find(x => x.cod === it.cod); if (T === 'placas' && pv && pv.opt) it.opt = pv.opt; if (pv && pv.pedirEd) { it.pedir = pv.pedir; it.pedirEd = true; } else it.pedir = it.req; ['recib', 'precioF', 'deStock'].forEach(k => { if (pv && pv[k] != null) it[k] = pv[k]; }); return it; });
+  return [...map.values()].map(it => { const pv = prev.find(x => x.cod === it.cod); if (T === 'placas' && pv && pv.opt) it.opt = pv.opt; if (pv && pv.pedirEd && T !== 'placas') { it.pedir = pv.pedir; it.pedirEd = true; } else it.pedir = Math.max(0, it.req - (T === 'placas' && pv ? N(pv.deStock) : 0)); ['recib', 'precioF', 'deStock', 'prov', 'nroProv', 'provOtro', 'est', 'fPedido', 'presu', 'fConf', 'factNum', 'fRecib', 'modo', 'sinCantos', 'factAdj'].forEach(k => { if (pv && pv[k] != null) it[k] = pv[k]; }); return it; });
 }
 async function conProyecto(prId, fn) {
   const base = PR && PR.id === prId ? PR : PROYS.find(p => p.id === prId); if (!base) return;
@@ -2674,12 +2710,12 @@ async function marcarModulos(origen, pedId, T) {
 }
 function nuevoPedido(T) { return { id: nid('n'), tipo: T, num: proximoPedido(T), prov: TIPOS[T].prov, estado: 'borrador', fCreado: today(), creado: Date.now(), upd: Date.now(), origen: [], items: [], notas: '', factura: { num: '', fecha: '', adj: [] } }; }
 async function guardarPed(doc) { doc.upd = Date.now(); await StorePed.put(clone(doc)); if (!DB) PEDS = Object.values(LOC('mueler_pedidos')).sort((a, b) => b.upd - a.upd); }
-async function sumarAlPedido(T, grupos) {
+async function sumarAlPedido(T, grupos, quiet) {
   if (!grupos.length) return; await flushPR();
   let cart = cartsDe(T)[0]; cart = cart ? clone(cart) : nuevoPedido(T);
   const nuevos = grupos.flatMap(x => x.ls.map(h => ({ prId: x.p.id, prNum: x.p.num, obra: x.p.obra || '', modId: x.m.id, modCod: x.m.cod, hid: h.hid, ocl: h.ocl || '', veta: !!h.veta, cod: lineaCod(h, T), cant: lineaCant(h, T), com: h.com || '' })));
   cart.origen = (cart.origen || []).concat(nuevos); cart.items = consolidar(cart.origen, cart.items, T);
-  try { await guardarPed(cart); await marcarModulos(nuevos, cart.id, T); if (PED && PED.id === cart.id) PED = clone(cart); updTabs(); renderPed(); const cs = cart.items.filter(it => !N(it.deStock) && saldoStock(T, it.cod) > 0).length; toast(`Sumado al pedido ${numPed(cart)} (${nuevos.length} línea${nuevos.length === 1 ? '' : 's'}).` + (cs ? ` Hay stock de ${cs} artículo${cs === 1 ? '' : 's'}: revisalo en el pedido.` : '')); }
+  try { await guardarPed(cart); await marcarModulos(nuevos, cart.id, T); if (PED && PED.id === cart.id) PED = clone(cart); updTabs(); if (quiet) { if (VIEW === 'proy' && PR) renderProyDet(); if (VIEW === 'ped') renderPed(); return numPed(cart); } renderPed(); const cs = cart.items.filter(it => !N(it.deStock) && saldoStock(T, it.cod) > 0).length; toast(`Sumado al pedido ${numPed(cart)} (${nuevos.length} línea${nuevos.length === 1 ? '' : 's'}).` + (cs ? ` Hay stock de ${cs} artículo${cs === 1 ? '' : 's'}: revisalo en el pedido.` : '')); }
   catch (e) { console.error(e); toast('No se pudo sumar al pedido. Revisá la conexión.'); }
 }
 async function editarLinea(prId, modId, hid, campo, valor, T) {
@@ -2696,9 +2732,11 @@ function renderCompras() {
   const lineaEd = (x, h) => T === 'placas' ? `<tr><td>${esc(h.art)} <span class="note">${esc(h.ocl)}</span></td><td class="n">${fmt(h.nPiezas)} piezas · ${fmt(h.m2, 2)} m²</td><td class="note">${fmt(h.cant, 2)} placas si se corta solo</td></tr>` : T === 'cantos'
     ? `<tr><td>Canto ${esc(h.color)} <span class="note">${esc(h.medida)}</span></td><td class="n" style="width:90px"><input type="text" class="n q" data-ed="${esc(x.p.id)}|${esc(x.m.id)}|${esc(h.hid)}|m" value="${esc(h.m)}" aria-label="Metros"></td><td class="note">${esc(h.com || '')}</td></tr>`
     : `<tr><td>${esc(lineaTxt(h))} <span class="note mono">${esc(h.cod)}</span></td><td class="n" style="width:90px"><input type="text" class="n q" data-ed="${esc(x.p.id)}|${esc(x.m.id)}|${esc(h.hid)}|cant" value="${esc(h.cant)}" aria-label="Cantidad"></td><td class="note">${esc(h.com || '')}</td></tr>`;
-  v.innerHTML = `<div class="row" style="justify-content:space-between"><div class="row"><h2>Compras</h2>
+  v.innerHTML = `<div class="row stickhead" style="justify-content:space-between"><div class="row"><h2>Compras</h2>
       <div class="seg" role="tablist">${Object.entries(TIPOS).map(([k, x]) => `<button data-pe="tipo" data-v="${k}" aria-pressed="${T === k}">${x.t}${cnt(k) ? ` · ${cnt(k)}` : ''}</button>`).join('')}</div></div>
-      <span class="note">${T === 'herrajes' ? 'Proveedor: All Sur' : 'Proveedor por defecto: Del Carril (se cambia en el pedido)'}</span></div>
+      <span class="note">${T === 'herrajes' ? 'Proveedor: All Sur' : T === 'placas' ? 'El proveedor se elige por placa dentro del pedido' : 'Proveedor por defecto: Del Carril (se cambia en el pedido)'}</span></div>
+    ${T === 'placas' ? `<div class="seg segbig" role="tablist"><button data-pe="mvista" data-v="pedir" aria-pressed="${MVISTA === 'pedir'}">Por pedir${pp.length + carts.reduce((s2, c) => s2 + (c.items || []).length, 0) ? ` · ${pp.length + carts.reduce((s2, c) => s2 + (c.items || []).length, 0)}` : ''}</button><button data-pe="mvista" data-v="seg" aria-pressed="${MVISTA === 'seg'}">Pedida y en taller</button></div>` : ''}
+    ${T !== 'placas' || MVISTA === 'pedir' ? `
     ${carts.length > 1 ? `<div class="alert">Hay ${carts.length} pedidos de ${TIPOS[T].t.toLowerCase()} en armado (${carts.map(numPed).join(', ')}). <button class="btn sm primary" data-pe="unir">Unirlos en ${numPed(carts[0])}</button> <span class="note">Los dos se ven abajo; al unirlos queda uno solo con todo.</span></div>` : ''}
     <div class="panel cartp"><header><h2>Pedido en armado</h2>${cart ? chip(ESTPED.borrador) : ''}</header>
       ${cart ? carts.map((cart, ci) => `<button class="cartcard" data-pe="abrir" data-id="${esc(cart.id)}"${ci ? ' style="margin-top:8px"' : ''}><span class="num">${esc(numPed(cart))}</span>
@@ -2712,14 +2750,44 @@ function renderCompras() {
           <div class="tbox"><table class="t"><tbody>${x.ls.map(h => lineaEd(x, h)).join('')}</tbody></table></div>
           <div class="row"><button class="btn sm ghost" data-pe="ficha" data-id="${esc(g.p.id)}|${esc(x.m.id)}">Abrir la ficha para agregar o cambiar →</button></div></details>`).join('')}</div>`).join('')}</div>`
         : `<p class="note" style="margin:0">Nada para sumar. ${pendientesDef(T) ? `Hay ${pendientesDef(T)} módulo${pendientesDef(T) === 1 ? '' : 's'} con ${TIPOS[T].t.toLowerCase()} cargados pero el diseño todavía no está en Listo.` : 'Cuando un módulo pase a diseño Listo, aparece acá.'}</p>`}</div>
+    ` : ''}
+    ${T === 'placas' && MVISTA === 'seg' ? maderaSegHTML() : ''}
+    ${T !== 'placas' || MVISTA === 'seg' ? `
     ${stockPanel(T)}
     <div class="panel"><header><h2>Pedidos hechos</h2></header>
       ${hist.length ? `<div class="list">${hist.map(p => { const pr = [...new Set((p.origen || []).filter(o => !o.manual).map(o => o.prNum))]; const it = (p.items || []).length; return `<button class="pcard pedcard" data-pe="abrir" data-id="${esc(p.id)}"><span class="num">${esc(numPed(p))}</span>
-        <span style="display:grid;gap:2px;min-width:0"><span class="t">${esc(p.prov || TIPOS[T].prov)}${p.nroProv ? ' · Nº ' + esc(p.nroProv) : ''} · pedido ${esc(p.fEnviado || '—')} · ${it} artículo${it === 1 ? '' : 's'}</span><span class="s">${modulosDe(p).map(x => esc(x.n) + ' ' + x.ms.map(esc).join(', ')).join(' · ') || 'Taller'}${p.estado === 'recibido' ? ' · recibido ' + esc(p.fRecibido || '') : ''}</span></span>
-        ${chip(p.estado === 'recibido' && (p.items || []).some(x => x.recib != null && N(x.recib) < N(x.pedir)) ? { t: 'Recibido con faltantes', c: 'e2' } : ESTPED[p.estado])}</button>`; }).join('')}</div>` : '<p class="note" style="margin:0">Todavía no se envió ningún pedido.</p>'}</div>`;
+        <span style="display:grid;gap:2px;min-width:0"><span class="t">${T === 'placas' ? provsPedTxt(p) : esc(p.prov || TIPOS[T].prov) + (p.nroProv ? ' · Nº ' + esc(p.nroProv) : '')} · pedido ${esc(p.fEnviado || '—')} · ${it} artículo${it === 1 ? '' : 's'}</span><span class="s">${modulosDe(p).map(x => esc(x.n) + ' ' + x.ms.map(esc).join(', ')).join(' · ') || 'Taller'}${p.estado === 'recibido' ? ' · recibido ' + esc(p.fRecibido || '') : ''}</span></span>
+        ${chip(T === 'placas' ? estPl(p) : p.estado === 'recibido' && (p.items || []).some(x => x.recib != null && N(x.recib) < N(x.pedir)) ? { t: 'Recibido con faltantes', c: 'e2' } : ESTPED[p.estado])}</button>`; }).join('')}</div>` : '<p class="note" style="margin:0">Todavía no se envió ningún pedido.</p>'}</div>` : ''}`;
+}
+/* ---- Madera: seguimiento de lo pedido y lo que ya está en el taller (aparte de lo que falta pedir) ---- */
+let MVISTA = LS.get('mueler_mvista', 'seg'); let FACT_K = null;
+const dkey = s => { const m = String(s || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); return m ? m[3] + m[2].padStart(2, '0') + m[1].padStart(2, '0') : ''; };
+const diasDesde = s => { const k = dkey(s); if (!k) return null; const d = new Date(+k.slice(0, 4), +k.slice(4, 6) - 1, +k.slice(6, 8)); return Math.max(0, Math.round((Date.now() - d) / 864e5)); };
+function lineasMadera() { return PEDS.filter(p => tipoDe(p) === 'placas').flatMap(p => (p.items || []).map((it, k) => ({ p, it, k, e: itEst(it, p) })).filter(x => N(x.it.pedir) > 0)); }
+function maderaSegHTML() {
+  const ls = lineasMadera();
+  const llega = ls.filter(x => x.e === 'pedido' || x.e === 'confirmado').sort((a, b) => dkey(a.it.fPedido || a.p.fEnviado).localeCompare(dkey(b.it.fPedido || b.p.fEnviado)));
+  const taller = ls.filter(x => x.e === 'recibido').sort((a, b) => dkey(b.it.fRecib || b.p.fRecibido).localeCompare(dkey(a.it.fRecib || a.p.fRecibido)));
+  const nPl = arr => arr.reduce((s, x) => s + N(x.e === 'recibido' ? (x.it.recib ?? x.it.pedir) : x.it.pedir), 0);
+  const abrir = x => `<button class="btn sm" data-pe="abrir" data-id="${esc(x.p.id)}">${esc(numPed(x.p))} →</button>`;
+  return `<div class="panel"><header><div><h2>Por llegar</h2><span class="note">Pedidas al proveedor, de la más vieja a la más nueva.</span></div><span class="sum">${fmt(nPl(llega))} placa${nPl(llega) === 1 ? '' : 's'}</span></header>
+    ${llega.length ? `<div class="tbox"><table class="t segt"><thead><tr><th>Pedida</th><th>Madera</th><th class="n">Placas</th><th>Proveedor · Nº</th><th>Estado</th><th>Para</th><th></th></tr></thead><tbody>
+      ${llega.map(x => { const d = diasDesde(x.it.fPedido || x.p.fEnviado); return `<tr><td class="mono">${esc(x.it.fPedido || x.p.fEnviado || '—')}${d != null ? `<div class="note">hace ${d} día${d === 1 ? '' : 's'}</div>` : ''}</td>
+        <td><b>${esc(x.it.cod)}</b>${modoIt(x.it, x.p) === 'entera' ? '<div class="note">placa entera · se corta en el taller</div>' : ''}</td><td class="n"><b>${fmt(x.it.pedir)}</b></td>
+        <td>${esc(provIt(x.it, x.p))}${x.it.nroProv ? `<div class="note mono">Nº ${esc(x.it.nroProv)}</div>` : /dilegno/i.test(provIt(x.it, x.p)) ? '<div class="note falta-t">falta el Nº de plano</div>' : ''}</td>
+        <td>${chip(EST_PL[x.e])}${x.e === 'confirmado' && x.it.fConf ? `<div class="note">${esc(x.it.fConf)}</div>` : ''}</td><td>${proyCelda(x.p, x.it.cod)}</td><td>${abrir(x)}</td></tr>`; }).join('')}
+    </tbody></table></div>` : '<p class="note" style="margin:0">No hay madera en camino.</p>'}</div>
+    <div class="panel"><header><div><h2>En el taller</h2><span class="note">Lo último que llegó primero. Es la madera con la que se puede armar.</span></div><span class="sum">${fmt(nPl(taller))} placa${nPl(taller) === 1 ? '' : 's'}</span></header>
+    ${taller.length ? `<div class="tbox"><table class="t segt"><thead><tr><th>Llegó</th><th>Madera</th><th class="n">Placas</th><th>Proveedor · factura</th><th>Para</th><th></th></tr></thead><tbody>
+      ${taller.map(x => `<tr><td class="mono">${esc(x.it.fRecib || x.p.fRecibido || '—')}</td><td><b>${esc(x.it.cod)}</b>${x.it.recib != null && N(x.it.recib) < N(x.it.pedir) ? `<div class="note falta-t">faltaron ${fmt(N(x.it.pedir) - N(x.it.recib))}</div>` : ''}</td>
+        <td class="n"><b>${fmt(x.it.recib ?? x.it.pedir)}</b></td><td>${esc(provIt(x.it, x.p))}${x.it.factNum ? `<div class="note mono">Fact. ${esc(x.it.factNum)}</div>` : ''}${(x.it.factAdj || []).length ? '<div class="note">📎 factura adjunta</div>' : ''}</td>
+        <td>${proyCelda(x.p, x.it.cod)}</td><td>${abrir(x)}</td></tr>`).join('')}
+    </tbody></table></div>` : '<p class="note" style="margin:0">Todavía no llegó madera registrada en el sistema.</p>'}</div>`;
 }
 let PEDIT = null;
-const OPTP = {}, OPTSIG = {}; let OPTPOPEN = {};
+const OPTP = {}, OPTSIG = {}; let OPTPOPEN = {}; let OPENDD = null;
+$('view-ped').addEventListener('toggle', e => { const d = e.target; if (!d.matches || !d.matches('details.dd')) return; if (d.open) { OPENDD = d.dataset.dd; document.querySelectorAll('#view-ped details.dd[open]').forEach(x => { if (x !== d) x.open = false; }); } else if (OPENDD === d.dataset.dd) OPENDD = null; }, true);
+document.addEventListener('click', e => { if (!e.isTrusted || !OPENDD || e.target.closest('details.dd') || e.target.closest('.combo-pop')) return; document.querySelectorAll('#view-ped details.dd[open]').forEach(x => { x.open = false; }); OPENDD = null; });
 function optTxt(it) {
   const o = it.opt; if (!o) return '<span class="note">Optimizando…</span>';
   if (o.error) return `<span class="falta-t">${esc(o.error)}</span>`;
@@ -2731,7 +2799,7 @@ async function piezasModulo(o) {
   const base = PROYS.find(x => x.id === o.prId); const mod = base && (base.modulos || []).find(x => x.id === o.modId); if (!mod) return null;
   let F = FICHAS[o.modId]; if (!F || !F.R) { const f = await StoreF.get(o.modId); if (!f || !f.csv) return null; F = FICHAS[o.modId] = { text: f.csv, archivo: f.archivo, R: OCL.parseOCL(f.csv, f.archivo) }; }
   const M = Builder.desdeOCL(F.R, cfgFicha(mod), F.text); const g = M.grupos.find(x => x.ocl === o.ocl); if (!g) return null;
-  return { veta: (mod.csvVeta || {})[g.ocl] != null ? !!mod.csvVeta[g.ocl] : !!(g.opt && g.opt.veta), piezas: g.piezas.map(pz => Object.assign({}, pz, { desc: `${o.prNum} ${o.modCod} · ${pz.desc}` })) };
+  return { veta: (mod.csvVeta || {})[g.ocl] != null ? !!mod.csvVeta[g.ocl] : !!(g.opt && g.opt.veta), piezas: g.piezas.map(pz => Object.assign({}, pz, { desc: `${o.prNum} ${o.modCod} · ${pz.desc}`, des0: pz.desc, mod: `${o.prNum} ${o.modCod}` })) };
 }
 async function optimizarPlacas(p) {
   const sig = firmaPl(p); if (OPTSIG[p.id] === sig) return; OPTSIG[p.id] = sig;
@@ -2745,7 +2813,7 @@ async function optimizarPlacas(p) {
       if (o.error) { it.opt = { error: o.error, solo, nPlacas: 0, piezas: piezas.length, aprov: 0 }; it.req = Math.ceil(solo) + manual; }
       else { it.opt = { solo, nPlacas: o.nPlacas, aprov: o.aprov, piezas: piezas.reduce((s, x) => s + N(x.cant), 0), veta: o.veta }; it.req = Math.ceil(o.nPlacas - 1e-6) + manual; }
     }
-    if (p.estado === 'borrador' && !it.pedirEd) it.pedir = Math.max(0, it.req - N(it.deStock));
+    if (p.estado === 'borrador') { it.pedirEd = false; it.pedir = Math.max(0, it.req - N(it.deStock)); }
   }
   if (PED && PED.id === p.id) { if (p.estado === 'borrador') savePED(true); renderPedDet(); }
 }
@@ -2766,9 +2834,9 @@ function datosPedHTML(p, T, st) {
   const provs = T === 'placas' ? PROVS_PLACA : T === 'cantos' ? PROVS_CANTO : ['All Sur']; const lock = st === 'recibido';
   const prov = p.prov || TIPOS[T].prov; const otro = !provs.includes(prov);
   const mods = modulosDe(p); const man = (p.origen || []).filter(o => o.manual).length;
-  return `<div class="panel datosped"><header><h2>Datos del pedido</h2></header><div class="dpgrid">
-    <div class="field"><label class="lbl">Proveedor</label><select data-pq="prov" ${lock ? 'disabled' : ''}>${provs.map(x => `<option ${x === prov ? 'selected' : ''}>${esc(x)}</option>`).join('')}<option value="__otro" ${otro ? 'selected' : ''}>Otro…</option></select>${otro ? `<input type="text" data-pq="prov" value="${esc(prov)}" placeholder="Nombre del proveedor" style="margin-top:6px" ${lock ? 'disabled' : ''}>` : ''}</div>
-    <div class="field"><label class="lbl">Nº de pedido de ${esc(otro ? 'el proveedor' : prov)}</label><input type="text" data-pq="nroProv" value="${esc(p.nroProv || '')}" placeholder="${T === 'placas' ? 'El que te da Dilegno al cargarlo' : 'Opcional'}" ${lock ? 'disabled' : ''}></div>
+  return `<div class="panel datosped"><header><h2>Datos del pedido</h2>${T === 'placas' ? '<span class="note">El proveedor y su Nº de pedido se cargan en cada placa, abajo.</span>' : ''}</header><div class="dpgrid">
+    ${T === 'placas' ? '' : `<div class="field"><label class="lbl">Proveedor</label><select data-pq="prov" ${lock ? 'disabled' : ''}>${provs.map(x => `<option ${x === prov ? 'selected' : ''}>${esc(x)}</option>`).join('')}<option value="__otro" ${otro ? 'selected' : ''}>Otro…</option></select>${otro ? `<input type="text" data-pq="prov" value="${esc(prov)}" placeholder="Nombre del proveedor" style="margin-top:6px" ${lock ? 'disabled' : ''}>` : ''}</div>
+    <div class="field"><label class="lbl">Nº de pedido de ${esc(otro ? 'el proveedor' : prov)}</label><input type="text" data-pq="nroProv" value="${esc(p.nroProv || '')}" placeholder="Opcional" ${lock ? 'disabled' : ''}></div>`}
     <div class="field"><label class="lbl">Fecha de pedido</label><input type="text" data-pq="fEnviado" value="${esc(p.fEnviado || '')}" placeholder="${st === 'borrador' ? 'Se completa al enviar' : today()}" ${st === 'borrador' || lock ? 'disabled' : ''}></div>
     <div class="field"><label class="lbl">${st === 'recibido' ? 'Recibido' : 'Creado'}</label><input type="text" value="${esc(st === 'recibido' ? (p.fRecibido || '') : (p.fCreado || ''))}" disabled></div>
     </div><div class="field"><label class="lbl">Proyectos y módulos</label><div class="pmods">${mods.map(x => `<span class="pmod"><b>${esc(x.n)}</b> ${esc(x.obra || '')} · ${x.ms.map(esc).join(', ')}</span>`).join('') || '<span class="note">Todavía ninguno</span>'}${man ? `<span class="pmod">${man} agregado${man === 1 ? '' : 's'} a mano</span>` : ''}</div></div></div>`;
@@ -2850,16 +2918,18 @@ function renderPedDet() {
   const tot = (p.items || []).reduce((s, it) => s + N(it.recib ?? it.pedir) * (it.precioF ? N(it.precioF) : N(it.precio) * 0.75), 0);
   const falt = (p.items || []).filter(it => st !== 'borrador' && it.recib != null && N(it.recib) < N(it.pedir));
   const paraOpts = ['Taller', ...PROYS.map(x => `Proyecto ${x.num}`)];
-  v.innerHTML = `<div class="row" style="justify-content:space-between"><div class="row"><button class="btn" data-pe="volver">← Compras</button><h2>Pedido de ${TIPOS[T].t.toLowerCase()} ${esc(numPed(p))}</h2></div>${chip(ESTPED[st])}</div>
-    <ol class="steps">${[['En armado', 'Se van sumando módulos y faltantes'], ['Pedido', 'Enviado al proveedor'], ['Recibido', 'Controlado con la factura o remito']].map(([t, s], k) => `<li class="${k < ip || st === 'recibido' ? 'done' : k === ip ? 'cur' : ''}"><b>${t}</b><span>${s}</span></li>`).join('')}</ol>
+  v.innerHTML = `<div class="row stickhead" style="justify-content:space-between"><div class="row"><button class="btn" data-pe="volver">← Compras</button><h2>Pedido de ${TIPOS[T].t.toLowerCase()} ${esc(numPed(p))}</h2></div>${chip(T === 'placas' ? estPl(p) : ESTPED[st])}</div>
+    ${T === 'placas' ? stepsPl(p) : `<ol class="steps">${[['En armado', 'Se van sumando módulos y faltantes'], ['Pedido', 'Enviado al proveedor'], ['Recibido', 'Controlado con la factura o remito']].map(([t, s], k) => `<li class="${k < ip || st === 'recibido' ? 'done' : k === ip ? 'cur' : ''}"><b>${t}</b><span>${s}</span></li>`).join('')}</ol>`}
     ${datosPedHTML(p, T, st)}
-    <div class="panel"><header><div class="row"><h2>Artículos</h2></div><div class="row">
-      <button class="btn" data-pe="xlsx">Descargar Excel</button><button class="btn" data-pe="txt">Copiar texto</button>
-      ${ed ? `<button class="btn primary" data-pe="enviar" ${(p.items || []).length && !(T === 'cantos' && (p.items || []).some(it => N(it.pedir) > 0 && !isDef(String(it.cod).split('|')[0]))) ? '' : 'disabled'} title="${T === 'cantos' && (p.items || []).some(it => !isDef(String(it.cod).split('|')[0])) ? 'Hay cantos con melamina genérica: cambialos antes de enviar' : ''}">Enviar pedido</button>` : ''}</div></header>
+    <div class="panel"><header><div class="row"><h2>${T === 'placas' ? 'Madera' : 'Artículos'}</h2></div><div class="row">
+      ${T === 'placas' ? ((p.items || []).length ? '<button class="btn" data-pe="pl-imp">Imprimir todo el lote (A4)</button>' : '') : '<button class="btn" data-pe="xlsx">Descargar Excel</button><button class="btn" data-pe="txt">Copiar texto</button>'}
+      ${ed && T !== 'placas' ? `<button class="btn primary" data-pe="enviar" ${(p.items || []).length && !(T === 'cantos' && (p.items || []).some(it => N(it.pedir) > 0 && !isDef(String(it.cod).split('|')[0]))) ? '' : 'disabled'} title="${T === 'cantos' && (p.items || []).some(it => !isDef(String(it.cod).split('|')[0])) ? 'Hay cantos con melamina genérica: cambialos antes de enviar' : ''}">Enviar pedido</button>` : ''}</div></header>
       <datalist id="dl-prov">${(T === 'placas' ? PROVS_PLACA : T === 'cantos' ? PROVS_CANTO : ['All Sur']).map(x => `<option value="${esc(x)}">`).join('')}</datalist>
-      ${ed ? `<p class="note" style="margin:0">“A pedir” arranca igual a lo necesario. Si pedís de más para stock, cambialo acá.</p>` : ''}
-      ${st === 'enviado' ? '<div class="hint">Cuando llegue, cargá lo recibido y el precio de la factura o el remito, y confirmá la recepción.</div>' : ''}
-      ${(p.items || []).length ? `<div class="tbox"><table class="t pedt"><thead><tr><th>${T === 'placas' ? 'Placa' : T === 'cantos' ? 'Canto' : 'Código'}</th><th>${T === 'placas' ? 'Optimización' : T === 'cantos' ? 'Medida' : 'Artículo'}</th><th class="n">Necesario</th><th class="n">A pedir (${u})</th>${st !== 'borrador' ? `<th class="n">Recibido</th><th class="n">Precio factura${T === 'cantos' ? ' por m' : ''}</th>` : ''}<th>Para</th>${ed ? '<th></th>' : ''}</tr></thead><tbody>
+      ${ed && T !== 'placas' ? `<p class="note" style="margin:0">“A pedir” arranca igual a lo necesario. Si pedís de más para stock, cambialo acá.</p>` : ''}
+      ${T === 'placas' ? `<p class="note" style="margin:0">Cada placa se pide por separado: <b>Por pedir → Pedido → Confirmado → En taller</b>.${st === 'borrador' ? ' Al pedir la primera, los módulos nuevos van a un pedido nuevo.' : ''}</p>` : ''}
+      ${st === 'enviado' && T !== 'placas' ? '<div class="hint">Cuando llegue, cargá lo recibido y el precio de la factura o el remito, y confirmá la recepción.</div>' : ''}
+      ${T === 'placas' ? lineasPlacasHTML(p) : ''}
+      ${T !== 'placas' && (p.items || []).length ? `<div class="tbox"><table class="t pedt"><thead><tr><th>${T === 'placas' ? 'Placa' : T === 'cantos' ? 'Canto' : 'Código'}</th><th>${T === 'placas' ? 'Optimización' : T === 'cantos' ? 'Medida' : 'Artículo'}</th><th class="n">Necesario</th><th class="n">A pedir (${u})</th>${st !== 'borrador' ? `<th class="n">Recibido</th><th class="n">Precio factura${T === 'cantos' ? ' por m' : ''}</th>` : ''}<th>Para</th>${ed ? '<th></th>' : ''}</tr></thead><tbody>
       ${(p.items || []).map((it, k) => { const [cc, md] = String(it.cod).split('|'); return `<tr class="${it.recib != null && st !== 'borrador' && N(it.recib) < N(it.pedir) ? 'warn' : ''}">
         ${T === 'placas' ? `<td><b>${esc(it.cod)}</b></td><td>${optTxt(it)}</td>` : T === 'cantos' ? `<td>${esc(cc)}${isDef(cc) ? '' : `<div class="note falta-t">Genérico: tocá Cambiar y elegí la melamina.</div>`}</td><td>${esc(md)}</td>` : `<td class="mono">${esc(it.cod)}</td><td>${esc(it.nombre)}<div class="note">${esc([it.marca, it.col].filter(Boolean).join(' · '))}</div></td>`}
         <td class="n">${fmt(it.req)}</td>
@@ -2867,9 +2937,9 @@ function renderPedDet() {
         ${st === 'enviado' ? `<td class="n"><input type="text" class="n q" data-pi="${k}.recib" value="${esc(it.recib ?? it.pedir)}" aria-label="Recibido"></td><td class="n"><input type="text" class="n" data-pi="${k}.precioF" value="${esc(it.precioF ?? '')}" placeholder="${it.precio ? esc(fmt(it.precio * 0.75)) : ''}" aria-label="Precio de factura"></td>` : ''}
         ${st === 'recibido' ? `<td class="n">${fmt(it.recib ?? it.pedir)}</td><td class="n">${it.precioF ? money(it.precioF) : '—'}</td>` : ''}
         <td class="note">${esc(dest(it.cod))}${N(it.pedir) > N(it.req) - N(it.deStock) ? ` <span class="chip e1">+${fmt(N(it.pedir) - (N(it.req) - N(it.deStock)))} para stock</span>` : ''}${stockCtl(it, k, T, ed)}</td>${ed ? `<td><button class="btn sm ${PEDIT && PEDIT.cod === it.cod ? 'primary' : ''}" data-pe="edit-it" data-cod="${esc(it.cod)}">Cambiar</button></td>` : ''}</tr>${ed && PEDIT && PEDIT.cod === it.cod ? editorItemHTML(it, T) : ''}`; }).join('')}
-      </tbody></table></div>` : '<p class="note" style="margin:0">Todavía no hay nada en este pedido.</p>'}
+      </tbody></table></div>` : T === 'placas' ? '' : '<p class="note" style="margin:0">Todavía no hay nada en este pedido.</p>'}
       ${st !== 'borrador' && T === 'herrajes' ? `<span class="note">Valor de lista: ${money((p.items || []).reduce((s, it) => s + N(it.pedir) * N(it.precio), 0))}${st === 'recibido' ? ` · costo de lo recibido: ${money(tot)}${(p.items || []).some(it => !it.precioF) ? ' (donde no cargaste precio de factura, se toma lista − 25%)' : ''}` : ''}</span>` : ''}</div>
-    ${ed ? `<div class="panel addp"><header><h3>Agregar al pedido</h3><span class="note">Faltantes del taller o stock. Elegí para qué es.</span></header><div class="addrow">
+    ${ed ? `<div class="panel addp"><header><h3>${T === 'placas' ? 'Agregar una placa aparte' : 'Agregar al pedido'}</h3><span class="note">${T === 'placas' ? 'Va aparte de la optimización: para un faltante, un repuesto o stock. Elegí para qué es.' : 'Faltantes del taller o stock. Elegí para qué es.'}</span></header><div class="addrow">
       ${T === 'placas' ? `<div class="field" style="flex:3 1 300px"><label class="lbl">Placa</label><input type="text" id="pe-placa" data-combo="mats" data-val="" value="" placeholder="Escribí para buscar la placa" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="combo-pop" aria-autocomplete="list" aria-label="Placa"></div>` : T === 'cantos' ? `<div class="field" style="flex:2 1 220px"><label class="lbl">Color / material</label><input type="text" id="pe-color" data-combo="mats" data-val="" value="" placeholder="Buscá la melamina · ej: Egger Blanco W954" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="combo-pop" aria-autocomplete="list" aria-label="Melamina del canto"></div>
         <div class="field" style="flex:1 1 120px"><label class="lbl">Medida</label><select id="pe-medida">${MEDIDAS.map(x => `<option>${esc(x)}</option>`).join('')}</select></div>
         <datalist id="dl-mel2">${MELAMINAS().map(x => `<option value="${esc(x)}">`).join('')}</datalist>`
@@ -2882,14 +2952,14 @@ function renderPedDet() {
       ${(p.origen || []).map((o, k) => `<tr><td>${o.manual ? esc(o.para || 'Taller') : esc(o.prNum) + ' · ' + esc(o.obra)}</td><td>${o.manual ? '<span class="note">a mano</span>' : esc(o.modCod)}</td><td>${esc(itemInfo(o.cod, T).nombre)} ${T === 'herrajes' ? `<span class="note mono">${esc(o.cod)}</span>` : ''}</td><td class="n">${fmt(o.cant)}</td><td class="note">${esc(o.com || '')}</td>
         ${ed ? `<td>${o.manual ? `<button class="x" data-pe="del-man" data-k="${k}" aria-label="Quitar">×</button>` : (p.origen.findIndex(x => !x.manual && x.modId === o.modId) === k ? `<button class="btn sm" data-pe="quitar-mod" data-id="${esc(o.modId)}">Sacar ${esc(o.modCod)}</button>` : '')}</td>` : ''}</tr>`).join('')}
     </tbody></table></div>` : '<p class="note" style="margin:0">—</p>'}</div>
-    ${st !== 'borrador' ? `<div class="panel"><header><h2>Factura o remito</h2></header><div class="grid3">
+    ${st !== 'borrador' && T !== 'placas' ? `<div class="panel"><header><h2>Factura o remito</h2></header><div class="grid3">
       <div class="field"><label class="lbl">Nº factura / remito</label><input type="text" data-pq="factura.num" value="${esc(p.factura.num || '')}" ${st === 'recibido' ? 'disabled' : ''}></div>
       <div class="field"><label class="lbl">Fecha</label><input type="text" data-pq="factura.fecha" value="${esc(p.factura.fecha || '')}" placeholder="${esc(today())}" ${st === 'recibido' ? 'disabled' : ''}></div>
       <div class="field"><label class="lbl">Archivo</label><div class="row">${(p.factura.adj || []).map(a => `<span class="tag">${esc(a.nombre)}</span>`).join('')}${st === 'enviado' ? '<button class="btn sm" data-pe="adj">Adjuntar foto o PDF</button>' : ''}</div></div></div>
       ${st === 'enviado' ? '<div class="row" style="justify-content:flex-end"><button class="btn primary" data-pe="recibir">Confirmar recepción</button></div>' : ''}
       ${falt.length ? `<div class="alert">Llegaron menos unidades de ${falt.length} artículo${falt.length === 1 ? '' : 's'}: ${falt.map(it => esc(T === 'cantos' ? it.nombre : it.cod) + ' (faltan ' + fmt(N(it.pedir) - N(it.recib)) + ')').join(' · ')}. ${st === 'recibido' ? '<button class="btn sm" data-pe="faltantes">Pasar lo que faltó al pedido en armado</button>' : ''}</div>` : ''}</div>` : ''}
     <div class="panel"><header><h2>Notas</h2></header><textarea data-pq="notas" rows="2" aria-label="Notas del pedido">${esc(p.notas || '')}</textarea></div>
-    <div class="row" style="justify-content:flex-end">${ed ? '<button class="btn sm danger" data-pe="del">Borrar pedido</button>' : st === 'enviado' ? '<button class="btn sm" data-pe="volver-borr">Volver a En armado</button>' : '<button class="btn sm" data-pe="reabrir">Corregir recepción</button>'}</div>`;
+    <div class="row" style="justify-content:flex-end">${ed ? '<button class="btn sm danger" data-pe="del">Borrar pedido</button>' : T === 'placas' ? '' : st === 'enviado' ? '<button class="btn sm" data-pe="volver-borr">Volver a En armado</button>' : '<button class="btn sm" data-pe="reabrir">Corregir recepción</button>'}</div>`;
   if (T === 'placas') { const tb = v.querySelector('.pedt'); if (tb) tb.closest('.panel').insertAdjacentHTML('afterend', placasViewer(p)); if (OPTSIG[p.id] !== firmaPl(p)) optimizarPlacas(p); }
 }
 function pedidoAOA(p) {
@@ -2909,6 +2979,177 @@ async function pedXlsx(p) {
   await offer(`Pedido_${numPed(p)}_${(p.prov || '').replace(/\s+/g, '')}.xlsx`, wbBlob(wb));
 }
 function pedTxt(p) { const T = tipoDe(p); return `Hola! Te paso el pedido de Mueler Taller (${numPed(p)}):\n` + (p.items || []).filter(it => N(it.pedir) > 0).map(it => T === 'placas' ? `${fmt(it.pedir)} placa${N(it.pedir) === 1 ? '' : 's'} · ${it.cod}` : T === 'cantos' ? `${fmt(it.pedir)} m · ${it.nombre}` : `${fmt(it.pedir)} × ${it.cod} - ${it.nombre}${it.col ? ' (' + it.col + ')' : ''}`).join('\n') + '\nGracias!'; }
+/* ---- Pedido de placas: proveedor y Nº por placa, archivos para cada proveedor y planilla para imprimir ---- */
+const provIt = (it, p) => it.prov || (p && p.prov && PROVS_PLACA.includes(p.prov) ? p.prov : '') || 'Dilegno';
+function provsPedTxt(p) {
+  const g = {}; (p.items || []).filter(it => N(it.pedir) > 0).forEach(it => { const pv = provIt(it, p); (g[pv] = g[pv] || []); if (it.nroProv) g[pv].push(it.nroProv); });
+  return Object.entries(g).map(([pv, ns]) => esc(pv) + (ns.length ? ' · Nº ' + ns.map(esc).join(', ') : '')).join(' / ') || 'Dilegno';
+}
+function manualDe(p, cod) { return (p.origen || []).filter(o => o.cod === cod && o.manual); }
+function proyCelda(p, cod) {
+  const os = (p.origen || []).filter(o => o.cod === cod); const g = {};
+  os.filter(o => !o.manual).forEach(o => { (g[o.prNum] = g[o.prNum] || { obra: o.obra, ms: new Set() }).ms.add(o.modCod); });
+  const lin = Object.entries(g).map(([n, x]) => `<span><b>${esc(n)}</b> ${esc(x.obra || '')} · ${[...x.ms].map(esc).join(', ')}</span>`);
+  manualDe(p, cod).forEach(o => lin.push(`<span class="note">+${fmt(o.cant)} aparte · ${esc(o.para || 'Taller')}${o.com ? ' · ' + esc(o.com) : ''}</span>`));
+  return `<div class="proy">${lin.join('') || '<span class="note">—</span>'}</div>`;
+}
+/* Cada placa (tipo de melamina / enchapado) es una línea con su propio recorrido dentro del pedido:
+   Por pedir → Pedido (Nº de plano / pedido del proveedor) → Confirmado (presupuesto aceptado) → En taller.
+   El pedido P-n es el lote: se cierra a nuevos módulos cuando se pide la primera placa, y queda "Pedido parcial" hasta que se piden todas. */
+const PROV_MODO = { 'Trumar': 'entera', 'Dac Maderas': 'entera' };
+const PROV_INFO = {
+  'Dilegno': 'Un archivo por tipo de placa: se importa en su optimizador y genera un Nº de plano. El vendedor manda un presupuesto por cada Nº y, al confirmar, agrupa todo en una factura.',
+  'Alnora': 'Un Excel por placa, por mail. Se pueden juntar varias placas en un mismo mail o mandarlas en días distintos.',
+  'Trumar': 'Por lo general placa entera: la optimización queda para cortar en el taller.',
+  'Dac Maderas': 'Por lo general placa entera: la optimización queda para cortar en el taller.',
+};
+const EST_PL = { armado: { t: 'Por pedir', c: 'e2' }, pedido: { t: 'Pedido', c: 'e3' }, confirmado: { t: 'Confirmado', c: 'e1' }, recibido: { t: 'En taller', c: 'e4' } };
+const itEst = (it, p) => it.est || (p.estado === 'recibido' ? 'recibido' : p.estado === 'enviado' ? 'pedido' : 'armado');
+const modoIt = (it, p) => it.modo || PROV_MODO[provIt(it, p)] || 'corte';
+const sinCantosIt = (it, p) => it.sinCantos != null ? !!it.sinCantos : !!p.sinCantos;
+const activasPl = p => (p.items || []).filter(it => N(it.pedir) > 0);
+function fijarEst(p) { (p.items || []).forEach(it => { it.est = itEst(it, p); }); }
+function syncEstadoPl(p) {
+  fijarEst(p); const act = activasPl(p); if (!act.length) return; const es = act.map(it => it.est);
+  if (es.every(e => e === 'armado')) { p.estado = 'borrador'; p.fEnviado = ''; }
+  else if (es.every(e => e === 'recibido')) { p.estado = 'recibido'; if (!p.fEnviado) p.fEnviado = today(); p.fRecibido = p.fRecibido || today(); }
+  else { p.estado = 'enviado'; p.fEnviado = p.fEnviado || today(); p.fRecibido = ''; }
+}
+function estPl(p) {
+  if (p.estado === 'borrador') return ESTPED.borrador; const act = activasPl(p); const n = act.length; const es = act.map(it => itEst(it, p));
+  const ped = es.filter(e => e !== 'armado').length, rec = es.filter(e => e === 'recibido').length;
+  if (rec === n) return (p.items || []).some(x => x.recib != null && N(x.recib) < N(x.pedir)) ? { t: 'Recibido con faltantes', c: 'e2' } : ESTPED.recibido;
+  if (ped < n) return { t: `Pedido parcial · ${ped} de ${n}`, c: 'e2' };
+  if (rec) return { t: `En taller ${rec} de ${n}`, c: 'e1' };
+  return ESTPED.enviado;
+}
+function stepsPl(p) {
+  const act = activasPl(p); const n = act.length || 0; const es = act.map(it => itEst(it, p)); const ped = es.filter(e => e !== 'armado').length, rec = es.filter(e => e === 'recibido').length;
+  const L = [['En armado', 'Se van sumando módulos y faltantes', ped > 0, ped === 0], ['Pedido', n ? `${ped} de ${n} placa${n === 1 ? '' : 's'} pedida${n === 1 ? '' : 's'}` : 'Cada placa se pide por separado', n && ped === n, ped > 0 && ped < n || (ped === n && rec === 0 && n > 0)], ['En taller', n ? `${rec} de ${n} recibida${n === 1 ? '' : 's'}` : 'Controlado con la factura o remito', n && rec === n, rec > 0 && rec < n]];
+  return `<ol class="steps">${L.map(([t, s, done, cur]) => `<li class="${done ? 'done' : cur ? 'cur' : ''}"><b>${t}</b><span>${s}</span></li>`).join('')}</ol>`;
+}
+function provsOrden(p) { const g = {}; (p.items || []).forEach((it, k) => { const pv = provIt(it, p); (g[pv] = g[pv] || []).push({ it, k }); }); const ord = [...PROVS_PLACA, ...Object.keys(g).filter(x => !PROVS_PLACA.includes(x))]; return ord.filter(x => g[x]).map(pv => ({ pv, ls: g[pv] })); }
+function lineasPlacasHTML(p) {
+  const its = p.items || []; if (!its.length) return '<p class="note" style="margin:0">Todavía no hay placas en este pedido.</p>';
+  const lote = p.estado === 'borrador';
+  return `<div class="pedt plgrid">${provsOrden(p).map(({ pv, ls }) => { const arm = ls.filter(x => itEst(x.it, p) === 'armado' && N(x.it.pedir) > 0); const n = ls.reduce((s, x) => s + N(x.it.pedir), 0);
+    return `<section class="provgrp"><header><div><h3>${esc(pv)}</h3><span class="note">${ls.length} tipo${ls.length === 1 ? '' : 's'} de placa · ${fmt(n)} placa${n === 1 ? '' : 's'}</span></div>
+      <div class="row">${arm.length ? `<button class="btn sm" data-pe="pl-copy" data-prov="${esc(pv)}">Copiar ${/alnora/i.test(pv) ? 'mail' : 'mensaje'} con ${arm.length === 1 ? 'la placa' : 'las ' + arm.length + ' placas'} por pedir</button>` : ''}${arm.length > 1 && !/dilegno/i.test(pv) ? `<button class="btn sm" data-pe="pl-pedtodas" data-prov="${esc(pv)}">Marcar las ${arm.length} como pedidas</button>` : ''}</div></header>
+      ${ls.map(({ it, k }) => lineaPlacaHTML(p, it, k, lote)).join('')}</section>`; }).join('')}</div>`;
+}
+function lineaPlacaHTML(p, it, k, lote) {
+  const e = itEst(it, p); const pv = provIt(it, p); const modo = modoIt(it, p); const sc = sinCantosIt(it, p); const dil = /dilegno/i.test(pv);
+  const o = it.opt; const nOpt = o && o.nPlacas ? Math.ceil(o.nPlacas - 1e-6) : 0; const man = manualDe(p, it.cod).reduce((s, x) => s + N(x.cant), 0); const ds = N(it.deStock);
+  const parts = []; if (nOpt) parts.push(`${fmt(nOpt)} de la optimización`); if (man) parts.push(`+${fmt(man)} aparte`); if (ds) parts.push(`−${fmt(ds)} de stock`);
+  const hayPz = o && o.piezas > 0;
+  const optl = !o ? '<div class="optl">Optimizando…</div>' : o.error ? `<div class="optl falta-t">${esc(o.error)}</div>` : hayPz ? `<div class="optl">Juntas ${fmt(o.nPlacas, 2)} placas (por separado ${fmt(o.solo, 2)}) · ${fmt(o.piezas)} piezas · aprovechamiento ${pct(o.aprov)}</div>` : '<div class="optl">Sin despiece: placas enteras agregadas aparte</div>';
+  if (!(N(it.pedir) > 0)) return `<div class="plcard"><div class="pltop"><div><b>${esc(it.cod)}</b>${proyCelda(p, it.cod)}</div><div class="plq"><div class="qty">0</div><div class="note">${parts.join(' · ')}</div>${stockCtl(it, k, 'placas', e === 'armado' && lote)}</div></div></div>`;
+  const otro = !PROVS_PLACA.includes(pv) || it.provOtro; const lock = e !== 'armado';
+  const provSel = `<select data-ps="${k}.prov" ${lock ? 'disabled' : ''} aria-label="Proveedor de ${esc(it.cod)}">${PROVS_PLACA.map(x => `<option ${x === pv && !otro ? 'selected' : ''}>${esc(x)}</option>`).join('')}<option value="__otro" ${otro ? 'selected' : ''}>Otro…</option></select>${otro ? `<input type="text" data-ps="${k}.prov" data-otro="1" value="${PROVS_PLACA.includes(pv) ? '' : esc(pv)}" placeholder="Nombre" style="margin-top:6px" ${lock ? 'disabled' : ''}>` : ''}`;
+  const seg = (act, val, opts) => `<div class="seg">${opts.map(([v, t]) => `<button type="button" data-pe="${act}" data-k="${k}" data-v="${v}" aria-pressed="${String(val) === String(v)}" ${lock ? 'disabled' : ''}>${t}</button>`).join('')}</div>`;
+  const files = modo === 'entera'
+    ? `<button class="btn sm primary" data-pe="pl-copy1" data-k="${k}">Copiar mensaje para ${esc(pv)}</button><span class="note">Placa entera. La optimización queda para cortar en el taller.</span>`
+    : hayPz ? (dil ? `<button class="btn sm primary" data-pe="pl-txt1" data-k="${k}">.txt para Importar en Dilegno</button><button class="btn sm" data-pe="pl-xls1" data-k="${k}">Excel</button>`
+      : `<button class="btn sm primary" data-pe="pl-xls1" data-k="${k}">Excel para ${esc(pv)}</button><button class="btn sm" data-pe="pl-txt1" data-k="${k}">.txt (formato Dilegno)</button>`) + `<button class="btn sm" data-pe="pl-csv1" data-k="${k}">CSV</button>`
+    : '<span class="note">Sin despiece para mandar: son placas enteras.</span>';
+  const taller = hayPz ? `<button class="btn sm" data-pe="pl-impk" data-k="${k}">Imprimir (A4)</button><button class="btn sm ${OPTPOPEN[it.cod] ? 'primary' : ''}" data-pe="pl-ver" data-cod="${esc(it.cod)}">${OPTPOPEN[it.cod] ? 'Ocultar placas' : 'Ver optimización'}</button><button class="btn sm" data-pe="pl-opti" data-cod="${esc(it.cod)}">Abrir en el Optimizador</button>` : '';
+  const nroPh = dil ? 'Nº de plano (ej. 5999493)' : 'Nº de pedido (opcional)';
+  const dd = (key, label, body, cls) => `<details class="dd" data-dd="${k}.${key}" ${OPENDD === k + '.' + key ? 'open' : ''}><summary class="btn sm ${cls || ''}">${label} <span aria-hidden="true">▾</span></summary><div class="ddpop">${body}</div></details>`;
+  const fld = (lbl, html) => `<div class="field"><label class="lbl">${lbl}</label>${html}</div>`;
+  const nroIn = `<input type="text" class="nro" data-ps="${k}.nroProv" value="${esc(it.nroProv || '')}" placeholder="${nroPh}">`;
+  // acción principal según el paso
+  let accion;
+  if (e === 'armado') accion = `<button class="btn sm primary" data-pe="pl-pedido" data-k="${k}">Marcar como pedida</button>`;
+  else if (e === 'pedido') accion = `${!it.nroProv ? `<input type="text" class="nro sm" data-ps="${k}.nroProv" value="" placeholder="${dil ? 'Cargá el Nº de plano' : 'Nº de pedido'}" aria-label="Nº de pedido">` : ''}<button class="btn sm primary" data-pe="pl-conf" data-k="${k}">Confirmar compra</button>`;
+  else if (e === 'confirmado') accion = dd('lleg', 'Llegó', `${fld('Recibidas', `<input type="text" class="n q" data-pi="${k}.recib" value="${esc(it.recib ?? it.pedir)}" aria-label="Placas recibidas">`)}
+    
+    ${fld('Nº factura / remito', `<input type="text" class="nro" data-ps="${k}.factNum" value="${esc(it.factNum || '')}" placeholder="Puede ser la misma para varias">`)}
+    <div class="row"><button class="btn sm" data-pe="pl-fact" data-k="${k}">📎 Adjuntar factura (foto o PDF)</button>${(it.factAdj || []).length ? `<span class="note">${(it.factAdj || []).map(a => esc(a.nombre)).join(', ')}</span>` : ''}</div>
+    <button class="btn primary" data-pe="pl-recib" data-k="${k}">Confirmar recepción</button>`, 'primary');
+  else accion = `<span class="note">Llegaron ${fmt(it.recib ?? it.pedir)} el ${esc(it.fRecib || '—')}</span>${it.recib != null && N(it.recib) < N(it.pedir) ? `<span class="chip e2">Faltan ${fmt(N(it.pedir) - N(it.recib))}</span><button class="btn sm" data-pe="faltantes">Pasar lo que faltó al pedido en armado</button>` : ''}`;
+  const filesMenu = `${PROV_INFO[pv] ? `<p class="note" style="margin:0">${esc(PROV_INFO[pv])}</p>` : ''}${modo === 'entera' ? `<button class="btn sm primary" data-pe="pl-copy1" data-k="${k}">Copiar mensaje para ${esc(pv)}</button>`
+    : hayPz ? (dil ? `<button class="btn sm primary" data-pe="pl-txt1" data-k="${k}">.txt para Importar en Dilegno</button><button class="btn sm" data-pe="pl-xls1" data-k="${k}">Excel</button>`
+      : `<button class="btn sm primary" data-pe="pl-xls1" data-k="${k}">Excel para ${esc(pv)}</button><button class="btn sm" data-pe="pl-txt1" data-k="${k}">.txt (formato Dilegno)</button>`) + `<button class="btn sm" data-pe="pl-csv1" data-k="${k}">CSV</button>` : '<span class="note">Sin despiece: son placas enteras.</span>'}`;
+  const tallerMenu = `${optl}${hayPz ? `<button class="btn sm" data-pe="pl-impk" data-k="${k}">Imprimir despiece (A4)</button><button class="btn sm ${OPTPOPEN[it.cod] ? 'primary' : ''}" data-pe="pl-ver" data-cod="${esc(it.cod)}">${OPTPOPEN[it.cod] ? 'Ocultar placas' : 'Ver optimización'}</button><button class="btn sm" data-pe="pl-opti" data-cod="${esc(it.cod)}">Abrir en el Optimizador</button>` : ''}`;
+  const ajustes = `${fld('Proveedor', provSel)}${fld('Cómo se pide', seg('pl-modo', modo, [['corte', 'Con corte'], ['entera', 'Placa entera']]))}${modo === 'corte' ? fld('Cantos', seg('pl-cantos1', sc ? 1 : 0, [[0, 'Con cantos'], [1, 'Sin cantos']])) : ''}
+    ${e === 'armado' ? `<div class="row">${lote ? `<button class="btn sm" data-pe="edit-it" data-cod="${esc(it.cod)}">Cambiar placa…</button>` : ''}<button class="btn sm danger" data-pe="pl-del" data-k="${k}">Eliminar del pedido…</button></div>` : '<span class="note">Ya pedida: para cambiarla o eliminarla, volvé el paso atrás en Seguimiento.</span>'}`;
+  const seguimiento = `${fld(dil ? 'Nº de plano' : 'Nº de pedido', nroIn)}${e !== 'armado' ? fld('Nº de presupuesto', `<input type="text" class="nro" data-ps="${k}.presu" value="${esc(it.presu || '')}" placeholder="${dil ? 'Ej. PR 13694' : 'Opcional'}">`) : ''}
+    ${[it.fPedido && `Pedida ${it.fPedido}`, it.fConf && `Confirmada ${it.fConf}`, it.fRecib && `Recibida ${it.fRecib}${it.factNum ? ' · factura ' + it.factNum : ''}${it.precioF && ESADMIN() ? ' · $' + fmt(it.precioF) + ' c/u' : ''}`].filter(Boolean).map(x => `<span class="note">${esc(x)}</span>`).join('')}
+    ${e !== 'armado' ? `<button class="btn sm ghost" data-pe="pl-undo" data-k="${k}">← Volver a ${{ pedido: 'Por pedir', confirmado: 'Pedido', recibido: 'Confirmado' }[e]}</button>` : ''}`;
+  const resumen = `${esc(pv)} · ${modo === 'entera' ? 'placa entera' : 'con corte · ' + (sc ? 'sin cantos' : 'con cantos')}${it.nroProv ? ' · Nº ' + esc(it.nroProv) : ''}`;
+  return `<div class="plcard e-${e}">
+    <div class="pltop"><div style="min-width:0;display:grid;gap:6px"><div class="row" style="gap:8px"><b>${esc(it.cod)}</b>${chip(EST_PL[e])}</div>
+        <div class="plinfo">${proyCelda(p, it.cod)}<span class="note">${resumen}</span></div>
+        <div class="plbar">${accion}${e !== 'armado' ? `<button class="btn sm ghost" data-pe="pl-undo" data-k="${k}" title="Volver a ${{ pedido: 'Por pedir', confirmado: 'Pedido', recibido: 'Confirmado' }[e]}">↶ Deshacer</button>` : ''}${dd('arch', 'Archivos', filesMenu)}${dd('tall', 'Taller', tallerMenu)}${dd('aj', 'Ajustes', ajustes)}${dd('seg', 'Seguimiento', seguimiento)}</div></div>
+      <div class="plq"><div class="qty">${o || man ? fmt(it.pedir) : '…'}</div><div class="note">${parts.join(' · ') || (o ? '' : 'calculando')}</div>${stockCtl(it, k, 'placas', e === 'armado' && lote)}</div></div>
+    ${lote && e === 'armado' && PEDIT && PEDIT.cod === it.cod ? `<table class="t"><tbody>${editorItemHTML(it, 'placas')}</tbody></table>` : ''}</div>`;
+}
+/* descargas por placa (mismos formatos que "Pedido desde OCL" del Optimizador) */
+async function unaPl(p, k) { const xs = await piezasPedido(p, [{ it: p.items[k], k }]); const x = xs[0]; if (!x || !x.piezas.length) { toast('Esta placa no tiene despiece (son placas enteras).'); return null; } return x; }
+const nomArchPl = (p, it, pv, sc) => fsafePl(`${numPed(p)} - ${it.cod} - ${pv}${sc ? ' SIN CANTOS' : ''}`);
+async function bajarTxtPl(p, k) { const x = await unaPl(p, k); if (!x) return; const it = p.items[k]; await offer(nomArchPl(p, it, 'Dilegno', sinCantosIt(it, p)) + '.txt', txtDilegnoPl(x, sinCantosIt(it, p))); }
+async function bajarCsvPl(p, k) { const x = await unaPl(p, k); if (!x) return; const it = p.items[k]; const sc = sinCantosIt(it, p); const q = v => /[;"\r\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : v;
+  await offer(nomArchPl(p, it, provIt(it, p), sc) + '.csv', '﻿' + [DIL_HEAD_PL.join(';'), ...filasProvPl(x, sc).map(r => r.map(q).join(';'))].join('\r\n') + '\r\n'); }
+async function bajarXlsPl(p, k) {
+  if (!needExcelJS()) return; const x = await unaPl(p, k); if (!x) return; const it = p.items[k]; const sc = sinCantosIt(it, p);
+  const wb = new ExcelJS.Workbook(); wb.creator = 'Mueler Taller'; const ws = wb.addWorksheet('Piezas');
+  ws.addRow(DIL_HEAD_PL); filasProvPl(x, sc).forEach(r => ws.addRow(r)); ws.getRow(1).font = { bold: true };
+  [7, 8, 8, 34, 6, 10, 10, 10, 10].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+  await offer(nomArchPl(p, it, provIt(it, p), sc) + '.xlsx', await xbufBlob(wb));
+}
+function txtProvPl(p, prov, solo) {
+  let ls = (p.items || []).map((it, k) => ({ it, k })).filter(x => provIt(x.it, p) === prov && N(x.it.pedir) > 0);
+  if (solo != null) ls = ls.filter(x => x.k === solo); else { const arm = ls.filter(x => itEst(x.it, p) === 'armado'); if (arm.length) ls = arm; }
+  const lin = ls.map(({ it }) => modoIt(it, p) === 'entera' ? `${fmt(it.pedir)} placa${N(it.pedir) === 1 ? '' : 's'} entera${N(it.pedir) === 1 ? '' : 's'} · ${it.cod}` : `${fmt(it.pedir)} placa${N(it.pedir) === 1 ? '' : 's'} · ${it.cod} · cortes ${sinCantosIt(it, p) ? 'sin cantos' : 'con cantos'}`);
+  const adj = ls.some(({ it }) => modoIt(it, p) === 'corte');
+  return `Hola! Te paso el pedido de placas de Mueler Taller (${numPed(p)}):\n${lin.join('\n')}${adj ? `\nTe adjunto ${ls.length > 1 ? 'un archivo por placa con el despiece' : 'el despiece'}.` : ''}\nGracias!`;
+}
+async function copiarTxt(t, tit) { try { await navigator.clipboard.writeText(t); toast('Copiado: pegalo en WhatsApp o en el mail.'); } catch (er) { modal(`${H(esc(tit))}<textarea rows="10" readonly style="font-family:var(--f-mono);font-size:12px">${esc(t)}</textarea>`); } }
+/* despiece de cada placa del pedido (de los CSV de los módulos) */
+async function piezasPedido(p, lista) {
+  const out = [];
+  for (const { it, k } of lista) {
+    const os = (p.origen || []).filter(o => o.cod === it.cod); let piezas = [], veta = false, faltan = 0;
+    for (const o of os.filter(o => !o.manual)) { const r = await piezasModulo(o); if (!r) { faltan++; continue; } piezas = piezas.concat(r.piezas); veta = veta || r.veta; }
+    out.push({ it, k, prov: provIt(it, p), piezas, rota: !veta, faltan, aparte: manualDe(p, it.cod).reduce((s, x) => s + N(x.cant), 0) });
+  }
+  const sinCsv = out.filter(x => x.faltan).map(x => x.it.cod); if (sinCsv.length) toast('Ojo: no encontré el CSV de algún módulo de ' + sinCsv.join(', ') + '.');
+  return out;
+}
+const DIL_HEAD_PL = ['cant', 'base', 'altura', 'detalle', 'rota', 'canto_arr', 'canto_aba', 'canto_izq', 'canto_der'];
+function filasProvPl(x, sinCantos) { return x.piezas.map(pz => [N(pz.cant), N(pz.largo), N(pz.ancho), String(pz.mod ? pz.mod + ' ' + (pz.des0 || '') : (pz.desc || '')).trim().slice(0, 50), x.rota ? 1 : 0, ...(sinCantos ? [0, 0, 0, 0] : [pz.cantos.sup | 0, pz.cantos.inf | 0, pz.cantos.izq | 0, pz.cantos.der | 0])]); }
+/* Dilegno lee texto separado por tabuladores: cant · base · altura · detalle · rota · canto_arr · canto_aba · canto_der · canto_izq, cada línea termina en tabulador */
+function txtDilegnoPl(x, sinCantos) {
+  const lines = [['cant', 'base', 'altura', 'detalle', 'rota', 'canto_arr', 'canto_aba', 'canto_der', 'canto_izq'].join('\t') + '\t'];
+  filasProvPl(x, sinCantos).forEach(([c, b, a, d, r, arr, aba, izq, der]) => lines.push([c, b, a, String(d).replace(/[\t\r\n]+/g, ' '), r, arr, aba, der, izq].join('\t') + '\t'));
+  return lines.join('\r\n') + '\r\n';
+}
+const fsafePl = s => String(s || '').replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim();
+function needExcelJS() { if (!window.ExcelJS) { toast('No se pudo cargar el generador de Excel. Recargá la página.'); return false; } return true; }
+async function xbufBlob(wb) { const b = await wb.xlsx.writeBuffer(); return new Blob([b], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); }
+function hojaNom(wb, s) { let b = String(s || 'Placa').replace(/[\\/?*[\]:]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 28) || 'Placa', n = b, i = 2; while (wb.getWorksheet(n)) n = b.slice(0, 25) + ' ' + i++; return n; }
+async function bajarImprimirPl(p, soloK) {
+  if (!needExcelJS()) return; const lista = (p.items || []).map((it, k) => ({ it, k })).filter(x => N(x.it.pedir) > 0 && (soloK == null || x.k === soloK)); const xs = await piezasPedido(p, lista);
+  const wb = new ExcelJS.Workbook(); wb.creator = 'Mueler Taller';
+  const ws = wb.addWorksheet(hojaNom(wb, 'Pedido ' + numPed(p)));
+  [6.5, 10, 9.7, 30, 14, 3.6, 3.6, 3.6, 3.6].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+  const F = { name: 'Aptos Narrow', size: 11 }, FB = Object.assign({}, F, { bold: true }); const thin = { style: 'thin' }, box = { top: thin, bottom: thin, left: thin, right: thin }; const center = { horizontal: 'center', vertical: 'middle' };
+  const HEAD = ['Cant', 'Longitud', 'Ancho', 'Designación', 'Módulo', 'L1', 'L2', 'A1', 'A2'];
+  let r = 1;
+  xs.forEach((x, k) => {
+    if (k) r += 2;
+    const t = ws.getRow(r); t.getCell(1).value = `${x.it.cod}  ·  ${fmt(x.it.pedir)} placa${N(x.it.pedir) === 1 ? '' : 's'}  ·  ${x.prov}${modoIt(x.it, p) === 'entera' ? ' (entera, se corta en el taller)' : ''}${x.it.nroProv ? ' Nº ' + x.it.nroProv : ''}${x.aparte ? `  ·  ${x.aparte} entera${x.aparte === 1 ? '' : 's'} aparte` : ''}`; t.getCell(1).font = Object.assign({}, FB, { size: 12 }); ws.mergeCells(r, 1, r, 9);
+    t.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8E8E8' } }; r++;
+    const h = ws.getRow(r); HEAD.forEach((v, i) => { const c = h.getCell(i + 1); c.value = v; c.font = FB; c.alignment = i <= 2 || i >= 5 ? center : { vertical: 'middle' }; if (i >= 5) c.border = box; }); r++;
+    if (!x.piezas.length) { ws.getRow(r).getCell(4).value = 'Placas enteras, sin despiece'; ws.getRow(r).getCell(4).font = F; r++; }
+    x.piezas.forEach(pz => { const row = ws.getRow(r); const ed = [pz.cantos.sup, pz.cantos.inf, pz.cantos.izq, pz.cantos.der].map(e => (e | 0) || null);
+      [N(pz.cant), N(pz.largo), N(pz.ancho), pz.des0 || pz.desc, pz.mod || '', ...ed].forEach((v, i) => { const c = row.getCell(i + 1); if (v != null && v !== '') c.value = v; c.font = F; c.alignment = i <= 2 || i >= 5 ? center : { vertical: 'middle' }; if (i >= 5) c.border = box; }); r++; });
+  });
+  ws.pageSetup = { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: 0.4, right: 0.4, top: 0.6, bottom: 0.5, header: 0.25, footer: 0.25 } };
+  const tit = `Pedido de placas ${numPed(p)} · ${modulosDe(p).map(x => x.n + ' ' + x.ms.join(', ')).join(' · ')}`;
+  ws.headerFooter = { oddHeader: '&L&"Aptos Narrow,Bold"' + tit.replace(/&/g, '&&') + '&R' + (p.fEnviado || today()), oddFooter: '&CPágina &P de &N' };
+  await offer(fsafePl(`Pedido ${numPed(p)}${soloK != null ? ' - ' + p.items[soloK].cod : ''} - para imprimir`) + '.xlsx', await xbufBlob(wb));
+}
 async function quitarModulo(modId) {
   const p = PED; const T = tipoDe(p); const os = (p.origen || []).filter(o => !o.manual && o.modId === modId); if (!os.length) return;
   await marcarModulos(os, null, T); p.origen = p.origen.filter(o => o.manual || o.modId !== modId); p.items = consolidar(p.origen, p.items, T);
@@ -2924,14 +3165,15 @@ async function unirPedidos(T) {
 const fAdjPed = document.createElement('input'); fAdjPed.type = 'file'; fAdjPed.accept = 'image/*,.pdf'; fAdjPed.hidden = true; document.body.appendChild(fAdjPed);
 fAdjPed.addEventListener('change', async () => {
   const f = fAdjPed.files[0]; fAdjPed.value = ''; if (!f || !PED) return;
-  if (!ASSETS) { toast('Adjuntar archivos no está disponible en esta vista. Abrí la página en claude.ai.'); return; }
-  try { toast('Subiendo ' + f.name + '…'); const r = await ASSETS.upload(f); PED.factura.adj.push({ id: r.id, nombre: f.name, tipo: r.contentType || f.type }); savePED(true); renderPedDet(); toast('Factura adjuntada'); } catch (e) { toast('No se pudo subir el archivo'); }
+  if (!ASSETS) { FACT_K = null; toast('Adjuntar archivos no está disponible en esta vista. Abrí la página en claude.ai.'); return; }
+  try { toast('Subiendo ' + f.name + '…'); const r = await ASSETS.upload(f); const adj = { id: r.id, nombre: f.name, tipo: r.contentType || f.type, fecha: today() }; if (FACT_K != null && PED.items[FACT_K]) { const it = PED.items[FACT_K]; (it.factAdj = it.factAdj || []).push(adj); } else PED.factura.adj.push(adj); FACT_K = null; savePED(true); renderPedDet(); toast('Factura adjuntada'); } catch (e) { toast('No se pudo subir el archivo'); }
 });
 $('view-ped').addEventListener('click', async e => {
   const b = e.target.closest('[data-pe]'); if (!b) return; const a = b.dataset.pe; const T = PED ? tipoDe(PED) : CTIPO;
   if (b.closest('summary') && a !== 'sumar') return;
   if (a === 'sumar') e.preventDefault();
   if (a === 'tipo') { CTIPO = b.dataset.v; renderPed(); }
+  if (a === 'mvista') { MVISTA = b.dataset.v; LS.set('mueler_mvista', MVISTA); renderPed(); }
   if (a === 'abrir') { PED = clone(PEDS.find(p => p.id === b.dataset.id)); renderPed(); window.scrollTo(0, 0); }
   if (a === 'volver') { await flushPED(); PED = null; PEDIT = null; renderPed(); }
   if (a === 'sumar') { const [pid, mid] = b.dataset.id.split('|'); sumarAlPedido(T, porPedir(T).filter(x => x.p.id === pid && x.m.id === mid)); }
@@ -2960,12 +3202,41 @@ $('view-ped').addEventListener('click', async e => {
     try { await movStock({ tipo: T, cod, nombre: itemInfo(cod, T).nombre, cant: q, motivo: 'ajuste', ref: '', refNum: '', nota: ($('aj-nota').value || '').trim() || 'Ajuste manual' }); renderPed(); toast('Stock actualizado.'); } catch (er) { toast('No se pudo guardar.'); } return; }
   if (a === 'pl-ver') { OPTPOPEN[b.dataset.cod] = !OPTPOPEN[b.dataset.cod]; renderPedDet(); return; }
   if (a === 'pl-opti') { optiPedido(PED, b.dataset.cod); return; }
+  if (['pl-pedido', 'pl-pedtodas', 'pl-conf', 'pl-recib', 'pl-undo', 'edit-it', 'pl-ver', 'pl-opti'].includes(a)) OPENDD = null;
+  if (a === 'pl-fact') { FACT_K = +b.dataset.k; fAdjPed.click(); return; }
+  if (a === 'pl-imp') { await flushPED(); bajarImprimirPl(PED); return; }
+  if (a === 'pl-impk') { bajarImprimirPl(PED, +b.dataset.k); return; }
+  if (a === 'pl-txt1') { bajarTxtPl(PED, +b.dataset.k); return; }
+  if (a === 'pl-xls1') { bajarXlsPl(PED, +b.dataset.k); return; }
+  if (a === 'pl-csv1') { bajarCsvPl(PED, +b.dataset.k); return; }
+  if (a === 'pl-copy') { copiarTxt(txtProvPl(PED, b.dataset.prov), 'Mensaje para ' + b.dataset.prov); return; }
+  if (a === 'pl-copy1') { const k = +b.dataset.k; copiarTxt(txtProvPl(PED, provIt(PED.items[k], PED), k), 'Mensaje para ' + provIt(PED.items[k], PED)); return; }
+  if (a === 'pl-del') { OPENDD = null; const k = +b.dataset.k; const it = PED.items[k]; if (!it) return;
+    const os = (PED.origen || []).filter(o => o.cod === it.cod); const mods = [...new Set(os.filter(o => !o.manual).map(o => `${o.prNum} ${o.modCod}`))]; const man = os.filter(o => o.manual).length;
+    confirmDlg(`Eliminar ${esc(it.cod)} del pedido ${esc(numPed(PED))}`, `¿Estás seguro? Esta placa sale del pedido.${mods.length ? ` <b>${mods.map(esc).join(', ')}</b> ${mods.length === 1 ? 'vuelve' : 'vuelven'} a “Listos para sumar” en Compras, para pedirla más adelante.` : ''}${man ? ` Lo agregado aparte (${man}) se borra.` : ''} La ficha del módulo no cambia.`, 'Eliminar', async () => {
+      try { await marcarModulos(os.filter(o => !o.manual), null, 'placas'); await borrarMovs(x => x.ref === PED.id && x.cod === it.cod && x.motivo === 'salida');
+        PED.origen = PED.origen.filter(o => o.cod !== it.cod); PED.items = consolidar(PED.origen, PED.items, 'placas'); if (PED.estado !== 'borrador') syncEstadoPl(PED); PEDIT = null;
+        savePED(true); renderPedDet(); updTabs(); toast(`${it.cod} eliminada del pedido.`); } catch (er) { console.error(er); toast('No se pudo eliminar. Revisá la conexión.'); } }, true); return; }
+  if (a === 'pl-modo' || a === 'pl-cantos1') { const it = PED.items[+b.dataset.k]; if (a === 'pl-modo') it.modo = b.dataset.v; else it.sinCantos = b.dataset.v === '1'; savePED(true); renderPedDet(); return; }
+  if (a === 'pl-pedido' || a === 'pl-pedtodas') { fijarEst(PED); const ks = a === 'pl-pedido' ? [+b.dataset.k] : PED.items.map((it, k) => k).filter(k => provIt(PED.items[k], PED) === b.dataset.prov && PED.items[k].est === 'armado' && N(PED.items[k].pedir) > 0);
+    const eraLote = PED.estado === 'borrador'; ks.forEach(k => { const it = PED.items[k]; it.est = 'pedido'; it.fPedido = today(); }); syncEstadoPl(PED); savePED(true); renderPedDet();
+    const sinNro = ks.some(k => !PED.items[k].nroProv && /dilegno/i.test(provIt(PED.items[k], PED)));
+    toast((ks.length > 1 ? `${ks.length} placas pedidas.` : 'Placa pedida.') + (sinNro ? ' Cargá el Nº de plano cuando te llegue el mail de Dilegno.' : '') + (eraLote ? ` Los módulos nuevos van a un pedido nuevo.` : '')); return; }
+  if (a === 'pl-conf') { fijarEst(PED); const it = PED.items[+b.dataset.k]; it.est = 'confirmado'; it.fConf = today(); syncEstadoPl(PED); savePED(true); renderPedDet(); toast('Compra confirmada. Cuando llegue, cargá lo recibido.'); return; }
+  if (a === 'pl-recib') { fijarEst(PED); const it = PED.items[+b.dataset.k]; if (it.recib == null) it.recib = N(it.pedir);
+    try { await borrarMovs(x => x.ref === PED.id && x.cod === it.cod && x.motivo === 'recepcion'); const tall = manualDe(PED, it.cod).filter(o => (o.para || 'Taller') === 'Taller').reduce((s2, o) => s2 + N(o.cant), 0);
+      const sob = Math.floor(N(it.recib) + N(it.deStock) - (N(it.req) - tall) + 1e-6); if (sob > 0) await movStock({ tipo: 'placas', cod: it.cod, nombre: it.nombre || it.cod, cant: sob, motivo: 'recepcion', ref: PED.id, refNum: numPed(PED), nota: 'Sobrante del pedido' }); } catch (er) { toast('No se pudo registrar el stock.'); }
+    it.est = 'recibido'; it.fRecib = today(); syncEstadoPl(PED); savePED(true); renderPedDet(); toast('Recibida: figura En taller en cada módulo.'); return; }
+  if (a === 'pl-undo') { fijarEst(PED); const it = PED.items[+b.dataset.k];
+    if (it.est === 'recibido') { try { await borrarMovs(x => x.ref === PED.id && x.cod === it.cod && x.motivo === 'recepcion'); } catch (er) { } it.est = 'confirmado'; it.fRecib = ''; }
+    else if (it.est === 'confirmado') { it.est = 'pedido'; it.fConf = ''; } else if (it.est === 'pedido') { it.est = 'armado'; it.fPedido = ''; }
+    syncEstadoPl(PED); savePED(true); renderPedDet(); return; }
   if (a === 'rnd') { const it = PED.items[+b.dataset.k]; it.pedir = +b.dataset.v; it.pedirEd = true; savePED(); renderPedDet(); return; }
   if (a === 'edit-it') { if (PEDIT && PEDIT.cod === b.dataset.cod) { PEDIT = null; renderPedDet(); } else abrirEditor(b.dataset.cod, T); return; }
   if (a === 'edit-cancel') { PEDIT = null; renderPedDet(); return; }
   if (a === 'edit-ok') { aplicarEditor(); return; }
   if (a === 'del-man') { PED.origen.splice(+b.dataset.k, 1); PED.items = consolidar(PED.origen, PED.items, T); savePED(true); renderPedDet(); }
-  if (a === 'enviar') confirmDlg(`Enviar el pedido ${esc(numPed(PED))}`, `Queda como pedido a <b>${esc(PED.prov || TIPOS[T].prov)}</b> con fecha de hoy. En cada módulo, estas líneas pasan a “Pedido ${esc(numPed(PED))}”. Descargá el Excel o copiá el texto para mandarlo.`, 'Enviar pedido', () => { PED.estado = 'enviado'; PED.fEnviado = today(); savePED(true); renderPedDet(); toast(`Pedido ${numPed(PED)} enviado. El próximo faltante abre un pedido nuevo.`); });
+  if (a === 'enviar') confirmDlg(`Enviar el pedido ${esc(numPed(PED))}`, `Queda como pedido a <b>${T === 'placas' ? esc([...new Set((PED.items || []).filter(it => N(it.pedir) > 0).map(it => provIt(it, PED)))].join(' y ')) : esc(PED.prov || TIPOS[T].prov)}</b> con fecha de hoy. En cada módulo, estas líneas pasan a “Pedido ${esc(numPed(PED))}”. ${T === 'placas' ? 'Bajá los archivos de cada proveedor y después cargá el Nº de pedido que te den.' : 'Descargá el Excel o copiá el texto para mandarlo.'}`, 'Enviar pedido', () => { PED.estado = 'enviado'; PED.fEnviado = today(); savePED(true); renderPedDet(); toast(`Pedido ${numPed(PED)} enviado. El próximo faltante abre un pedido nuevo.`); });
   if (a === 'volver-borr') { PED.estado = 'borrador'; PED.fEnviado = ''; savePED(true); renderPedDet(); }
   if (a === 'recibir') { PED.items.forEach(it => { if (it.recib == null) it.recib = N(it.pedir); });
     try { await borrarMovs(x => x.ref === PED.id && x.motivo === 'recepcion');
@@ -2983,12 +3254,16 @@ $('view-ped').addEventListener('click', async e => {
   }
   if (a === 'del') confirmDlg('Borrar el pedido ' + esc(numPed(PED)), 'Lo de los módulos vuelve a “Listos para sumar”. Lo agregado a mano se pierde.', 'Borrar', async () => { try { await marcarModulos(PED.origen || [], null, T); await borrarMovs(x => x.ref === PED.id && x.motivo === 'salida'); await StorePed.del(PED.id); PED = null; renderPed(); toast('Pedido borrado.'); } catch (er) { toast('No se pudo borrar.'); } }, true);
 });
-$('view-ped').addEventListener('input', e => { const t = e.target; if (t.dataset.ed) return; if (!PED) return; if (t.tagName === 'SELECT' && t.dataset.pq) return; if (t.dataset.pi) { const [k, f] = t.dataset.pi.split('.'); const it = PED.items[+k]; it[f] = N(t.value); if (f === 'pedir') it.pedirEd = true; savePED(); } if (t.dataset.pq) { setPath(PED, t.dataset.pq, t.value); savePED(); } });
+$('view-ped').addEventListener('input', e => { const t = e.target; if (t.dataset.ed) return; if (!PED) return;
+  if (t.dataset.ps && t.tagName !== 'SELECT') { const [k, f] = t.dataset.ps.split('.'); const it = PED.items[+k]; if (it) { it[f] = t.value.trim(); savePED(); } return; } if (t.tagName === 'SELECT' && t.dataset.pq) return; if (t.dataset.pi) { const [k, f] = t.dataset.pi.split('.'); const it = PED.items[+k]; it[f] = N(t.value); if (f === 'pedir') it.pedirEd = true; savePED(); } if (t.dataset.pq) { setPath(PED, t.dataset.pq, t.value); savePED(); } });
 $('view-ped').addEventListener('change', async e => {
   const t = e.target;
   if (t.dataset.ed) { const [pid, mid, hid, campo] = t.dataset.ed.split('|'); await editarLinea(pid, mid, hid, campo, N(t.value), CTIPO); toast('Cambiado también en la ficha del módulo.'); return; }
   if (!PED) return;
   if (t.dataset.pi && /pedir/.test(t.dataset.pi)) renderPedDet();
+  if (t.dataset.ps && t.tagName === 'SELECT') { const [k, f] = t.dataset.ps.split('.'); const it = PED.items[+k]; if (it) { if (t.value === '__otro') { it.provOtro = true; it[f] = ''; } else { it.provOtro = false; it[f] = t.value; } if (f === 'prov') delete it.modo; savePED(true); renderPedDet(); if (t.value === '__otro') setTimeout(() => { const x = document.querySelector(`#view-ped input[data-ps="${k}.prov"]`); if (x) x.focus(); }, 30); } return; }
+  if (t.dataset.ps && t.dataset.otro) { renderPedDet(); return; }
+  if (t.name === 'pl-cantos') { PED.sinCantos = t.value === '0'; savePED(true); return; }
   if (t.tagName === 'SELECT' && t.dataset.pq === 'prov') { PED.prov = t.value === '__otro' ? '' : t.value; savePED(); renderPedDet(); if (t.value === '__otro') setTimeout(() => { const x = document.querySelector('#view-ped input[data-pq="prov"]'); if (x) x.focus(); }, 30); return; }
   if (PEDIT && t.id === 'pe-ed-prod') { const p = CAT.find(x => x.n === t.value); if (p) { const m = marcaLinea(p, 'cara'); Object.assign(PEDIT, { prod: p.c, marca: m, c: artsDe(p, m)[0].c }); renderPedDet(); } }
   if (PEDIT && t.id === 'pe-ed-marca') { PEDIT.marca = t.value; PEDIT.c = artsDe(CATP[PEDIT.prod], t.value)[0].c; renderPedDet(); }
@@ -3016,6 +3291,7 @@ $('cfgpop').addEventListener('click', e => { if (e.target.closest('#b-backup')) 
 document.addEventListener('click', e => { if (!e.target.closest('.cfgmenu')) { $('cfgpop').hidden = true; $('b-config').setAttribute('aria-expanded', 'false'); } });
 let ERRS = [];
 function reportErr(e) { const msg = String((e && (e.message || e.reason && e.reason.message)) || e || 'error'); ERRS.push(new Date().toLocaleTimeString('es-AR') + ' ' + msg); if (ERRS.length > 20) ERRS.shift(); toast('Algo falló: ' + msg.slice(0, 120) + '. Si se repite, recargá la página.'); }
+(function () { const hb = document.querySelector('header.bar'); if (!hb) return; const set = () => document.documentElement.style.setProperty('--barh', hb.offsetHeight + 'px'); set(); try { new ResizeObserver(set).observe(hb); } catch (e) { window.addEventListener('resize', set); } })();
 window.addEventListener('error', e => { if (e && e.message && !/ResizeObserver/.test(e.message)) reportErr(e.error || e.message); });
 window.addEventListener('unhandledrejection', e => reportErr(e.reason));
 /* ---------------- Versión web: base compartida del taller (Google Sheets + Apps Script) ---------------- */
@@ -3072,7 +3348,7 @@ async function exportarDatos() {
   toast('Juntando los datos…'); const out = { formato: 'mueler-sistema-backup-1', fecha: new Date().toISOString(), colecciones: {}, config: {} };
   try {
     for (const c of COLS_SIS) { const s = await DB.collection(c).limit(5000).get(); out.colecciones[c] = s.docs.map(d => Object.assign({ id: d.id }, d.data())); }
-    for (const id of ['taller', 'listas']) { try { const s = await DB.doc('config/' + id).get(); if (s.exists) out.config[id] = s.data(); } catch (e) { } }
+    for (const id of ['taller', 'listas', 'usuarios']) { try { const s = await DB.doc('config/' + id).get(); if (s.exists) out.config[id] = s.data(); } catch (e) { } }
   } catch (e) { console.error(e); toast('No se pudieron leer los datos.'); return; }
   const n = Object.values(out.colecciones).reduce((a, x) => a + x.length, 0);
   await offer(`Mueler_Sistema_datos_${today().replace(/\//g, '-')}.json`, JSON.stringify(out));
@@ -3123,17 +3399,183 @@ async function abrirEnOptimizador(j) {
 const _flush = flush;
 flush = async function () { await _flush(); if (!DB) PRES = Object.values(LOCAL().pres).map(p => Object.assign({}, p)).sort((a, b) => b.upd - a.upd); };
 $('view-lista').innerHTML = `<div class="empty"><b>Cargando presupuestos…</b></div>`;
+/* ---------------- Usuarios y permisos ----------------
+   Admin: ve todo con precios. Taller: ve presupuestos sin montos (solo lectura), sin Configuración de precios ni copias.
+   OJO: en claude.ai y en esta versión web el precio sigue en la misma base: esto OCULTA en pantalla, no bloquea.
+   Para la web, el bloqueo real va del lado del Apps Script (precios en una hoja que solo se lee con clave admin). */
+let USR = null, USERS = [];
+function ESADMIN() { return !!USR && USR.rol === 'admin'; }
+async function hashClave(salt, clave) {
+  const txt = salt + '|' + clave;
+  try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); }
+  catch (e) { let h = 5381; for (let i = 0; i < txt.length; i++) h = ((h << 5) + h + txt.charCodeAt(i)) >>> 0; return 'd' + h.toString(16); }
+}
+async function cargarUsuarios() {
+  USERS = LS.get('mueler_usuarios', []);
+  if (DB && typeof DB.doc === 'function') { try { const s = await DB.doc('config/usuarios').get(); if (s.exists) { USERS = JSON.parse(s.data().lista || '[]'); LS.set('mueler_usuarios', USERS); } } catch (e) { } }
+}
+async function guardarUsuarios() {
+  LS.set('mueler_usuarios', USERS);
+  if (DB && typeof DB.doc === 'function') await DB.doc('config/usuarios').set({ lista: JSON.stringify(USERS), upd: Date.now() });
+}
+function aplicarRol() {
+  document.body.classList.toggle('taller', !ESADMIN());
+  const b = $('b-user'); if (b) { b.hidden = !USR; b.textContent = USR ? (USR.nombre + (ESADMIN() ? '' : ' · Taller')) : ''; }
+  if (!ESADMIN() && ['precios', 'usuarios'].includes(VIEW)) show('inicio'); else if (VIEW) show(VIEW);
+}
+function setUser(u) { USR = u; LS.set('mueler_sesion', { uid: u.id, h: u.hash }); aplicarRol(); }
+async function login() {
+  await cargarUsuarios();
+  const ses = LS.get('mueler_sesion', null); const u = ses && USERS.find(x => x.id === ses.uid && x.hash === ses.h);
+  if (u) { USR = u; aplicarRol(); return; }
+  return new Promise(res => loginDlg(res));
+}
+function loginDlg(done) {
+  const m = document.createElement('div'); m.className = 'modal'; $('modal-root').appendChild(m);
+  const primero = !USERS.length;
+  m.innerHTML = `<div class="dlg" role="dialog" aria-modal="true" style="width:min(420px,100%)"><header><h2>${primero ? 'Creá tu usuario de administrador' : 'Entrar a Mueler Taller'}</h2></header>
+    ${primero ? `<p class="note" style="margin:0">Es el usuario que ve todo, con precios. Después, desde Configuración → Usuarios, creás los del taller.</p>
+      <div class="field"><label class="lbl" for="lg-n">Nombre</label><input type="text" id="lg-n" autocomplete="username" placeholder="Ej: Ger"></div>`
+      : `<div class="field"><label class="lbl" for="lg-u">Usuario</label><select id="lg-u">${USERS.map(x => `<option value="${esc(x.id)}">${esc(x.nombre)}</option>`).join('')}</select></div>`}
+    <div class="field"><label class="lbl" for="lg-c">Clave</label><input type="password" id="lg-c" autocomplete="${primero ? 'new-password' : 'current-password'}" style="font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--ink)"></div>
+    ${primero ? `<div class="field"><label class="lbl" for="lg-c2">Repetí la clave</label><input type="password" id="lg-c2" autocomplete="new-password" style="font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--ink)"></div>` : ''}
+    <p class="note falta-t" id="lg-err" style="margin:0" hidden></p>
+    <div class="row" style="justify-content:flex-end"><button class="btn primary" id="lg-ok">${primero ? 'Crear y entrar' : 'Entrar'}</button></div></div>`;
+  const q = s => m.querySelector(s); const err = t => { q('#lg-err').textContent = t; q('#lg-err').hidden = false; };
+  setTimeout(() => { const f = q(primero ? '#lg-n' : '#lg-c'); f && f.focus(); }, 30);
+  const ok = async () => {
+    const clave = q('#lg-c').value;
+    if (primero) {
+      const nombre = q('#lg-n').value.trim(); if (!nombre) return err('Poné tu nombre.'); if (clave.length < 4) return err('La clave tiene que tener al menos 4 caracteres.'); if (clave !== q('#lg-c2').value) return err('Las claves no coinciden.');
+      const salt = uid(); const u = { id: uid(), nombre, rol: 'admin', salt, hash: await hashClave(salt, clave), creado: Date.now() };
+      USERS = [u]; try { await guardarUsuarios(); } catch (e) { return err('No se pudo guardar. Revisá la conexión.'); }
+      m.remove(); setUser(u); toast(`Listo, ${nombre}. Creá los usuarios del taller en Configuración → Usuarios.`); done(); return;
+    }
+    const u = USERS.find(x => x.id === q('#lg-u').value); if (!u) return err('Elegí el usuario.');
+    if (await hashClave(u.salt, clave) !== u.hash) { q('#lg-c').value = ''; return err('La clave no es correcta.'); }
+    m.remove(); setUser(u); done();
+  };
+  q('#lg-ok').onclick = ok; m.addEventListener('keydown', e => { if (e.key === 'Enter') ok(); });
+}
+$('b-user').addEventListener('click', () => { if (!USR) return; const d = modal(`${H(esc(USR.nombre))}<p style="margin:0">Entraste como <b>${ESADMIN() ? 'Administrador' : 'Taller (sin precios)'}</b>.</p><div class="row" style="justify-content:flex-end"><button class="btn" data-close>Cancelar</button><button class="btn primary" id="cs-ok">Cerrar sesión</button></div>`); d.q('#cs-ok').onclick = () => { d.close(); cerrarSesion(); }; });
+function cerrarSesion() { LS.set('mueler_sesion', null); USR = null; aplicarRol(); loginDlg(() => { }); }
+function renderUsuarios() {
+  const v = $('view-usuarios'); if (!ESADMIN()) { v.innerHTML = '<div class="empty">Solo el administrador puede ver esta pantalla.</div>'; return; }
+  const admins = USERS.filter(u => u.rol === 'admin').length;
+  v.innerHTML = `<div class="row stickhead" style="justify-content:space-between"><h2>Usuarios</h2><span class="note">Administrador: ve todo, con precios. Taller: ve presupuestos, proyectos y compras sin montos.</span></div>
+    <div class="panel"><div class="tbox"><table class="t"><thead><tr><th>Nombre</th><th>Permiso</th><th></th></tr></thead><tbody>
+    ${USERS.map(u => `<tr><td><b>${esc(u.nombre)}</b>${USR && u.id === USR.id ? ' <span class="chip e4">vos</span>' : ''}</td>
+      <td><select data-us="rol" data-id="${esc(u.id)}" style="width:auto" ${u.rol === 'admin' && admins === 1 ? 'disabled title="Tiene que quedar al menos un administrador"' : ''}><option value="admin" ${u.rol === 'admin' ? 'selected' : ''}>Administrador</option><option value="taller" ${u.rol !== 'admin' ? 'selected' : ''}>Taller (sin precios)</option></select></td>
+      <td><div class="row" style="justify-content:flex-end"><button class="btn sm" data-us="clave" data-id="${esc(u.id)}">Cambiar clave</button>${USR && u.id === USR.id ? '' : `<button class="btn sm danger" data-us="del" data-id="${esc(u.id)}">Borrar</button>`}</div></td></tr>`).join('')}
+    </tbody></table></div></div>
+    <div class="panel"><header><h3>Agregar usuario</h3></header><div class="addrow">
+      <div class="field" style="flex:2 1 180px"><label class="lbl" for="us-n">Nombre</label><input type="text" id="us-n" placeholder="Ej: Jor"></div>
+      <div class="field" style="flex:1 1 140px"><label class="lbl" for="us-c">Clave</label><input type="text" id="us-c" placeholder="Mínimo 4 caracteres" autocomplete="off"></div>
+      <div class="field" style="flex:1 1 160px"><label class="lbl" for="us-r">Permiso</label><select id="us-r"><option value="taller">Taller (sin precios)</option><option value="admin">Administrador</option></select></div>
+      <button class="btn primary" data-us="add">Agregar</button></div>
+      <p class="note" style="margin:0">Las claves se guardan cifradas. Si alguien se la olvida, se la cambiás desde acá.</p></div>`;
+}
+$('view-usuarios').addEventListener('click', async e => {
+  const b = e.target.closest('[data-us]'); if (!b || b.tagName === 'SELECT') return; const a = b.dataset.us; const u = USERS.find(x => x.id === b.dataset.id);
+  try {
+    if (a === 'add') { const nombre = $('us-n').value.trim(), clave = $('us-c').value; if (!nombre) return toast('Poné el nombre.'); if (clave.length < 4) return toast('La clave tiene que tener al menos 4 caracteres.'); if (USERS.some(x => x.nombre.toLowerCase() === nombre.toLowerCase())) return toast('Ya hay un usuario con ese nombre.');
+      const salt = uid(); USERS.push({ id: uid(), nombre, rol: $('us-r').value, salt, hash: await hashClave(salt, clave), creado: Date.now() }); await guardarUsuarios(); renderUsuarios(); toast(`Usuario ${nombre} creado.`); }
+    if (a === 'clave' && u) { const d = modal(`${H('Nueva clave para ' + esc(u.nombre))}<div class="field"><label class="lbl">Clave</label><input type="text" id="nc" autocomplete="off" placeholder="Mínimo 4 caracteres"></div><div class="row" style="justify-content:flex-end"><button class="btn" data-close>Cancelar</button><button class="btn primary" id="nc-ok">Guardar</button></div>`);
+      d.q('#nc-ok').onclick = async () => { const c = d.q('#nc').value; if (c.length < 4) return toast('Mínimo 4 caracteres.'); u.salt = uid(); u.hash = await hashClave(u.salt, c); try { await guardarUsuarios(); } catch (er) { return toast('No se pudo guardar.'); } if (USR && USR.id === u.id) setUser(u); d.close(); toast('Clave cambiada.'); }; }
+    if (a === 'del' && u) confirmDlg('Borrar el usuario ' + esc(u.nombre), '¿Estás seguro? No va a poder entrar más. Lo que cargó queda guardado.', 'Borrar', async () => { USERS = USERS.filter(x => x.id !== u.id); await guardarUsuarios(); renderUsuarios(); toast('Usuario borrado.'); }, true);
+  } catch (er) { console.error(er); toast('No se pudo guardar. Revisá la conexión.'); }
+});
+$('view-usuarios').addEventListener('change', async e => { const t = e.target; if (t.dataset.us !== 'rol') return; const u = USERS.find(x => x.id === t.dataset.id); if (!u) return; u.rol = t.value; try { await guardarUsuarios(); } catch (er) { toast('No se pudo guardar.'); } if (USR && USR.id === u.id) setUser(u); else renderUsuarios(); });
+
+/* ---------------- Inicio: pendientes del taller ---------------- */
+function materialesOK(m) { return ['placas', 'cantos', 'herrajes'].every(T => { const e = estadoT(m, T); return e.t === 'En taller' || e.t === 'De stock' || /^Sin (cantos|herrajes|placas)$/.test(e.t); }); }
+function faltaMod(m) { const out = []; if (!m.csv) out.push('Falta el CSV'); [['placas', 'Madera'], ['cantos', 'Cantos'], ['herrajes', 'Herrajes']].forEach(([T, n]) => { const e = estadoT(m, T); if (e.c === 'e2' && /definir|catálogo|Definir/.test(e.t)) out.push(`${n}: ${e.t.toLowerCase()}`); }); return out; }
+function renderInicio() {
+  const v = $('view-inicio');
+  const sumar = [['placas', 'Madera'], ['cantos', 'Cantos'], ['herrajes', 'Herrajes']].map(([T, n]) => ({ T, n, ls: porPedir(T) })).filter(x => x.ls.length);
+  const mad = PEDS.filter(p => tipoDe(p) === 'placas' && p.estado !== 'recibido').flatMap(p => (p.items || []).filter(it => N(it.pedir) > 0).map(it => ({ p, it, e: itEst(it, p) })));
+  const madPedir = mad.filter(x => x.e === 'armado'), madConf = mad.filter(x => x.e === 'pedido'), madLlega = mad.filter(x => x.e === 'confirmado');
+  const otros = PEDS.filter(p => tipoDe(p) !== 'placas');
+  const armando = otros.filter(p => p.estado === 'borrador' && (p.items || []).length), llegar = otros.filter(p => p.estado === 'enviado');
+  const mods = PROYS.flatMap(pr => (pr.modulos || []).map(m => ({ pr, m })));
+  const definir = mods.filter(({ m }) => normEst('estDiseno', m.estDiseno) !== 'Listo' || faltaMod(m).length);
+  const armar = mods.filter(({ m }) => normEst('estDiseno', m.estDiseno) === 'Listo' && normEst('estArmado', m.estArmado) === 'Pendiente' && materialesOK(m));
+  const tile = (n, t, s, go) => `<button class="tile${n ? '' : ' cero'}" data-in="${go}"><b>${n}</b><span>${t}</span><small>${s}</small></button>`;
+  const cap = (arr, f, n = 8) => arr.slice(0, n).map(f).join('') + (arr.length > n ? `<div class="note">y ${arr.length - n} más…</div>` : '');
+  const fila = (izq, der, attrs, btn) => `<div class="infila"><div style="min-width:0">${izq}</div><div class="row" style="gap:8px">${der || ''}<button class="btn sm" ${attrs}>${btn}</button></div></div>`;
+  const modTxt = ({ pr, m }) => `<b>${esc(pr.num)}</b> ${esc(pr.obra || '')} · <b>${esc(m.cod || '—')}</b> ${esc(m.desc || '')}`;
+  const tot = sumar.length + madPedir.length + madConf.length + madLlega.length + armando.length + llegar.length + definir.length + armar.length;
+  v.innerHTML = `<div class="row stickhead" style="justify-content:space-between"><h2>Inicio</h2><span class="note">${USR ? 'Hola, ' + esc(USR.nombre) + '. ' : ''}Lo que hay que hacer hoy, de lo más urgente a lo que espera.</span></div>
+    <div class="tiles">${tile(sumar.reduce((s, x) => s + x.ls.length, 0) + madPedir.length + armando.length, 'Para pedir', 'módulos y pedidos sin mandar', 'sec-pedir')}${tile(madConf.length, 'Esperando presupuesto', 'pedidas, falta confirmar', 'sec-conf')}${tile(madLlega.length + llegar.length, 'Por llegar', 'confirmado, sin recibir', 'sec-llega')}${tile(definir.length, 'Para definir', 'módulos con diseño abierto', 'sec-def')}${tile(armar.length, 'Listos para armar', 'con todo el material', 'sec-armar')}</div>
+    ${!tot ? '<div class="empty"><b>Todo al día.</b><span>No hay nada pendiente.</span></div>' : ''}
+    ${sumar.length || madPedir.length || armando.length ? `<div class="panel" id="sec-pedir"><header><h2>Para pedir</h2></header>
+      ${cap(sumar, x => fila(`<b>${x.n}</b> · ${x.ls.length} módulo${x.ls.length === 1 ? '' : 's'} con diseño Listo sin sumar a un pedido <span class="note">${x.ls.map(y => esc(y.p.num + ' ' + y.m.cod)).join(', ')}</span>`, '', `data-in="compras" data-t="${x.T}"`, 'Ir a Compras'))}
+      ${cap(madPedir, x => fila(`<b>${esc(x.it.cod)}</b> <span class="note">· ${fmt(x.it.pedir)} placa${N(x.it.pedir) === 1 ? '' : 's'} · ${esc(provIt(x.it, x.p))} · pedido ${esc(numPed(x.p))}</span>`, chip(EST_PL.armado), `data-in="ped" data-id="${esc(x.p.id)}"`, 'Abrir pedido'))}
+      ${cap(armando, p => fila(`Pedido de ${TIPOS[tipoDe(p)].t.toLowerCase()} <b>${esc(numPed(p))}</b> <span class="note">· ${(p.items || []).length} artículo${(p.items || []).length === 1 ? '' : 's'} sin enviar · creado ${esc(p.fCreado || '')}</span>`, '', `data-in="ped" data-id="${esc(p.id)}"`, 'Revisar y enviar'))}</div>` : ''}
+    ${madConf.length ? `<div class="panel" id="sec-conf"><header><h2>Esperando presupuesto del proveedor</h2></header>
+      ${cap(madConf, x => fila(`<b>${esc(x.it.cod)}</b> <span class="note">· ${esc(provIt(x.it, x.p))}${x.it.nroProv ? ' · Nº ' + esc(x.it.nroProv) : ''} · pedida ${esc(x.it.fPedido || '')}</span>`, !x.it.nroProv && /dilegno/i.test(provIt(x.it, x.p)) ? '<span class="chip e2">Falta el Nº de plano</span>' : '', `data-in="ped" data-id="${esc(x.p.id)}"`, 'Abrir'))}</div>` : ''}
+    ${madLlega.length || llegar.length ? `<div class="panel" id="sec-llega"><header><h2>Por llegar</h2><span class="note">Cuando llegue, confirmá la recepción para que figure En taller.</span></header>
+      ${cap(madLlega, x => fila(`<b>${esc(x.it.cod)}</b> <span class="note">· ${fmt(x.it.pedir)} placa${N(x.it.pedir) === 1 ? '' : 's'} · ${esc(provIt(x.it, x.p))} · confirmada ${esc(x.it.fConf || '')}</span>`, '', `data-in="ped" data-id="${esc(x.p.id)}"`, 'Registrar llegada'))}
+      ${cap(llegar, p => fila(`${TIPOS[tipoDe(p)].t} <b>${esc(numPed(p))}</b> <span class="note">· ${esc(p.prov || TIPOS[tipoDe(p)].prov)} · pedido ${esc(p.fEnviado || '')}</span>`, '', `data-in="ped" data-id="${esc(p.id)}"`, 'Registrar llegada'))}</div>` : ''}
+    ${definir.length ? `<div class="panel" id="sec-def"><header><h2>Para definir</h2><span class="note">Módulos con el diseño sin terminar o con materiales sin definir. Cuando pasan a Listo, sus materiales se suman solos al pedido.</span></header>
+      ${cap(definir, x => { const f = faltaMod(x.m); return fila(modTxt(x) + (f.length ? `<div class="note falta-t">${f.map(esc).join(' · ')}</div>` : ''), chip({ t: 'Diseño ' + normEst('estDiseno', x.m.estDiseno).toLowerCase(), c: estCls('estDiseno', normEst('estDiseno', x.m.estDiseno)) }), `data-in="mod" data-pr="${esc(x.pr.id)}" data-id="${esc(x.m.id)}"`, 'Abrir ficha'); }, 12)}</div>` : ''}
+    ${armar.length ? `<div class="panel" id="sec-armar"><header><h2>Listos para armar</h2><span class="note">Diseño listo y todo el material en el taller.</span></header>
+      ${cap(armar, x => fila(modTxt(x), '', `data-in="mod" data-pr="${esc(x.pr.id)}" data-id="${esc(x.m.id)}"`, 'Abrir ficha'), 12)}</div>` : ''}`;
+}
+$('view-inicio').addEventListener('click', e => {
+  const b = e.target.closest('[data-in]'); if (!b) return; const a = b.dataset.in;
+  if (a.startsWith('sec-')) { const s = $(a); if (s) s.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+  if (a === 'compras') { CTIPO = b.dataset.t; PED = null; show('ped'); }
+  if (a === 'ped') { const p = PEDS.find(x => x.id === b.dataset.id); if (!p) return; CTIPO = tipoDe(p); PED = clone(p); show('ped'); }
+  if (a === 'mod') abrirProy(b.dataset.pr, b.dataset.id);
+});
+
+/* ---------------- Proyectos sin presupuesto (obras anteriores al sistema) ---------------- */
+function moduloVacio(cod, desc) { return { id: uid(), mid: '', cod: cod || '', desc: desc || '', sector: '', opcion: '', frente: '', frenteTipo: '', frenteDef: '', estrTipo: '', estrDef: '', canto: '', agarre: 'A definir', laqueado: '', herrajesTxt: '', herrajes: [], estDiseno: 'Pendiente', estMadera: 'Sin pedir', estArmado: 'Pendiente', estInstal: 'Pendiente', coment: '', notas: '', csv: null, cantos: [], csvMap: {}, csvVeta: {} }; }
+function nuevoProyManualDlg() {
+  const d = modal(`${H('Proyecto sin presupuesto')}<p class="note" style="margin:0">Para obras que ya están en marcha y no salieron de un presupuesto del sistema. Poné el Nº real de la obra (puede ser menor a 391). Después cargás los módulos desde el CSV o a mano.</p>
+    <div class="grid2"><div class="field"><label class="lbl" for="pm-num">Nº de proyecto</label><input type="text" id="pm-num" placeholder="Ej: 385"></div><div class="field"><label class="lbl" for="pm-obra">Obra</label><input type="text" id="pm-obra" placeholder="Ej: Laprida PB"></div>
+    <div class="field"><label class="lbl" for="pm-cli">Cliente</label><input type="text" id="pm-cli"></div><div class="field"><label class="lbl" for="pm-arq">Arquitecto/a o estudio</label><input type="text" id="pm-arq"></div>
+    <div class="field"><label class="lbl" for="pm-fecha">Aprobado</label><input type="text" id="pm-fecha" placeholder="${esc(today())}"></div></div>
+    <div class="row" style="justify-content:flex-end"><button class="btn" data-close>Cancelar</button><button class="btn primary" id="pm-ok">Crear proyecto</button></div>`);
+  d.q('#pm-ok').onclick = async () => {
+    const num = d.q('#pm-num').value.trim(); if (!num) return toast('Poné el Nº de proyecto.'); if (PROYS.some(p => String(p.num) === num)) return toast(`Ya existe el proyecto ${num}.`);
+    const doc = { id: nid('r'), num, presId: '', presNum: '', presVersion: '', sinPres: true, obra: d.q('#pm-obra').value.trim(), cliente: d.q('#pm-cli').value.trim(), arq: d.q('#pm-arq').value.trim(), fechaAprob: d.q('#pm-fecha').value.trim(), creado: Date.now(), upd: Date.now(), notas: '', modulos: [] };
+    try { await StoreP.put(doc); if (!DB) PROYS = Object.values(LOC('mueler_proyectos')); d.close(); PR = clone(doc); PSEL = null; show('proy'); toast(`Proyecto ${num} creado. Ahora cargá los módulos.`); } catch (er) { toast('No se pudo crear. Revisá la conexión.'); }
+  };
+}
+function agregarModuloDlg() {
+  const d = modal(`${H('Agregar módulo')}<div class="grid2"><div class="field"><label class="lbl" for="am-cod">Código</label><input type="text" id="am-cod" value="M${String((PR.modulos || []).length + 1).padStart(2, '0')}"></div><div class="field"><label class="lbl" for="am-desc">Descripción</label><input type="text" id="am-desc" placeholder="Ej: Bajo mesada"></div>
+    <div class="field"><label class="lbl" for="am-sec">Sector (opcional)</label><input type="text" id="am-sec" placeholder="Ej: Cocina"></div></div>
+    <div class="row" style="justify-content:flex-end"><button class="btn" data-close>Cancelar</button><button class="btn primary" id="am-ok">Agregar y abrir la ficha</button></div>`);
+  d.q('#am-ok').onclick = () => { const m = moduloVacio(d.q('#am-cod').value.trim(), d.q('#am-desc').value.trim()); m.sector = d.q('#am-sec').value.trim(); PR.modulos.push(m); PSEL = m.id; savePR(true); d.close(); renderProyDet(); setTimeout(() => { const f = $('pr-ficha'); if (f) f.scrollIntoView({ block: 'start' }); }, 60); toast(`${m.cod || 'Módulo'} agregado. Cargale el CSV o completá la ficha a mano.`); };
+}
+async function modulosDesdeCSVs(files) {
+  const fs = [...files].filter(f => /\.(csv|txt)$/i.test(f.name)); if (!fs.length) { toast('Elegí los CSV que exporta OpenCutList.'); return; }
+  for (const f of fs) { const mm = f.name.match(/\bM\s*0*(\d+(?:\.\d+)?)\b/i); const m = moduloVacio(mm ? 'M' + mm[1].padStart(2, '0') : f.name.replace(/\.(csv|txt)$/i, ''), ''); PR.modulos.push(m); PSEL = m.id; await cargarCSV(f); }
+  toast(`${fs.length} módulo${fs.length === 1 ? '' : 's'} cargado${fs.length === 1 ? '' : 's'} desde CSV.`);
+}
+const fModCsv = document.createElement('input'); fModCsv.type = 'file'; fModCsv.accept = '.csv,.txt'; fModCsv.multiple = true; fModCsv.hidden = true; document.body.appendChild(fModCsv);
+fModCsv.addEventListener('change', () => { const fs = fModCsv.files; if (fs && fs.length && PR) modulosDesdeCSVs(fs); fModCsv.value = ''; });
+
+/* ---------------- Al pasar un módulo a Listo, se suma solo al pedido en armado ---------------- */
+async function autoSumar(prId, modId) {
+  const nums = [];
+  for (const T of ['placas', 'cantos', 'herrajes']) { const g = porPedir(T).filter(x => x.p.id === prId && x.m.id === modId); if (g.length) { const n = await sumarAlPedido(T, g, true); if (n) nums.push(n); } }
+  if (nums.length) toast(`Diseño Listo: se sumó a ${nums.join(', ')}. Si no correspondía, sacalo desde el pedido.`);
+}
 (async () => {
   try { if (EN_CLAUDE()) { [DB, DL, ASSETS] = await Promise.all([window.claude.use('db'), window.claude.use('downloads'), window.claude.use('assets')]); } else { DL = WEB_DL; DB = await conectarWeb(); } } catch (e) { console.error(e); }
   await Store.loadCfg();
+  await login();
   Store.listenPres(list => { PRES = list; if (VIEW === 'lista') renderLista(); if (VIEW === 'pres') updDup(); });
   const safe = fn => (...a) => { try { fn(...a); } catch (e) { console.error(e); reportErr(e); } };
   const escribiendo = id => { const a = document.activeElement; return a && a.closest && a.closest('#' + id) && /INPUT|TEXTAREA|SELECT/.test(a.tagName); };
-  StoreP.listen(safe(list => { PROYS = list; updTabs(); if (VIEW === 'proy' && !PR) renderProyLista(); if (VIEW === 'lista') renderLista(); if (VIEW === 'pres') updAprobarBtn(); if (VIEW === 'ped' && !PED && !escribiendo('view-ped')) renderCompras(); }));
+  StoreP.listen(safe(list => { PROYS = list; updTabs(); if (VIEW === 'inicio') renderInicio(); if (VIEW === 'proy' && !PR) renderProyLista(); if (VIEW === 'lista') renderLista(); if (VIEW === 'pres') updAprobarBtn(); if (VIEW === 'ped' && !PED && !escribiendo('view-ped')) renderCompras(); }));
   StoreS.listen(safe(list => { MOVS = list; if (VIEW === 'ped' && !escribiendo('view-ped')) renderPed(); }));
-  StorePed.listen(safe(list => { PEDS = list; updTabs(); if (VIEW === 'ped' && !PED && !escribiendo('view-ped')) renderCompras(); if (VIEW === 'proy' && !PR) renderProyLista(); }));
+  StorePed.listen(safe(list => { PEDS = list; updTabs(); if (VIEW === 'inicio') renderInicio(); if (VIEW === 'ped' && !PED && !escribiendo('view-ped')) renderCompras(); if (VIEW === 'proy' && !PR) renderProyLista(); }));
   if (DB && typeof DB.doc === 'function') { try { const s = await DB.doc('config/listas').get(); if (s.exists && Array.isArray(s.data().melaminas)) { MEL_EXTRA = [...new Set([...MEL_EXTRA, ...s.data().melaminas])]; LS.set('mueler_mel_extra', MEL_EXTRA); } } catch (e) { } }
-  if (VIEW === 'lista') renderLista();
+  show('inicio');
 })();
 window.addEventListener('beforeunload', () => { if (dirtyP || dirtyM.size) flush(); });
 /* ---------------- Presupuesto FINAL desde el Calculador ---------------- */
@@ -3229,4 +3671,4 @@ function dialogoFinal() {
 }
 })();</script>
 
-</html>
+</body></html>
