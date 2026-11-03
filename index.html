@@ -621,6 +621,11 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
           const g = R.correderas[k] || (R.correderas[k] = { largo: Math.round(largo), der: 0, izq: 0 });
           if (/der|right/i.test(des)) g.der += cant; else g.izq += cant;
         } else if (/bisagra|hinge/i.test(des)) R.bisagras += cant;
+        else if (/soporte/i.test(des) && /oval/i.test(des)) R.soportesOval = (R.soportesOval || 0) + cant;
+        else if (/(tubo|ca[ñn]o|barral)/i.test(des) && /oval/i.test(des)) {
+          const cm = String(des).match(/\(\s*([\d.,]+)\s*cm\s*\)/i); let largo = cm ? parseFloat(cm[1].replace(',', '.')) * 10 : Math.max(...dims);
+          if (!(largo > 0)) largo = 0; R.barrales = R.barrales || []; for (let q = 0; q < cant; q++) R.barrales.push(Math.round(largo));
+        }
         else { const k = cleanName(des) || mat || 'Accesorio'; R.accesorios[k] = (R.accesorios[k] || 0) + cant; }
       } else {
         const d2 = get(C.desc);
@@ -840,6 +845,7 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
     });
     return { frentes: [...frentesMat].join(' + '), estructura: [...estrMat].join(' + ') };
   }
+  const fmtCm = mm => String(Math.round(mm / 10 * 10) / 10).replace('.', ',');
   function desdeOCL(R, CFG, csvText) {
     const avisos = R.avisos.slice();
     const grupos = Object.values(R.tableros).map(t => {
@@ -859,6 +865,16 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
     });
     const sug = CALC.bisagrasSugeridas(R.puertas, CFG.bisagrasPorAlto);
     if (R.bisagras || R.puertas.length) herrajes.push({ id: uid(), art: CFG.bisagraArt, cant: R.bisagras, tipo: 'BASE', auto: 'bisagra', nota: `${R.bisagras} en el modelo · ${R.puertas.length} puertas`, sugeridas: sug });
+    // Barral (caño oval) y sus soportes: el caño se compra en barras de 3 m; los tramos se acomodan en las barras (primero el más largo)
+    const nomH = re => ((CFG.herrajes || []).find(h => re.test(h.n)) || {}).n || '';
+    if ((R.barrales || []).length) {
+      const tr = R.barrales.slice().sort((a, b) => b - a), barras = [];
+      tr.forEach(l => { const b = barras.find(x => x + l + 5 <= 3000); if (b != null) barras[barras.indexOf(b)] += l + 5; else barras.push(l); });
+      const art = nomH(/^Caño oval hierro cromado 3 m · Importado/i) || nomH(/^Caño oval hierro cromado/i) || nomH(/^PERFIL TUBULAR OVAL/i);
+      if (tr.some(l => l > 3000)) avisos.push(`Hay un tramo de caño oval de más de 3 m (${Math.max(...tr) / 10} cm). Revisalo.`);
+      herrajes.push({ id: uid(), art, cant: barras.length, tipo: 'BASE', auto: 'barral', nota: `${tr.length} tramo${tr.length === 1 ? '' : 's'} de ${tr.map(l => fmtCm(l)).join(', ')} cm → ${barras.length} caño${barras.length === 1 ? '' : 's'} de 3 m` });
+    }
+    if (R.soportesOval) herrajes.push({ id: uid(), art: nomH(/^Soporte lateral caño oval · Del Sur/i) || nomH(/^Soporte lateral caño oval/i) || nomH(/^SOPORTE CAÑO OVAL/i), cant: R.soportesOval, tipo: 'BASE', auto: 'soporte-barral', nota: `${R.soportesOval} en el modelo · no sale en el texto del presupuesto` });
     Object.entries(R.accesorios || {}).forEach(([k, v]) => avisos.push(`Accesorio "${k}" × ${v}: no tiene precio asociado, cargalo en Herrajes si corresponde.`));
     const txt = sugerirTextos(R, grupos);
     return {
@@ -1524,12 +1540,13 @@ function humano(art, q) {
   if (a.startsWith('CORREDERAS')) return `${c}Correderas telescópicas${a.includes('PUSH') ? ' push' : a.includes('C/SUAVE') ? ' C. suave' : ''}`;
   if (a.startsWith('GUIA')) return `${c}Guías ocultas${a.includes('SUAVE') ? ' C. suave' : ''}`;
   if (a.startsWith('BISAGRA')) return `Bisagras${a.includes('SUAVE') ? ' C. suave' : ''}`;
+  if (/^(CAÑO|CANO) OVAL|^PERFIL TUBULAR OVAL/.test(a)) return `Barral caño oval${/CROM|ACERO|HIERRO/.test(a) ? ' cromado' : /NEGRO/.test(a) ? ' negro' : /ALUMINIO|TUBULAR/.test(a) ? ' aluminio' : ''}`;
   return String(art || '').charAt(0) + String(art || '').slice(1).toLowerCase();
 }
 function textoOpcion(o) { if (o.nombre) return o.nombre; return o.base ? `${humano(o.art, o.cant)} en vez de ${humano(o.base).replace(/^\(\d+\) /, '').split(' ')[0].toLowerCase()}` : `${humano(o.art, o.cant)} (se suma)`; }
 function sugHerrajes(M) {
   const g = new Map();
-  M.herrajes.filter(h => h.tipo !== 'OPCIÓN' && h.art && N(h.cant)).forEach(h => { const k = humano(h.art, 0), cuenta = /^(CORREDERAS|GUIA)/i.test(h.art); g.set(k, { cuenta, q: (g.has(k) ? g.get(k).q : 0) + N(h.cant) }); });
+  M.herrajes.filter(h => h.tipo !== 'OPCIÓN' && h.art && N(h.cant) && h.auto !== 'soporte-barral' && !/^soporte .*ca[ñn]o oval/i.test(h.art)).forEach(h => { const k = humano(h.art, 0), cuenta = /^(CORREDERAS|GUIA)/i.test(h.art); g.set(k, { cuenta, q: (g.has(k) ? g.get(k).q : 0) + N(h.cant) }); });
   return [...g].map(([k, x]) => x.cuenta ? `(${x.q}) ${k}` : k).join('\n');
 }
 // Opciones de herraje agrupadas por tipo (ej. todas las guías ocultas que reemplazan correderas = una sola fila, un solo redondeo)
@@ -1761,7 +1778,7 @@ function reemplazar(viejo, nuevo) {
   M.grupos.forEach(g => { const o = viejo.grupos.find(x => x.ocl && x.ocl === g.ocl); if (o && o.art && o.art !== g.art) { g.art = o.art; if (o.veta != null) g.veta = o.veta; reopt(g); } });
   viejo.grupos.filter(g => !g.ocl).forEach(g => M.grupos.push(g));
   // herrajes manuales y opciones
-  const autoMap = {}; viejo.herrajes.filter(h => h.auto).forEach(h => { const n = M.herrajes.find(x => x.auto === h.auto); if (n) { autoMap[h.id] = n.id; if (h.art && h.art !== n.art && h.auto === 'bisagra') n.art = h.art; } });
+  const autoMap = {}; viejo.herrajes.filter(h => h.auto).forEach(h => { const n = M.herrajes.find(x => x.auto === h.auto); if (n) { autoMap[h.id] = n.id; if (h.art && h.art !== n.art && ['bisagra', 'barral', 'soporte-barral'].includes(h.auto)) n.art = h.art; } });
   viejo.herrajes.filter(h => !h.auto).forEach(h => { const c = clone(h); if (c.ref && autoMap[c.ref]) c.ref = autoMap[c.ref]; M.herrajes.push(c); });
   // variantes: mismo material OCL
   M.variantes = (viejo.variantes || []).map(v => { const map = {}; Object.entries(v.map || {}).forEach(([k, a]) => { const og = viejo.grupos.find(x => x.key === k); const ng = og && M.grupos.find(x => x.ocl && x.ocl === og.ocl); if (ng) map[ng.key] = a; else if (og && !og.ocl) map[k] = a; }); return { nombre: v.nombre, map }; });
