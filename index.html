@@ -809,19 +809,25 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
   }
   function placaDe(art, CFG) { const p = (CFG.placas || []).find(x => x.n === art); return p ? { L: +p.L || 2600, A: +p.A || 1830, veta: !!p.veta } : { L: 2600, A: 1830, veta: false }; }
   function optimizarGrupo(g, CFG) {
-    const pl = placaDe(g.art, CFG);
+    const pl = placaDe(g.art, CFG); const mm = String(g.medida || '').match(/(\d{3,4})\s*[x×]\s*(\d{3,4})/);
+    if (mm) { pl.L = +mm[1]; pl.A = +mm[2]; }
     const veta = g.veta != null ? g.veta : pl.veta;
-    const pieces = g.piezas.map(p => ({ cant: p.cant, largo: p.largo, ancho: p.ancho, desc: p.desc, girar: !veta, cantos: p.cantos }));
+    const oc = Object.assign({ refX: 4.5, refY: 4.5, ref4: true }, CFG.opt || {}); const nX = oc.ref4 === false ? 1 : 2;
+    const W0 = pl.L - nX * (+oc.refX || 0), H0 = pl.A - nX * (+oc.refY || 0);
+    const entra = p => (p.largo <= W0 + 1e-6 && p.ancho <= H0 + 1e-6) || (!veta && p.ancho <= W0 + 1e-6 && p.largo <= H0 + 1e-6);
+    const noEntran = g.piezas.filter(p => !entra(p)).map(p => ({ desc: p.desc, largo: p.largo, ancho: p.ancho, cant: p.cant }));
+    const pieces = g.piezas.filter(entra).map(p => ({ cant: p.cant, largo: p.largo, ancho: p.ancho, desc: p.desc, girar: !veta, cantos: p.cantos }));
     const fr = OPT.FRACS.map(f => f.flag);
+    if (!pieces.length) return { error: 'Ninguna pieza entra en la placa (' + pl.L + ' × ' + pl.A + ' mm)', L: pl.L, A: pl.A, veta, noEntran };
     const res = OPT.optimize({ placa: { largo: pl.L, ancho: pl.A }, pieces, cfg: Object.assign({}, CFG.opt || {}, { fracciones: fr }) });
-    if (res.error) return { error: res.error + ' (' + pl.L + ' × ' + pl.A + ' mm)', L: pl.L, A: pl.A, veta };
+    if (res.error) return { error: res.error + ' (' + pl.L + ' × ' + pl.A + ' mm)', L: pl.L, A: pl.A, veta, noEntran };
     const enteras = res.groups.filter(x => !x.placa.recorte);
     const last = enteras[enteras.length - 1];
     const areaPlaca = res.W * res.H;
     const ultimaPct = last ? last.usedArea / areaPlaca : 0;
     // layouts compactos para guardar y dibujar
     const placasDib = res.groups.map(x => ({ n: x.n, cant: x.cantidad, P: x.pieces.map(p => [Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10, p.w, p.h, p.it.item, p.rotated ? 1 : 0]), uso: x.usedArea / areaPlaca, cortes: x.cuts.length }));
-    return { L: pl.L, A: pl.A, veta, nPlacas: res.nPlacas, aprov: res.aprovechamiento, cortes: res.cortes, ultimaPct, fraccion: res.fraccion, m2Cortado: res.m2Cortado, placasDib, nPiezas: res.nPiezas, kerf: res.cfg.kerf, ref: res.cfg.refX };
+    return { L: pl.L, A: pl.A, veta, noEntran, nPlacas: res.nPlacas, aprov: res.aprovechamiento, cortes: res.cortes, ultimaPct, fraccion: res.fraccion, m2Cortado: res.m2Cortado, placasDib, nPiezas: res.nPiezas, kerf: res.cfg.kerf, ref: res.cfg.refX };
   }
   function articuloCorredera(largoMm, CFG) {
     const cm = Math.round(largoMm / 10);
@@ -854,6 +860,7 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
       const g = { key: uid(), ocl: t.material, esp: t.esp, art, piezas: t.piezas, nPiezas: t.nPiezas, m2: t.m2, cantoM: t.cantoM };
       const o = optimizarGrupo(g, CFG); g.opt = o;
       if (o.error) avisos.push(`${t.material}: ${o.error}`);
+      else if ((o.noEntran || []).length) avisos.push(`${t.material}: ${o.noEntran.reduce((s, p) => s + p.cant, 0)} pieza${o.noEntran.reduce((s, p) => s + p.cant, 0) === 1 ? '' : 's'} no entra${o.noEntran.reduce((s, p) => s + p.cant, 0) === 1 ? '' : 'n'} en la placa de ${o.L} × ${o.A} mm. Se optimizó el resto; mirá el detalle en Placas.`);
       g.placas = o.error ? 0 : o.nPlacas; g.cortes = o.error ? 0 : o.cortes;
       return g;
     });
@@ -1436,7 +1443,9 @@ function secPlacas(M, R) {
         <div class="row" style="justify-content:flex-end;gap:4px">${sub}<button class="x" data-act="del-grupo" data-i="${i}" aria-label="Quitar placa">✕</button></div></div></div>`;
     }
     const o = g.opt;
-    if (o.error) return `<div class="gcard"><div class="gtop"><div class="field"><label class="lbl">${esc(g.ocl)} · ${g.nPiezas} piezas</label>${artSel}</div></div><div class="alert">${esc(o.error)}. Elegí otra placa o revisá su medida en Precios y taller.</div></div>`;
+    const medSel = medidaSel(g, i, o);
+    const ne = noEntranHTML(o);
+    if (o.error) return `<div class="gcard"><div class="gtop"><div class="field"><label class="lbl">${esc(g.ocl)} · ${g.nPiezas} piezas</label>${artSel}</div></div><div class="alert">${esc(o.error)}. Probá con otra medida de placa o elegí otra placa.</div>${ne}<div class="hint">${medSel}</div></div>`;
     const hints = hintsGrupo(g, i);
     return `<div class="gcard"><div class="gtop">
       <div class="field"><label class="lbl" for="${kid(`grupos.${i}.art`)}">${esc(g.ocl)} · ${g.nPiezas} piezas · ${fmt(g.m2, 2)} m²</label>${artSel}</div>
@@ -1445,7 +1454,8 @@ function secPlacas(M, R) {
       <div class="field"><label class="lbl" for="${kid(`grupos.${i}.placas`)}">Placas a cobrar</label><div class="stepper"><button data-act="pl-" data-i="${i}" aria-label="Una placa menos">−</button>${inp(`grupos.${i}.placas`, g.placas, { num: 1, edited: g.placasEdit, label: 'Placas a cobrar' })}<button data-act="pl+" data-i="${i}" aria-label="Una placa más">+</button></div></div>
       <div class="field"><label class="lbl" for="${kid(`grupos.${i}.cortes`)}">Cortes</label>${inp(`grupos.${i}.cortes`, g.cortes, { num: 1, edited: g.cortesEdit, label: 'Cortes' })}</div>
       ${sub}</div>
-      <div class="hint"><span class="mono">${fmt(o.L)} × ${fmt(o.A)} mm</span>
+      ${ne}
+      <div class="hint">${medSel}
         <label class="row" style="gap:5px"><input type="checkbox" id="${kid(`grupos.${i}.veta`)}" data-k="grupos.${i}.veta" ${o.veta ? 'checked' : ''}> Respetar veta</label>
         <button class="btn sm" data-act="ver" data-i="${i}">${OPEN[g.key] ? 'Ocultar placas' : 'Ver placas'}</button>
         <button class="btn sm" data-act="opti" data-i="${i}">Llevar al Optimizador</button>
@@ -1458,6 +1468,17 @@ function secPlacas(M, R) {
     <div class="row"><button class="btn sm" data-act="add-grupo">+ Agregar placa a mano</button><span class="note">Disco ${fmt(PC().opt.kerf, 1)} mm · refilado ${fmt(PC().opt.refX, 1)} mm por lado. Se cambia en Precios y taller.</span></div></div>`;
 }
 const n2 = v => fmt(v, Number.isInteger(+v) ? 0 : 2);
+const MEDIDAS_PLACA = ['2600x1830', '2750x1830'];
+function medidaSel(g, i, o) {
+  const base = (PC().placas || []).find(x => x.n === g.art); const def = base ? `${+base.L || 2600}x${+base.A || 1830}` : '2600x1830';
+  const opts = [...new Set([def, ...MEDIDAS_PLACA, g.medida].filter(Boolean))];
+  return `<label class="row" style="gap:6px"><span class="lbl">Medida de placa</span><select data-k="grupos.${i}.medida" style="width:auto;padding:3px 6px" aria-label="Medida de placa">${opts.map(v => `<option value="${v === def ? '' : v}" ${(g.medida || '') === (v === def ? '' : v) ? 'selected' : ''}>${v.replace('x', ' × ')} mm${v === def ? ' (la de la placa)' : ''}</option>`).join('')}</select></label>`;
+}
+function noEntranHTML(o) {
+  const ne = (o && o.noEntran) || []; if (!ne.length) return '';
+  const n = ne.reduce((s, p) => s + p.cant, 0);
+  return `<div class="alert"><b>${n} pieza${n === 1 ? '' : 's'} no entra${n === 1 ? '' : 'n'} en la placa de ${fmt(o.L)} × ${fmt(o.A)} mm</b>${o.error ? '' : ' (el resto se optimizó)'}:<ul>${ne.map(p => `<li>${esc(p.desc || 'Pieza')} · <span class="mono">${fmt(p.largo)} × ${fmt(p.ancho)} mm</span>${p.cant > 1 ? ' × ' + p.cant : ''}</li>`).join('')}</ul>Probá con una placa más grande en “Medida de placa”, o revisá la pieza en el modelo.</div>`;
+}
 function secCantos(M, R) {
   const cortesAuto = M.grupos.reduce((s, g) => s + N(g.cortes), 0);
   const cantoOpts = PC().cantos.map(c => c.n);
@@ -1650,7 +1671,7 @@ function setField(M, path, el) {
   setPath(M, path, v);
   let m;
   if ((m = path.match(/^grupos\.(\d+)\.art$/))) { const g = M.grupos[+m[1]]; delete g.veta; reopt(g); }
-  else if ((m = path.match(/^grupos\.(\d+)\.veta$/))) reopt(M.grupos[+m[1]]);
+  else if ((m = path.match(/^grupos\.(\d+)\.(veta|medida)$/))) reopt(M.grupos[+m[1]]);
   else if ((m = path.match(/^grupos\.(\d+)\.(placas|cortes)$/))) { const g = M.grupos[+m[1]], k = m[2]; if (g.opt && !g.opt.error) { if (v === '') { g[k + 'Edit'] = false; g[k] = k === 'placas' ? g.opt.nPlacas : g.opt.cortes; } else g[k + 'Edit'] = N(v) !== (k === 'placas' ? g.opt.nPlacas : g.opt.cortes); } }
   else if ((m = path.match(/^cantosOv\.(.+)$/)) && v === '') delete M.cantosOv[m[1]];
 }
@@ -1775,7 +1796,7 @@ function reemplazar(viejo, nuevo) {
   M.sector = viejo.sector;
   M.textos = Object.assign({}, nuevo.textos, Object.fromEntries(Object.entries(viejo.textos || {}).filter(([, v]) => v)));
   // placa elegida por material OCL
-  M.grupos.forEach(g => { const o = viejo.grupos.find(x => x.ocl && x.ocl === g.ocl); if (o && o.art && o.art !== g.art) { g.art = o.art; if (o.veta != null) g.veta = o.veta; reopt(g); } });
+  M.grupos.forEach(g => { const o = viejo.grupos.find(x => x.ocl && x.ocl === g.ocl); if (o && o.art && o.art !== g.art) { g.art = o.art; if (o.veta != null) g.veta = o.veta; reopt(g); } if (o && o.medida && !g.medida) { g.medida = o.medida; reopt(g); } });
   viejo.grupos.filter(g => !g.ocl).forEach(g => M.grupos.push(g));
   // herrajes manuales y opciones
   const autoMap = {}; viejo.herrajes.filter(h => h.auto).forEach(h => { const n = M.herrajes.find(x => x.auto === h.auto); if (n) { autoMap[h.id] = n.id; if (h.art && h.art !== n.art && ['bisagra', 'barral', 'soporte-barral'].includes(h.auto)) n.art = h.art; } });
@@ -2528,7 +2549,7 @@ function placasHTML(m, i) {
   return M.grupos.map((g, k) => { const o = g.opt || {}; const open = OPENF[m.id + '|' + g.ocl];
     return `<div class="gcard"><div class="gtop">
       <div class="field"><label class="lbl">${esc(g.ocl)} · ${g.nPiezas} piezas · ${fmt(g.m2, 2)} m²</label><input type="text" data-combo="mats" data-fx="map" data-ocl="${esc(g.ocl)}" data-val="${isDef(g.art) ? esc(g.art) : ''}" value="${isDef(g.art) ? esc(g.art) : ''}" placeholder="${g.art ? 'Del presupuesto: ' + esc(g.art) + ' → escribí para buscar la placa' : 'Escribí para buscar la placa'}" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="combo-pop" aria-autocomplete="list" aria-label="Placa para ${esc(g.ocl)}" class="${isDef(g.art) ? '' : 'falta'}"></div>
-      ${o.error ? `<div class="alert">${esc(o.error)}</div>` : `<div class="stat"><span>Optimizado</span><b>${fmt(o.nPlacas)} placa${o.nPlacas === 1 ? '' : 's'}</b><span>aprovechamiento ${pct(o.aprov)}</span></div>
+      ${o.error ? `<div class="alert">${esc(o.error)}</div>${noEntranHTML(o)}` : `${noEntranHTML(o)}<div class="stat"><span>Optimizado</span><b>${fmt(o.nPlacas)} placa${o.nPlacas === 1 ? '' : 's'}</b><span>aprovechamiento ${pct(o.aprov)}</span></div>
       <div class="stat"><span>Última placa</span><b>${pct(o.ultimaPct)}</b><div class="meter ${o.ultimaPct < .3 ? 'low' : ''}"><i style="width:${Math.min(100, Math.round(o.ultimaPct * 100))}%"></i></div></div>
       <div class="stat"><span>Cortes</span><b>${fmt(o.cortes)}</b></div>`}</div>
       ${o.error ? '' : `<div class="hint"><span class="mono">${fmt(o.L)} × ${fmt(o.A)} mm</span><label class="row" style="gap:5px"><input type="checkbox" data-fx="veta" data-ocl="${esc(g.ocl)}" ${o.veta ? 'checked' : ''}> Respetar veta</label>
