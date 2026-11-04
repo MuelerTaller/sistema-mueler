@@ -977,7 +977,7 @@ if (typeof module !== "undefined") module.exports = DEFAULT_CFG;
         if (estSame) cells.push(first ? C([P([R(f[1])])], { vMerge: rs }) : Ccont()); else cells.push(txt(f[1]));
         if (canSame) cells.push(first ? C([P([R(f[2])])], { vMerge: rs }) : Ccont()); else cells.push(txt(f[2]));
         cells.push(first ? C(m.herrajes.map(h => P([R(h)])), { vMerge: nF > 1 ? 'restart' : undefined }) : Ccont());
-        cells.push(C([P([R(ars(f[3]), { bold: true })], { align: AlignmentType.RIGHT })], { shade: YELLOW }));
+        cells.push(C([P([R(f[4] === 'dif' ? (f[3] < 0 ? '− ' : '+ ') + ars(Math.abs(f[3])) : ars(f[3]), { bold: true })], { align: AlignmentType.RIGHT })], { shade: YELLOW }));
         rows.push(new TableRow({ cantSplit: true, children: cells }));
       });
       E.forEach((e, j) => {
@@ -1040,7 +1040,7 @@ if (typeof module !== "undefined") module.exports = DEFAULT_CFG;
         cell(r, 3).value = f[0]; cell(r, 3).font = fnt(); cell(r, 3).alignment = aln('left', 'middle', true);
         if (!estSame) { cell(r, 4).value = f[1]; cell(r, 4).font = fnt(); cell(r, 4).alignment = aln('left', 'middle', true); }
         if (!canSame) { cell(r, 5).value = f[2]; cell(r, 5).font = fnt(); cell(r, 5).alignment = aln('left', 'middle', true); }
-        const g = cell(r, 7); g.value = f[3]; g.font = fnt({ bold: true }); g.fill = fill(YELLOW); g.alignment = aln('right'); g.numFmt = '"$" #,##0';
+        const g = cell(r, 7); g.value = f[3]; g.font = fnt({ bold: true }); g.fill = fill(YELLOW); g.alignment = aln('right'); g.numFmt = f[4] === 'dif' ? '"+ $" #,##0;"− $" #,##0' : '"$" #,##0';
         for (let c = 1; c <= 7; c++) cell(r, c).border = box;
         const h = nF === 1 ? 14 * Math.max(herrLines, wl(f[0], 20), wl(f[1], 20)) + 8 : 14 * Math.max(1, wl(f[0], 20), estSame ? 1 : wl(f[1], 20)) + 8;
         heights.push(h); ws.getRow(r).height = h; r++;
@@ -1180,7 +1180,7 @@ function unpackMueble(doc) {
 }
 function packPres() {
   const tot = resumen().totBase;
-  return { num: P.num || '', obra: P.obra || '', cliente: P.cliente || '', arq: P.arq || '', fecha: P.fecha || '', estado: P.estado || 'borrador', final: P.final || null, comEst: P.comEst || null, orden: P.orden.slice(), sectores: (P.sectores || []).map(s => ({ id: s.id, nombre: s.nombre || '' })), version: P.version || '', notas: P.notas || '', cfg: JSON.stringify(P.cfg), cfgFecha: P.cfgFecha || Date.now(), total: tot, nMuebles: P.orden.length, upd: Date.now(), creado: P.creado || Date.now() };
+  return { num: P.num || '', obra: P.obra || '', cliente: P.cliente || '', arq: P.arq || '', fecha: P.fecha || '', estado: P.estado || 'borrador', final: P.final || null, comEst: P.comEst || null, opDif: !!P.opDif, orden: P.orden.slice(), sectores: (P.sectores || []).map(s => ({ id: s.id, nombre: s.nombre || '' })), version: P.version || '', notas: P.notas || '', cfg: JSON.stringify(P.cfg), cfgFecha: P.cfgFecha || Date.now(), total: tot, nMuebles: P.orden.length, upd: Date.now(), creado: P.creado || Date.now() };
 }
 let dirtyP = false, dirtyM = new Set(), saveT = null, saving = false;
 function touch(mid) { if (mid) dirtyM.add(mid); dirtyP = true; setSave('Cambios sin guardar'); clearTimeout(saveT); saveT = setTimeout(flush, 900); }
@@ -1275,7 +1275,7 @@ async function abrirPres(id) {
   await flush();
   const doc = PRES.find(p => p.id === id); if (!doc) return;
   setSave('Abriendo…');
-  P = { id, final: doc.final || null, comEst: doc.comEst || null, num: doc.num, version: doc.version || '', sectores: (doc.sectores || []).map(s => Object.assign({}, s)), obra: doc.obra, cliente: doc.cliente, arq: doc.arq, fecha: doc.fecha, estado: doc.estado || 'borrador', orden: (doc.orden || []).slice(), notas: doc.notas || '', creado: doc.creado, cfgFecha: doc.cfgFecha };
+  P = { id, final: doc.final || null, comEst: doc.comEst || null, opDif: !!doc.opDif, num: doc.num, version: doc.version || '', sectores: (doc.sectores || []).map(s => Object.assign({}, s)), obra: doc.obra, cliente: doc.cliente, arq: doc.arq, fecha: doc.fecha, estado: doc.estado || 'borrador', orden: (doc.orden || []).slice(), notas: doc.notas || '', creado: doc.creado, cfgFecha: doc.cfgFecha };
   try { P.cfg = doc.cfg ? mergeCfg(JSON.parse(doc.cfg)) : clone(CFG); } catch (e) { P.cfg = clone(CFG); }
   MS = {};
   try { const ms = await Store.getMuebles(id); ms.forEach(d => { const M = unpackMueble(d); if (M) MS[M.id] = M; }); } catch (e) { toast('No se pudieron leer los muebles de este presupuesto'); }
@@ -1640,9 +1640,9 @@ function renderSide(M, R) {
       <i class="sep"></i><i hidden></i><span class="strong">Precio final</span><span class="strong">${money(R.final)}</span>
     </div></div>
     ${R.opciones.length || vars.length ? `<div class="panel"><span class="eyebrow">Opciones</span><div class="kv">
-      ${vars.map(x => `<span>Frente ${esc(x.v.nombre || 'alternativo')}</span><span>${money(x.R.precio)}</span>`).join('')}
+      ${vars.map(x => `<span>Frente ${esc(x.v.nombre || 'alternativo')}</span><span>${P.opDif ? difTxt(x.R.precio - R.precio) : money(x.R.precio)}</span>`).join('')}
       ${opcionesAgrupadas(M, R).map(o => `<span>${esc(textoOpcion(o))}</span><span>+ ${money(o.deltaRnd)}</span>`).join('')}</div>
-      <span class="note">Recargo de opciones × ${fmt(R.factor, 4)}</span></div>` : ''}
+      <span class="note">Recargo de opciones × ${fmt(R.factor, 4)}</span>${vars.length ? `<label class="row" style="gap:6px;margin-top:6px"><input type="checkbox" id="side-dif" ${P.opDif ? 'checked' : ''}> Ver frentes como diferencia (+ $)</label>` : ''}</div>` : ''}
     <div class="panel"><span class="eyebrow">En la Planilla de Carga</span><div class="kv">
       <span>Presup. base</span><span>${money(base)}</span><span>Instalación</span><span>${money(inst)}</span><span>Flete</span><span>${money(fl)}</span>
       <i class="sep"></i><i hidden></i><span class="strong">Total</span><span class="strong">${money(base + inst + fl)}</span></div></div>`;
@@ -1730,13 +1730,16 @@ function resumen(sids) {
   });
   return { rows, totBase, sub };
 }
+const difTxt = v => (v < 0 ? '− ' : '+ ') + money(Math.abs(v));
+document.addEventListener('change', e => { if (e.target && (e.target.id === 'res-dif' || e.target.id === 'side-dif')) { P.opDif = e.target.checked; touch(); if (e.target.id === 'side-dif') { const M = MS[SEL]; if (M) renderSide(M, calcM(M)); } else renderResumen(); } });
 function renderResumen() {
   const el = $('resumen'); if (!el) return; const S = resumen();
   el.innerHTML = `<header><h2>Resumen del presupuesto ${esc(P.num || '')}</h2><div class="row"><button class="btn primary" data-act="final" ${S.rows.length ? '' : 'disabled'}>Presupuesto FINAL (Word y Excel)</button>${comEstPct() ? `<button class="btn" data-act="estudio" ${S.rows.length ? '' : 'disabled'}>Para el estudio (Word y Excel)</button>` : ''}<button class="btn" data-act="xlsx-planilla" ${S.rows.length ? '' : 'disabled'}>Planilla de Carga (.xlsx)</button><button class="btn" data-act="xlsx-pedido" ${S.rows.length ? '' : 'disabled'}>Pedido de materiales (.xlsx)</button></div></header>
+    ${S.rows.some(r => r.opcion || (r.M.variantes || []).length) ? `<label class="row" style="gap:8px;margin:0 0 8px"><input type="checkbox" id="res-dif" ${P.opDif ? 'checked' : ''}> Ver frentes alternativos y opciones de mueble como diferencia (+ $) · se usa también en el FINAL</label>` : ''}
     ${S.rows.length ? `<div class="tbox"><table class="t sumtable"><thead><tr><th>Mueble</th><th>Descripción</th><th class="n">Precio calculado</th><th class="n">Presup. base</th>${comEstPct() ? `<th class="n">Comisión ${fmt(comEstPct(), 1).replace(',0', '')}%</th><th class="n">Base cliente</th>` : ''}<th class="n">Instalación</th><th class="n">Flete</th><th class="n">Total</th></tr></thead><tbody>
       ${S.rows.map((r, k) => { const multi = P.sectores.length > 1, first = !k || S.rows[k - 1].sector !== r.sector, last = k === S.rows.length - 1 || S.rows[k + 1].sector !== r.sector;
-        return `${multi && first ? `<tr class="secrow"><td colspan="${comEstPct() ? 9 : 7}">${esc(r.sectorNombre || 'Sin nombre')}</td></tr>` : ''}<tr class="click ${r.opcion ? 'opt' : ''}" data-act="sel" data-id="${r.id}"><td><b>${r.opcion ? '' : esc(r.M.cod || '—')}</b></td><td>${r.opcion ? `<span class="tag op">Opción</span> ${esc(textoOpcionMueble(r.M))} <span class="note">(no suma)</span>` : esc(r.M.desc || '')}</td><td class="n">${money(r.R.precio)}</td><td class="n">${money(r.bM)}</td>${comEstPct() ? `<td class="n">${money(r.com)}</td><td class="n">${money(r.b)}</td>` : ''}<td class="n">${money(r.i)}</td><td class="n">${money(r.f)}</td><td class="n">${money(r.t)}</td></tr>
-        ${(r.M.variantes || []).map(v => { const RV = calcVar(r.M, v); return `<tr class="opt"><td></td><td class="note">Frente ${esc(v.nombre || 'alternativo')}</td><td class="n">${money(RV.precio)}</td><td class="n">${money(RV.precio)}</td>${comEstPct() ? `<td class="n">${money(cliB(RV.precio) - RV.precio)}</td><td class="n">${money(cliB(RV.precio))}</td>` : ''}<td class="n">${money(r.i)}</td><td class="n">${money(r.f)}</td><td class="n">${money(cliB(RV.precio) + r.i + r.f)}</td></tr>`; }).join('')}
+        return `${multi && first ? `<tr class="secrow"><td colspan="${comEstPct() ? 9 : 7}">${esc(r.sectorNombre || 'Sin nombre')}</td></tr>` : ''}<tr class="click ${r.opcion ? 'opt' : ''}" data-act="sel" data-id="${r.id}"><td><b>${r.opcion ? '' : esc(r.M.cod || '—')}</b></td><td>${r.opcion ? `<span class="tag op">Opción</span> ${esc(textoOpcionMueble(r.M))} <span class="note">(no suma)</span>` : esc(r.M.desc || '')}</td><td class="n">${money(r.R.precio)}</td><td class="n">${money(r.bM)}</td>${comEstPct() ? `<td class="n">${money(r.com)}</td><td class="n">${money(r.b)}</td>` : ''}<td class="n">${money(r.i)}</td><td class="n">${money(r.f)}</td><td class="n">${r.opcion && P.opDif ? difTxt(r.t - (S.rows.find(x => x.id === r.M.opcionDe) || { t: 0 }).t) : money(r.t)}</td></tr>
+        ${(r.M.variantes || []).map(v => { const RV = calcVar(r.M, v); return `<tr class="opt"><td></td><td class="note">Frente ${esc(v.nombre || 'alternativo')}</td><td class="n">${money(RV.precio)}</td><td class="n">${money(RV.precio)}</td>${comEstPct() ? `<td class="n">${money(cliB(RV.precio) - RV.precio)}</td><td class="n">${money(cliB(RV.precio))}</td>` : ''}<td class="n">${money(r.i)}</td><td class="n">${money(r.f)}</td><td class="n">${P.opDif ? difTxt(cliB(RV.precio) + r.i + r.f - r.t) : money(cliB(RV.precio) + r.i + r.f)}</td></tr>`; }).join('')}
         ${opcionesAgrupadas(r.M, r.R).map(o => `<tr class="opt"><td></td><td class="note">Opción: ${esc(textoOpcion(o))}</td><td class="n">+ ${money(cliB(o.deltaRnd))}</td><td></td><td></td><td></td><td></td>${comEstPct() ? '<td></td><td></td>' : ''}</tr>`).join('')}
         ${multi && last ? `<tr class="subt"><td></td><td colspan="${comEstPct() ? 7 : 5}">Subtotal ${esc(r.sectorNombre || '')}</td><td class="n">${money(S.sub[r.sector])}</td></tr>` : ''}`; }).join('')}
       </tbody><tfoot><tr><td colspan="${comEstPct() ? 8 : 6}">Total sin opciones ni variantes</td><td class="n">${money(S.totBase)}</td></tr></tfoot></table></div>` : '<p class="note" style="margin:0">Cuando cargues muebles, acá aparece el total.</p>'}`;
@@ -3768,8 +3771,9 @@ function finalModulos(sids) {
     const t = r.M.textos || {}, can = t.cantos || sugCantos(r.R) || 'ABS 045';
     const fr = [[t.frentes || '', t.estructura || '', can, r.t]];
     const alts = [];
-    (r.M.variantes || []).forEach(v => { const RV = calcVar(r.M, v); fr.push([v.nombre || 'Frente alternativo', t.estructura || '', can, cliB(RV.precio) + r.i + r.f]); alts.push({ n: v.nombre || 'frente alternativo', v: cliB(RV.precio) + r.i + r.f }); });
-    S.rows.filter(o => o.opcion && o.M.opcionDe === r.id).forEach(o => { const ot = o.M.textos || {}; const nom = o.M.opcionNombre || ot.frentes || 'opción'; fr.push(['OPCIÓN — ' + (o.M.opcionNombre || ot.frentes || ''), ot.estructura || t.estructura || '', ot.cantos || sugCantos(o.R) || can, o.t]); alts.push({ n: nom, v: o.t }); });
+    const dif = !!P.opDif;
+    (r.M.variantes || []).forEach(v => { const RV = calcVar(r.M, v); const tv = cliB(RV.precio) + r.i + r.f; fr.push([v.nombre || 'Frente alternativo', t.estructura || '', can, dif ? tv - r.t : tv, dif ? 'dif' : '']); alts.push({ n: v.nombre || 'frente alternativo', v: cliB(RV.precio) + r.i + r.f }); });
+    S.rows.filter(o => o.opcion && o.M.opcionDe === r.id).forEach(o => { const ot = o.M.textos || {}; const nom = o.M.opcionNombre || ot.frentes || 'opción'; fr.push(['OPCIÓN — ' + (o.M.opcionNombre || ot.frentes || ''), ot.estructura || t.estructura || '', ot.cantos || sugCantos(o.R) || can, dif ? o.t - r.t : o.t, dif ? 'dif' : '']); alts.push({ n: nom, v: o.t }); });
     const herr = String(t.herrajes || sugHerrajes(r.M) || '').split('\n').map(x => x.trim()).filter(Boolean);
     const OA = opcionesAgrupadas(r.M, r.R).map(o => Object.assign({}, o, { deltaRnd: cliB(o.deltaRnd) })); const ex = OA.map(o => ['OPCIÓN — ' + textoOpcion(o), 'delta', o.deltaRnd]);
     out.push({ cod: r.M.cod || '', desc: r.M.desc || '', herrajes: herr.length ? herr : ['—'], frentes: fr, extras: ex });
@@ -3809,6 +3813,7 @@ function dialogoFinal() {
       <label class="row" style="gap:8px"><input type="checkbox" id="fo-total" ${fo.total ? 'checked' : ''}> Agregar total <span class="note mono" id="fo-v1"></span></label>
       <div class="row" id="fo-oprow" style="gap:8px"><label class="row" style="gap:8px"><input type="checkbox" id="fo-totop" ${fo.totalOp ? 'checked' : ''}> Total con opciones</label><input type="text" id="fo-labop" style="flex:1;min-width:180px" value="${esc(fo.labelOp)}" placeholder="TOTAL CON OPCIONES" aria-label="Título del total con opciones"><span class="note mono" id="fo-v2"></span></div>
       <div class="note" id="fo-crit"></div>
+      <label class="row" style="gap:8px"><input type="checkbox" id="fo-dif" ${P.opDif ? 'checked' : ''}> Frentes alternativos y opciones de mueble como diferencia (+ $) en vez del precio completo</label>
       <label class="row" style="gap:8px"><input type="checkbox" id="fo-adel" ${fo.adelanto ? 'checked' : ''}> Adelanto y saldo · adelanto <input type="text" id="fo-pct" class="n" style="width:60px" value="${fo.pct}" inputmode="decimal" aria-label="Porcentaje de adelanto"> %</label>
     </fieldset>
     <fieldset style="border:1px solid var(--line);border-radius:6px;padding:10px;display:grid;gap:8px"><legend class="lbl">Bonificación (excepcional)</legend>
@@ -3824,7 +3829,7 @@ function dialogoFinal() {
   const bonDef = p => `Bonificación especial del ${fmt(p, 1).replace(',0', '')}% sobre el total del presupuesto, ya aplicada en los totales.`;
   const upd = () => { const X = finalModulos(sids()); const bp = N(d.q('#fo-bpct').value) || 0; d.q('#fo-btx').placeholder = bonDef(bp); d.q('#fo-bv').textContent = d.q('#fo-bon').checked ? `− ${money(Math.round(X.sinOp * bp / 100))} sobre ${money(X.sinOp)}` : ''; d.q('#fo-v1').textContent = money(X.sinOp); d.q('#fo-v2').textContent = money(X.conOp); d.q('#fo-oprow').hidden = !X.hayOp; d.q('#fo-crit').textContent = X.hayOp ? 'Con opciones toma: ' + X.criterio.join(' · ') : '';
     const av = revisarFinal(X); d.q('#fo-rev').innerHTML = av.length ? `<div class="alert"><b>Para revisar antes de mandar</b><ul>${av.map(a => `<li>${esc(a)}</li>`).join('')}</ul></div>` : ''; return X; };
-  d.m.addEventListener('change', upd); d.m.addEventListener('input', e => { if (e.target.id === 'fo-bpct') upd(); }); upd();
+  d.m.addEventListener('change', e => { if (e.target.id === 'fo-dif') { P.opDif = e.target.checked; touch(); } upd(); }); d.m.addEventListener('input', e => { if (e.target.id === 'fo-bpct') upd(); }); upd();
   const go = async (word, excel) => {
     const ids = sids(); if (ids && !ids.length) { toast('Elegí al menos un sector'); return; }
     const X = upd();
