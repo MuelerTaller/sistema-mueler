@@ -1169,7 +1169,7 @@ function unpackMueble(doc) {
 }
 function packPres() {
   const tot = resumen().totBase;
-  return { num: P.num || '', obra: P.obra || '', cliente: P.cliente || '', arq: P.arq || '', fecha: P.fecha || '', estado: P.estado || 'borrador', final: P.final || null, orden: P.orden.slice(), sectores: (P.sectores || []).map(s => ({ id: s.id, nombre: s.nombre || '' })), version: P.version || '', notas: P.notas || '', cfg: JSON.stringify(P.cfg), cfgFecha: P.cfgFecha || Date.now(), total: tot, nMuebles: P.orden.length, upd: Date.now(), creado: P.creado || Date.now() };
+  return { num: P.num || '', obra: P.obra || '', cliente: P.cliente || '', arq: P.arq || '', fecha: P.fecha || '', estado: P.estado || 'borrador', final: P.final || null, comEst: P.comEst || null, orden: P.orden.slice(), sectores: (P.sectores || []).map(s => ({ id: s.id, nombre: s.nombre || '' })), version: P.version || '', notas: P.notas || '', cfg: JSON.stringify(P.cfg), cfgFecha: P.cfgFecha || Date.now(), total: tot, nMuebles: P.orden.length, upd: Date.now(), creado: P.creado || Date.now() };
 }
 let dirtyP = false, dirtyM = new Set(), saveT = null, saving = false;
 function touch(mid) { if (mid) dirtyM.add(mid); dirtyP = true; setSave('Cambios sin guardar'); clearTimeout(saveT); saveT = setTimeout(flush, 900); }
@@ -1264,7 +1264,7 @@ async function abrirPres(id) {
   await flush();
   const doc = PRES.find(p => p.id === id); if (!doc) return;
   setSave('Abriendo…');
-  P = { id, final: doc.final || null, num: doc.num, version: doc.version || '', sectores: (doc.sectores || []).map(s => Object.assign({}, s)), obra: doc.obra, cliente: doc.cliente, arq: doc.arq, fecha: doc.fecha, estado: doc.estado || 'borrador', orden: (doc.orden || []).slice(), notas: doc.notas || '', creado: doc.creado, cfgFecha: doc.cfgFecha };
+  P = { id, final: doc.final || null, comEst: doc.comEst || null, num: doc.num, version: doc.version || '', sectores: (doc.sectores || []).map(s => Object.assign({}, s)), obra: doc.obra, cliente: doc.cliente, arq: doc.arq, fecha: doc.fecha, estado: doc.estado || 'borrador', orden: (doc.orden || []).slice(), notas: doc.notas || '', creado: doc.creado, cfgFecha: doc.cfgFecha };
   try { P.cfg = doc.cfg ? mergeCfg(JSON.parse(doc.cfg)) : clone(CFG); } catch (e) { P.cfg = clone(CFG); }
   MS = {};
   try { const ms = await Store.getMuebles(id); ms.forEach(d => { const M = unpackMueble(d); if (M) MS[M.id] = M; }); } catch (e) { toast('No se pudieron leer los muebles de este presupuesto'); }
@@ -1360,6 +1360,7 @@ function renderPres() {
       <div class="field"><label class="lbl" for="p-estado">Estado</label>${sel('estado', P.estado, ESTADOS, { d: 'p', pre: 'p', label: 'Estado' })}</div>
     </div>
     <div class="row"><button class="btn primary" data-act="save-file">Guardar archivo del presupuesto</button><button class="btn" data-act="dup-version">Duplicar como versión nueva</button><button class="btn" data-act="linea-h">Marca de herrajes</button><span id="p-aprobar">${aprobarBtnHTML()}</span><span class="note">Excel con el resumen para tu carpeta 01-CALCULADOR. Se vuelve a abrir en el calculador con “Abrir archivo” para revisarlo o modificarlo.</span></div>
+    ${comEstHTML()}
     <div id="p-avisos">${dupHTML()}</div>
     ${viejo ? `<div class="hint">Este presupuesto usa los precios guardados el ${fdate(P.cfgFecha)}. Los precios del taller cambiaron desde entonces. <button class="btn sm" data-act="upd-precios">Pasar a los precios actuales</button></div>` : ''}
     <div class="panel"><header><h2>Muebles</h2><span class="note">Separá el presupuesto en sectores (cocina, placares, lavadero…). Cada sector numera sus muebles desde M01.</span></header>
@@ -1632,6 +1633,75 @@ function renderSide(M, R) {
       <span>Presup. base</span><span>${money(base)}</span><span>Instalación</span><span>${money(inst)}</span><span>Flete</span><span>${money(fl)}</span>
       <i class="sep"></i><i hidden></i><span class="strong">Total</span><span class="strong">${money(base + inst + fl)}</span></div></div>`;
 }
+/* ---------------- Comisión del estudio (interna: el cliente nunca la ve) ----------------
+   Se suma a la base de cada mueble (base Mueler × (1 + %)). Instalación y flete van aparte, sin comisión.
+   El documento "Para el estudio" muestra base, comisión y flete + instalación. */
+const comEstPct = () => (P && P.comEst && P.comEst.on) ? N(P.comEst.pct) : 0;
+const cliB = v => { const p = comEstPct(); return p ? Math.round(N(v) * (1 + p / 100)) : N(v); };
+function comEstHTML() {
+  if (!ESADMIN()) return '';
+  const c = P.comEst || { on: false, pct: 10 };
+  return `<div class="hint comest"><label class="row" style="gap:6px"><input type="checkbox" data-ce="on" ${c.on ? 'checked' : ''}> <b>Comisión estudio</b></label>
+    <input type="text" class="n" data-ce="pct" value="${esc(c.pct != null ? c.pct : 10)}" style="width:60px" inputmode="decimal" aria-label="Porcentaje de comisión del estudio" ${c.on ? '' : 'disabled'}> %
+    <span class="note">${c.on ? `Se suma a la base de cada mueble${P.arq ? ' para ' + esc(P.arq) : ''}. Instalación y flete van aparte. El cliente no la ve; el estudio recibe su detalle con “Para el estudio”.` : 'Si el estudio cobra comisión, activala: se suma a la base de cada mueble y no aparece en el presupuesto del cliente.'}</span></div>`;
+}
+function filasEstudio(sids) {
+  const S = resumen(sids || undefined); const out = []; const multi = P.sectores.length > 1;
+  S.rows.forEach((r, k) => { if (multi && (!k || S.rows[k - 1].sector !== r.sector)) out.push({ sector: r.sectorNombre || 'Sector' }); if (r.opcion) return;
+    out.push({ cod: r.M.cod || '', desc: r.M.desc || '', base: r.bM, com: r.com, fi: r.i + r.f, total: r.t }); });
+  const fs = out.filter(x => !x.sector); const tot = k => fs.reduce((s, x) => s + x[k], 0);
+  return { filas: out, tot: { base: tot('base'), com: tot('com'), fi: tot('fi'), total: tot('total') } };
+}
+async function exportEstudio(word, excel) {
+  const pct = comEstPct(); if (!pct) { toast('Activá la comisión del estudio primero.'); return; }
+  const X = filasEstudio(); const pctT = fmt(pct, 1).replace(',0', '') + '%';
+  const tit = `PRESUPUESTO Nº ${P.num || 's/n'}${P.version ? ' ' + P.version : ''} · ${String(P.obra || '').toUpperCase()}`;
+  const sub = `Detalle para ${P.arq || 'el estudio'} · comisión ${pctT} · ${P.fecha || today()}`;
+  const head = ['Mueble', 'Descripción', 'Presupuesto base', `Comisión estudio ${pctT}`, 'Flete + instalación', 'Total'];
+  const nombre = `Presupuesto_${P.num || 'sn'}${P.version ? '_' + P.version : ''}_${P.obra || 'Obra'} - Para el estudio`.replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim();
+  try {
+    if (excel) {
+      if (!window.ExcelJS) throw new Error('excel');
+      const wb = new ExcelJS.Workbook(); wb.creator = 'Mueler Taller'; const ws = wb.addWorksheet('Para el estudio');
+      [10, 46, 18, 20, 20, 18].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+      try { const img = wb.addImage({ base64: LOGO_B64, extension: 'png' }); ws.addImage(img, { tl: { col: 0, row: 0 }, ext: { width: 150, height: 62 } }); } catch (e) { }
+      ws.getRow(1).height = 50; ws.getCell('B5').value = tit; ws.getCell('B5').font = { bold: true, size: 14 }; ws.getCell('B6').value = sub; ws.getCell('B6').font = { color: { argb: 'FF5F6A64' } };
+      const hr = ws.getRow(8); head.forEach((h, i) => { const c = hr.getCell(i + 1); c.value = h; c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1B211E' } }; c.alignment = { horizontal: i >= 2 ? 'right' : 'left', vertical: 'middle', wrapText: true }; });
+      const fmtM = '"$ "#,##0'; let r = 9; const thin = { style: 'thin', color: { argb: 'FFD5DAD3' } };
+      X.filas.forEach(x => { const row = ws.getRow(r++);
+        if (x.sector) { row.getCell(1).value = x.sector.toUpperCase(); row.getCell(1).font = { bold: true }; ws.mergeCells(row.number, 1, row.number, 6); row.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEF0EC' } }; return; }
+        [x.cod, x.desc, x.base, x.com, x.fi, x.total].forEach((v, i) => { const c = row.getCell(i + 1); c.value = v; if (i >= 2) c.numFmt = fmtM; c.border = { bottom: thin }; c.alignment = { vertical: 'top', wrapText: i === 1 }; }); });
+      const tr = ws.getRow(r); ['', 'TOTAL', X.tot.base, X.tot.com, X.tot.fi, X.tot.total].forEach((v, i) => { const c = tr.getCell(i + 1); c.value = v; c.font = { bold: true }; if (i >= 2) c.numFmt = fmtM; c.border = { top: { style: 'medium' } }; });
+      ws.getCell(`B${r + 2}`).value = `La comisión es el ${pctT} del presupuesto base de cada mueble. Flete e instalación no llevan comisión. Si el cliente elige opciones o frentes alternativos, la comisión se calcula igual sobre la base elegida.`; ws.getCell(`B${r + 2}`).alignment = { wrapText: true }; ws.mergeCells(r + 2, 2, r + 2, 6); ws.getRow(r + 2).height = 32;
+      ws.pageSetup = { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
+      await offer(nombre + '.xlsx', new Blob([await wb.xlsx.writeBuffer()], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    }
+    if (word) {
+      const D = window.docx; if (!D) throw new Error('word');
+      const T = (t, o = {}) => new D.Paragraph({ alignment: o.right ? D.AlignmentType.RIGHT : D.AlignmentType.LEFT, children: [new D.TextRun({ text: String(t), bold: !!o.bold, size: o.size || 18, color: o.color, font: 'Arial' })] });
+      const cell = (t, o = {}) => new D.TableCell({ children: [T(t, o)], shading: o.fill ? { fill: o.fill, type: D.ShadingType.CLEAR, color: 'auto' } : undefined, columnSpan: o.span, margins: { top: 60, bottom: 60, left: 80, right: 80 } });
+      const m = v => money(v);
+      const rows = [new D.TableRow({ tableHeader: true, children: head.map((h, i) => cell(h, { bold: true, color: 'FFFFFF', fill: '1B211E', right: i >= 2 })) })];
+      X.filas.forEach(x => { if (x.sector) rows.push(new D.TableRow({ children: [cell(x.sector.toUpperCase(), { bold: true, fill: 'EEF0EC', span: 6 })] }));
+        else rows.push(new D.TableRow({ children: [cell(x.cod, { bold: true }), cell(x.desc), cell(m(x.base), { right: true }), cell(m(x.com), { right: true }), cell(m(x.fi), { right: true }), cell(m(x.total), { right: true })] })); });
+      rows.push(new D.TableRow({ children: [cell(''), cell('TOTAL', { bold: true }), cell(m(X.tot.base), { bold: true, right: true }), cell(m(X.tot.com), { bold: true, right: true }), cell(m(X.tot.fi), { bold: true, right: true }), cell(m(X.tot.total), { bold: true, right: true })] }));
+      const kids = [];
+      try { kids.push(new D.Paragraph({ children: [new D.ImageRun({ data: logoBytes(), type: 'png', transformation: { width: 140, height: 58 } })] })); } catch (e) { }
+      kids.push(T(tit, { bold: true, size: 28 }), T(sub, { color: '5F6A64', size: 20 }), new D.Paragraph({ children: [] }),
+        new D.Table({ rows, width: { size: 100, type: D.WidthType.PERCENTAGE }, columnWidths: [900, 3600, 1500, 1500, 1500, 1500] }),
+        new D.Paragraph({ children: [] }), T(`La comisión es el ${pctT} del presupuesto base de cada mueble. Flete e instalación no llevan comisión. Si el cliente elige opciones o frentes alternativos, la comisión se calcula igual sobre la base elegida.`, { color: '5F6A64', size: 18 }));
+      const doc = new D.Document({ sections: [{ properties: { page: { margin: { top: 900, bottom: 900, left: 900, right: 900 } } }, children: kids }] });
+      await offer(nombre + '.docx', await D.Packer.toBlob(doc));
+    }
+  } catch (e) { console.error(e); toast(e && e.message === 'word' ? 'No se pudo cargar el generador de Word. Recargá la página.' : e && e.message === 'excel' ? 'No se pudo cargar el generador de Excel. Recargá la página.' : 'No se pudo armar el documento para el estudio.'); }
+}
+function dialogoEstudio() {
+  const X = filasEstudio(); const pctT = fmt(comEstPct(), 1).replace(',0', '') + '%';
+  const d = modal(`${H('Para el estudio')}<p class="note" style="margin:0">Detalle para ${esc(P.arq || 'el estudio')}: presupuesto base de cada mueble, su comisión del ${pctT} y flete + instalación juntos. No es el documento del cliente.</p>
+    <div class="kv"><span>Presupuesto base</span><span>${money(X.tot.base)}</span><span>Comisión ${pctT}</span><span>${money(X.tot.com)}</span><span>Flete + instalación</span><span>${money(X.tot.fi)}</span><span class="sep"></span><span class="strong">Total (igual al del cliente)</span><span class="strong">${money(X.tot.total)}</span></div>
+    <div class="row" style="justify-content:flex-end"><button class="btn" data-close>Cancelar</button><button class="btn" id="es-x">Excel</button><button class="btn" id="es-w">Word</button><button class="btn primary" id="es-a">Word + Excel</button></div>`);
+  d.q('#es-x').onclick = () => { d.close(); exportEstudio(false, true); }; d.q('#es-w').onclick = () => { d.close(); exportEstudio(true, false); }; d.q('#es-a').onclick = () => { d.close(); exportEstudio(true, true); };
+}
 function resumen(sids) {
   const rows = []; let totBase = 0; const sub = {};
   if (!P) return { rows, totBase, sub };
@@ -1639,8 +1709,8 @@ function resumen(sids) {
     if (sids && !sids.includes(sec.id)) return;
     const ids = P.orden.filter(id => MS[id] && (sec.id === undefined || MS[id].sector === sec.id));
     const esOp = id => MS[id].opcionDe && MS[MS[id].opcionDe] && MS[MS[id].opcionDe].sector === MS[id].sector;
-    const push = (id, op) => { const M = MS[id], R = calcM(M), b = baseVenta(M, R), i = N(M.venta.instalacion), f = N(M.venta.flete);
-      rows.push({ id, M, R, b, i, f, t: b + i + f, sector: sec.id, sectorNombre: sec.nombre || '', opcion: op, base: op ? MS[M.opcionDe] : null });
+    const push = (id, op) => { const M = MS[id], R = calcM(M), bM = baseVenta(M, R), b = cliB(bM), i = N(M.venta.instalacion), f = N(M.venta.flete);
+      rows.push({ id, M, R, bM, com: b - bM, b, i, f, t: b + i + f, sector: sec.id, sectorNombre: sec.nombre || '', opcion: op, base: op ? MS[M.opcionDe] : null });
       if (!op) { totBase += b + i + f; sub[sec.id] = (sub[sec.id] || 0) + b + i + f; } };
     ids.filter(id => !esOp(id)).forEach(id => { push(id, false); ids.filter(o => esOp(o) && MS[o].opcionDe === id).forEach(o => push(o, true)); });
   });
@@ -1648,14 +1718,14 @@ function resumen(sids) {
 }
 function renderResumen() {
   const el = $('resumen'); if (!el) return; const S = resumen();
-  el.innerHTML = `<header><h2>Resumen del presupuesto ${esc(P.num || '')}</h2><div class="row"><button class="btn primary" data-act="final" ${S.rows.length ? '' : 'disabled'}>Presupuesto FINAL (Word y Excel)</button><button class="btn" data-act="xlsx-planilla" ${S.rows.length ? '' : 'disabled'}>Planilla de Carga (.xlsx)</button><button class="btn" data-act="xlsx-pedido" ${S.rows.length ? '' : 'disabled'}>Pedido de materiales (.xlsx)</button></div></header>
-    ${S.rows.length ? `<div class="tbox"><table class="t sumtable"><thead><tr><th>Mueble</th><th>Descripción</th><th class="n">Precio calculado</th><th class="n">Presup. base</th><th class="n">Instalación</th><th class="n">Flete</th><th class="n">Total</th></tr></thead><tbody>
+  el.innerHTML = `<header><h2>Resumen del presupuesto ${esc(P.num || '')}</h2><div class="row"><button class="btn primary" data-act="final" ${S.rows.length ? '' : 'disabled'}>Presupuesto FINAL (Word y Excel)</button>${comEstPct() ? `<button class="btn" data-act="estudio" ${S.rows.length ? '' : 'disabled'}>Para el estudio (Word y Excel)</button>` : ''}<button class="btn" data-act="xlsx-planilla" ${S.rows.length ? '' : 'disabled'}>Planilla de Carga (.xlsx)</button><button class="btn" data-act="xlsx-pedido" ${S.rows.length ? '' : 'disabled'}>Pedido de materiales (.xlsx)</button></div></header>
+    ${S.rows.length ? `<div class="tbox"><table class="t sumtable"><thead><tr><th>Mueble</th><th>Descripción</th><th class="n">Precio calculado</th><th class="n">Presup. base</th>${comEstPct() ? `<th class="n">Comisión ${fmt(comEstPct(), 1).replace(',0', '')}%</th><th class="n">Base cliente</th>` : ''}<th class="n">Instalación</th><th class="n">Flete</th><th class="n">Total</th></tr></thead><tbody>
       ${S.rows.map((r, k) => { const multi = P.sectores.length > 1, first = !k || S.rows[k - 1].sector !== r.sector, last = k === S.rows.length - 1 || S.rows[k + 1].sector !== r.sector;
-        return `${multi && first ? `<tr class="secrow"><td colspan="7">${esc(r.sectorNombre || 'Sin nombre')}</td></tr>` : ''}<tr class="click ${r.opcion ? 'opt' : ''}" data-act="sel" data-id="${r.id}"><td><b>${r.opcion ? '' : esc(r.M.cod || '—')}</b></td><td>${r.opcion ? `<span class="tag op">Opción</span> ${esc(textoOpcionMueble(r.M))} <span class="note">(no suma)</span>` : esc(r.M.desc || '')}</td><td class="n">${money(r.R.precio)}</td><td class="n">${money(r.b)}</td><td class="n">${money(r.i)}</td><td class="n">${money(r.f)}</td><td class="n">${money(r.t)}</td></tr>
-        ${(r.M.variantes || []).map(v => { const RV = calcVar(r.M, v); return `<tr class="opt"><td></td><td class="note">Frente ${esc(v.nombre || 'alternativo')}</td><td class="n">${money(RV.precio)}</td><td class="n">${money(RV.precio)}</td><td class="n">${money(r.i)}</td><td class="n">${money(r.f)}</td><td class="n">${money(RV.precio + r.i + r.f)}</td></tr>`; }).join('')}
-        ${opcionesAgrupadas(r.M, r.R).map(o => `<tr class="opt"><td></td><td class="note">Opción: ${esc(textoOpcion(o))}</td><td class="n">+ ${money(o.deltaRnd)}</td><td></td><td></td><td></td><td></td></tr>`).join('')}
-        ${multi && last ? `<tr class="subt"><td></td><td colspan="5">Subtotal ${esc(r.sectorNombre || '')}</td><td class="n">${money(S.sub[r.sector])}</td></tr>` : ''}`; }).join('')}
-      </tbody><tfoot><tr><td colspan="6">Total sin opciones ni variantes</td><td class="n">${money(S.totBase)}</td></tr></tfoot></table></div>` : '<p class="note" style="margin:0">Cuando cargues muebles, acá aparece el total.</p>'}`;
+        return `${multi && first ? `<tr class="secrow"><td colspan="${comEstPct() ? 9 : 7}">${esc(r.sectorNombre || 'Sin nombre')}</td></tr>` : ''}<tr class="click ${r.opcion ? 'opt' : ''}" data-act="sel" data-id="${r.id}"><td><b>${r.opcion ? '' : esc(r.M.cod || '—')}</b></td><td>${r.opcion ? `<span class="tag op">Opción</span> ${esc(textoOpcionMueble(r.M))} <span class="note">(no suma)</span>` : esc(r.M.desc || '')}</td><td class="n">${money(r.R.precio)}</td><td class="n">${money(r.bM)}</td>${comEstPct() ? `<td class="n">${money(r.com)}</td><td class="n">${money(r.b)}</td>` : ''}<td class="n">${money(r.i)}</td><td class="n">${money(r.f)}</td><td class="n">${money(r.t)}</td></tr>
+        ${(r.M.variantes || []).map(v => { const RV = calcVar(r.M, v); return `<tr class="opt"><td></td><td class="note">Frente ${esc(v.nombre || 'alternativo')}</td><td class="n">${money(RV.precio)}</td><td class="n">${money(RV.precio)}</td>${comEstPct() ? `<td class="n">${money(cliB(RV.precio) - RV.precio)}</td><td class="n">${money(cliB(RV.precio))}</td>` : ''}<td class="n">${money(r.i)}</td><td class="n">${money(r.f)}</td><td class="n">${money(cliB(RV.precio) + r.i + r.f)}</td></tr>`; }).join('')}
+        ${opcionesAgrupadas(r.M, r.R).map(o => `<tr class="opt"><td></td><td class="note">Opción: ${esc(textoOpcion(o))}</td><td class="n">+ ${money(cliB(o.deltaRnd))}</td><td></td><td></td><td></td><td></td>${comEstPct() ? '<td></td><td></td>' : ''}</tr>`).join('')}
+        ${multi && last ? `<tr class="subt"><td></td><td colspan="${comEstPct() ? 7 : 5}">Subtotal ${esc(r.sectorNombre || '')}</td><td class="n">${money(S.sub[r.sector])}</td></tr>` : ''}`; }).join('')}
+      </tbody><tfoot><tr><td colspan="${comEstPct() ? 8 : 6}">Total sin opciones ni variantes</td><td class="n">${money(S.totBase)}</td></tr></tfoot></table></div>` : '<p class="note" style="margin:0">Cuando cargues muebles, acá aparece el total.</p>'}`;
 }
 /* ---------------- Edición del presupuesto y del mueble ---------------- */
 function reopt(g) {
@@ -1691,6 +1761,7 @@ VP.addEventListener('input', e => {
 });
 VP.addEventListener('change', e => {
   const t = e.target;
+  if (t.dataset.ce) { const c = Object.assign({ on: false, pct: 10 }, P.comEst || {}); if (t.dataset.ce === 'on') c.on = t.checked; else c.pct = N(t.value) || 0; P.comEst = c; touch(); const box = document.querySelector('#view-pres .comest'); if (box) box.outerHTML = comEstHTML(); renderResumen(); return; }
   if (t.dataset.combo && e.isTrusted) return;
   if (t.dataset.p != null) { P[t.dataset.p] = t.value; touch(); if (t.dataset.p === 'num' || t.dataset.p === 'version') updDup(); renderResumen(); return; }
   if (t.dataset.sn) { sectorDe(SECT).nombre = t.value.trim(); touch(); setTimeout(() => { renderSectores(); renderResumen(); }, 0); return; }
@@ -1757,6 +1828,7 @@ VP.addEventListener('click', e => {
     case 'del-v': M.variantes.splice(+b.dataset.k, 1); redo(); break;
     case 'xlsx-planilla': elegirPlanilla(); break;
     case 'final': dialogoFinal(); break;
+    case 'estudio': dialogoEstudio(); break;
     case 'xlsx-pedido': exportPedido(); break;
     case 'save-file': guardarArchivo(); break;
     case 'upd-precios': confirmDlg('Pasar a los precios actuales', 'Se recalculan todos los muebles con los precios y la configuración actuales del taller. Las placas y cortes que ajustaste a mano se mantienen.', 'Actualizar', () => { P.cfg = clone(CFG); P.cfgFecha = Date.now(); Object.values(MS).forEach(M2 => M2.grupos.forEach(reopt)); Object.keys(MS).forEach(id => dirtyM.add(id)); renderPres(); touch(); toast('Precios actualizados'); }); break;
@@ -3682,10 +3754,10 @@ function finalModulos(sids) {
     const t = r.M.textos || {}, can = t.cantos || sugCantos(r.R) || 'ABS 045';
     const fr = [[t.frentes || '', t.estructura || '', can, r.t]];
     const alts = [];
-    (r.M.variantes || []).forEach(v => { const RV = calcVar(r.M, v); fr.push([v.nombre || 'Frente alternativo', t.estructura || '', can, RV.precio + r.i + r.f]); alts.push({ n: v.nombre || 'frente alternativo', v: RV.precio + r.i + r.f }); });
+    (r.M.variantes || []).forEach(v => { const RV = calcVar(r.M, v); fr.push([v.nombre || 'Frente alternativo', t.estructura || '', can, cliB(RV.precio) + r.i + r.f]); alts.push({ n: v.nombre || 'frente alternativo', v: cliB(RV.precio) + r.i + r.f }); });
     S.rows.filter(o => o.opcion && o.M.opcionDe === r.id).forEach(o => { const ot = o.M.textos || {}; const nom = o.M.opcionNombre || ot.frentes || 'opción'; fr.push(['OPCIÓN — ' + (o.M.opcionNombre || ot.frentes || ''), ot.estructura || t.estructura || '', ot.cantos || sugCantos(o.R) || can, o.t]); alts.push({ n: nom, v: o.t }); });
     const herr = String(t.herrajes || sugHerrajes(r.M) || '').split('\n').map(x => x.trim()).filter(Boolean);
-    const OA = opcionesAgrupadas(r.M, r.R); const ex = OA.map(o => ['OPCIÓN — ' + textoOpcion(o), 'delta', o.deltaRnd]);
+    const OA = opcionesAgrupadas(r.M, r.R).map(o => Object.assign({}, o, { deltaRnd: cliB(o.deltaRnd) })); const ex = OA.map(o => ['OPCIÓN — ' + textoOpcion(o), 'delta', o.deltaRnd]);
     out.push({ cod: r.M.cod || '', desc: r.M.desc || '', herrajes: herr.length ? herr : ['—'], frentes: fr, extras: ex });
     let v = r.t; if (alts.length) { v = alts[0].v; criterio.push(`${r.M.cod}: ${alts[0].n}`); }
     OA.forEach(o => { v += o.deltaRnd; criterio.push(`${r.M.cod}: ${textoOpcion(o)}`); });
