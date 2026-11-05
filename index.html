@@ -88,6 +88,7 @@ table.t tr.click{cursor:pointer} table.t tr.click:hover td{background:var(--pane
 .stabs{display:flex;gap:4px;flex-wrap:wrap;align-items:flex-end;border-bottom:1px solid var(--line)}
 .stabs button.st{background:none;border:1px solid transparent;border-bottom:0;border-radius:5px 5px 0 0;padding:7px 12px;font:600 13px var(--f-body);color:var(--muted);cursor:pointer;display:grid;gap:1px;text-align:left;margin-bottom:-1px}
 .stabs button.st small{font:500 11.5px var(--f-mono)}
+.stabs button.st{touch-action:pan-y;user-select:none}.stabs button.st.sdrag{opacity:.45;cursor:grabbing}.stabs button.st.sdb{box-shadow:inset 3px 0 0 var(--accent)!important}.stabs button.st.sda{box-shadow:inset -3px 0 0 var(--accent)!important}.stabs.sdragging{cursor:grabbing}
 .stabs button.st[aria-current="true"]{border-color:var(--line);background:var(--panel);color:var(--ink);box-shadow:inset 0 3px 0 var(--accent)}
 .sbar{display:flex;gap:8px;align-items:end;flex-wrap:wrap}
 table.t tr.secrow td{background:var(--panel2);font-weight:700;font-family:var(--f-display)}
@@ -1385,11 +1386,33 @@ function renderPres() {
 function textoOpcionMueble(M) { return M.opcionNombre || M.desc || ('Opción de ' + ((MS[M.opcionDe] || {}).cod || '')); }
 function esDup() { const v = String(P.version || '').trim(); return !!P.num && PRES.some(p => p.id !== P.id && String(p.num).trim() === String(P.num).trim() && String(p.version || '').trim() === v); }
 function dupHTML() { return esDup() ? `<div class="alert">Ya hay otro presupuesto con el Nº ${esc(P.num)}${P.version ? ' ' + esc(P.version) : ''}. Revisá el número o poné una versión distinta.</div>` : ''; }
+/* Arrastrar pestañas de sector para cambiar el orden (mouse y touch) */
+let SDRAG = null, SDSUP = false;
+document.addEventListener('pointerdown', e => { const b = e.target.closest && e.target.closest('.stabs .st'); if (!b || e.button || !P) return; SDRAG = { id: b.dataset.id, x: e.clientX, on: false, idx: null }; });
+document.addEventListener('pointermove', e => {
+  if (!SDRAG) return; if (!SDRAG.on && Math.abs(e.clientX - SDRAG.x) < 8) return;
+  const tabs = [...document.querySelectorAll('.stabs .st')]; if (tabs.length < 2) return;
+  if (!SDRAG.on) { SDRAG.on = true; const me = tabs.find(t => t.dataset.id === SDRAG.id); if (me) me.classList.add('sdrag'); me && me.parentNode.classList.add('sdragging'); }
+  const otros = tabs.filter(t => t.dataset.id !== SDRAG.id);
+  const cerca = otros.map(t => { const r = t.getBoundingClientRect(); return { t, r, d: Math.hypot(Math.max(r.left - e.clientX, 0, e.clientX - r.right), Math.max(r.top - e.clientY, 0, e.clientY - r.bottom)) }; }).sort((a, b) => a.d - b.d)[0];
+  tabs.forEach(t => t.classList.remove('sdb', 'sda')); if (!cerca) return;
+  const antes = e.clientX < cerca.r.left + cerca.r.width / 2; cerca.t.classList.add(antes ? 'sdb' : 'sda');
+  SDRAG.idx = { id: cerca.t.dataset.id, antes }; e.preventDefault();
+});
+document.addEventListener('pointerup', () => {
+  const d = SDRAG; SDRAG = null; if (!d || !d.on) return; SDSUP = true; setTimeout(() => { SDSUP = false; }, 0);
+  document.querySelectorAll('.stabs .st').forEach(t => t.classList.remove('sdrag', 'sdb', 'sda')); const bar = document.querySelector('.stabs'); if (bar) bar.classList.remove('sdragging');
+  if (!d.idx) return; const arr = P.sectores, me = arr.find(x => x.id === d.id); if (!me) return;
+  const resto = arr.filter(x => x.id !== d.id); let k = resto.findIndex(x => x.id === d.idx.id); if (k < 0) return; if (!d.idx.antes) k++;
+  resto.splice(k, 0, me); if (resto.every((x, i) => x === arr[i])) return; P.sectores = resto; touch(); renderSectores(); renderResumen(); toast('Orden de sectores actualizado.');
+});
+document.addEventListener('pointercancel', () => { if (SDRAG) { SDRAG = null; document.querySelectorAll('.stabs .st').forEach(t => t.classList.remove('sdrag', 'sdb', 'sda')); } });
+document.addEventListener('click', e => { if (SDSUP && e.target.closest && e.target.closest('.stabs .st')) { e.stopPropagation(); e.preventDefault(); SDSUP = false; } }, true);
 function renderSectores() {
   const el = $('sectores'); if (!el) return;
   const s = sectorDe(SECT);
   el.innerHTML = `<div class="stabs" role="tablist">${P.sectores.map(x => { const ids = mueblesDe(x.id); const tot = ids.reduce((t, id) => { const M = MS[id], R = calcM(M); if (M.opcionDe && MS[M.opcionDe]) return t; return t + baseVenta(M, R) + N(M.venta.instalacion) + N(M.venta.flete); }, 0);
-      return `<button class="st" role="tab" data-act="sect" data-id="${x.id}" aria-current="${x.id === SECT}"><span>${esc(x.nombre || 'Sin nombre')}</span><small>${ids.length} mueble${ids.length === 1 ? '' : 's'} · ${money(tot)}</small></button>`; }).join('')}
+      return `<button class="st" role="tab" data-act="sect" data-id="${x.id}" aria-current="${x.id === SECT}" title="Arrastrá para cambiar el orden"><span>${esc(x.nombre || 'Sin nombre')}</span><small>${ids.length} mueble${ids.length === 1 ? '' : 's'} · ${money(tot)}</small></button>`; }).join('')}
       <button class="btn sm ghost" data-act="add-sect" style="margin-bottom:6px">+ Sector</button></div>
     <div class="sbar" style="margin-top:10px"><div class="field" style="width:260px;max-width:100%"><label class="lbl" for="s-nombre">Nombre del sector</label><input type="text" id="s-nombre" data-sn="1" value="${esc(s.nombre || '')}" placeholder="Ej: Cocina" aria-label="Nombre del sector"></div>
       ${P.sectores.length > 1 ? `<button class="btn sm danger" data-act="del-sect">Borrar sector</button>` : ''}</div>`;
