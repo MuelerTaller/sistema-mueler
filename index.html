@@ -1427,7 +1427,7 @@ function secDatos(M, R) {
     <div class="field"><label class="lbl" for="k-cod">Código</label>${inp('cod', M.cod, { label: 'Código del mueble', ph: 'M01' })}</div>
     <div class="field"><label class="lbl" for="k-desc">Descripción del mueble</label>${inp('desc', M.desc, { ph: 'Ej: ESCRITORIO CON CAJONERA + 2 ESTANTES', label: 'Descripción' })}</div>
     <div class="row"><button class="btn sm" data-act="dup">Duplicar</button><button class="btn sm" data-act="dup-op">Duplicar como opción</button><button class="btn sm danger" data-act="del-m">Borrar</button></div></div>
-    <div class="grid2"><div class="field"><label class="lbl" for="k-opcionDe">Es una opción de</label>${sel('opcionDe', M.opcionDe || '', P.orden.filter(id => id !== M.id && MS[id] && MS[id].sector === M.sector && !MS[id].opcionDe).map(id => ({ v: id, t: (MS[id].cod || '—') + (MS[id].desc ? ' · ' + MS[id].desc : '') })), { empty: 'No, es un mueble del presupuesto', label: 'Es una opción de' })}</div>
+    <div class="grid2">${P.sectores.length ? `<div class="field"><label class="lbl" for="mv-sec">Sector</label>${M.opcionDe && MS[M.opcionDe] ? `<span class="note">${esc(sectorDe(M.sector).nombre || '')} · las opciones se mueven junto con su mueble</span>` : `<select id="mv-sec" data-mvsec="1" aria-label="Mover a sector">${P.sectores.map(x => `<option value="${esc(x.id)}" ${x.id === M.sector ? 'selected' : ''}>${esc(x.nombre || 'Sin nombre')}</option>`).join('')}<option value="__new">+ Mover a un sector nuevo…</option></select>`}</div>` : ''}<div class="field"><label class="lbl" for="k-opcionDe">Es una opción de</label>${sel('opcionDe', M.opcionDe || '', P.orden.filter(id => id !== M.id && MS[id] && MS[id].sector === M.sector && !MS[id].opcionDe).map(id => ({ v: id, t: (MS[id].cod || '—') + (MS[id].desc ? ' · ' + MS[id].desc : '') })), { empty: 'No, es un mueble del presupuesto', label: 'Es una opción de' })}</div>
       ${M.opcionDe && MS[M.opcionDe] ? `<div class="field"><label class="lbl" for="k-opcionNombre">Nombre de la opción</label>${inp('opcionNombre', M.opcionNombre || '', { label: 'Nombre de la opción', ph: 'Ej: LAQUEADO COLOR · sale como “OPCIÓN — …” y no suma al total' })}</div>` : ''}</div>
     <div class="row note">${M.src ? `<span class="badge csv">CSV</span><span>${esc(M.src.archivo)} · importado ${fdate(M.src.fecha)}${M.ocl ? ` · ${M.ocl.cajones} cajones · ${M.ocl.puertas.length} puertas` : ''}</span><button class="btn sm" data-act="dl-csv">Descargar CSV</button><button class="btn sm" data-act="rep-csv">Reemplazar CSV</button>` : `<span class="badge man">A mano</span><span>Cargá las placas, cortes, metros de canto y herrajes.</span>`}</div>
     ${av.length ? `<div class="alert"><b>Para revisar</b><ul>${av.map(a => `<li>${esc(a)}</li>`).join('')}</ul></div>` : ''}</div>`;
@@ -1781,6 +1781,7 @@ VP.addEventListener('change', e => {
   if (t.dataset.ce) { const c = Object.assign({ on: false, pct: 10 }, P.comEst || {}); if (t.dataset.ce === 'on') c.on = t.checked; else c.pct = N(t.value) || 0; P.comEst = c; touch(); const box = document.querySelector('#view-pres .comest'); if (box) box.outerHTML = comEstHTML(); renderResumen(); return; }
   if (t.dataset.combo && e.isTrusted) return;
   if (t.dataset.p != null) { P[t.dataset.p] = t.value; touch(); if (t.dataset.p === 'num' || t.dataset.p === 'version') updDup(); renderResumen(); return; }
+  if (t.dataset.mvsec) { moverSector(SEL, t.value); return; }
   if (t.dataset.sn) { sectorDe(SECT).nombre = t.value.trim(); touch(); setTimeout(() => { renderSectores(); renderResumen(); }, 0); return; }
   if (t.dataset.k != null) { const M = MS[SEL]; if (!M) return; setField(M, t.dataset.k, t); touch(SEL);
     if (t.dataset.k === 'opcionDe') { if (t.value) { const base = MS[t.value]; MS[SEL].cod = base.cod; } renderPres(); }
@@ -1852,6 +1853,20 @@ VP.addEventListener('click', e => {
     case 'del-p': confirmDlg('Borrar presupuesto', `¿Borrar el presupuesto ${esc(P.num || '')} ${esc(P.obra || '')} con sus ${P.orden.length} muebles? No se puede deshacer.`, 'Borrar', async () => { const p = P, ids = P.orden.slice(); clearTimeout(saveT); dirtyP = false; dirtyM.clear(); P = null; MS = {}; SEL = null; try { for (const id of ids) await Store.delMueble(id); await Store.delPres(p.id); } catch (er) { toast('No se pudo borrar todo'); } if (!DB) Store.listenPres(l => { PRES = l; }); show('lista'); toast('Presupuesto borrado'); }, true); break;
   }
 });
+function moverSector(id, dest) {
+  const M = MS[id]; if (!M || dest === M.sector) return;
+  if (dest === '__new') { const s = { id: 's' + uid(), nombre: 'Sector ' + (P.sectores.length + 1) }; P.sectores.push(s); dest = s.id; }
+  const prevSect = SECT; SECT = dest; const libre = siguienteCod(); SECT = prevSect;
+  const choca = Object.values(MS).some(x => x.id !== id && x.sector === dest && !x.opcionDe && x.cod && x.cod === M.cod);
+  const antes = M.cod; if (choca || !M.cod) M.cod = libre;
+  const mov = [M].concat(Object.values(MS).filter(x => x.opcionDe === id));
+  mov.forEach(x => { x.sector = dest; if (x !== M) x.cod = M.cod; dirtyM.add(x.id); });
+  const ids = mov.map(x => x.id); P.orden = P.orden.filter(x => !ids.includes(x)).concat(ids);
+  SECT = dest; SEL = id; touch(); renderPres();
+  const nom = sectorDe(dest).nombre || 'el sector';
+  toast(`${M.cod} pasó a ${nom}${mov.length > 1 ? ` con ${mov.length - 1} opción${mov.length > 2 ? 'es' : ''}` : ''}.${choca ? ` Ya había un ${antes} ahí: quedó como ${M.cod}.` : ''}`);
+  if (/^Sector \d+$/.test(nom)) setTimeout(() => { const n = $('s-nombre'); if (n) { n.focus(); n.select(); } }, 50);
+}
 function siguienteCod() { const ns = Object.values(MS).filter(M => M.sector === SECT).map(M => { const m = String(M.cod || '').match(/^M\s*0*(\d+)/i); return m ? +m[1] : 0; }); return 'M' + String((ns.length ? Math.max(...ns) : 0) + 1).padStart(2, '0'); }
 
 /* ---------------- Importar CSV ---------------- */
