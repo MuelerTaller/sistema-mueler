@@ -2348,6 +2348,7 @@ function renderPrecios() {
     <div class="row"><input type="text" id="c-map-new" placeholder="Material OCL (ej: MelGris18)" style="max-width:220px" aria-label="Nuevo material OCL"><button class="btn sm" data-act="map-add">+ Agregar</button></div>
     <h3>Herrajes del modelo</h3><div class="grid2">
       <div class="field"><label class="lbl" for="c-correderaPatron">Línea de corredera ({mm} = largo en mm, {cm} = en cm)</label>${cin('correderaPatron', C.correderaPatron)}</div>
+      <div class="field"><label class="lbl" for="c-guiaOcultaPatron">Línea de guía oculta ({mm} = largo en mm)</label>${cin('guiaOcultaPatron', C.guiaOcultaPatron || 'Guía oculta cierre suave {mm} mm · Häfele')}</div>
       <div class="field"><label class="lbl" for="c-bisagraArt">Bisagra</label>${sel('bisagraArt', C.bisagraArt, C.herrajes.map(h => h.n), { d: 'c', pre: 'c', label: 'Bisagra' })}</div></div>
     <div class="field"><span class="lbl">Bisagras sugeridas por alto de puerta</span><div class="grid4">${(C.bisagrasPorAlto || []).map((r, i) => `<div class="row" style="gap:6px"><span class="note">hasta</span>${cin(`bisagrasPorAlto.${i}.0`, r[0], { num: 1, style: 'width:80px', label: 'Alto máximo' })}<span class="note">mm →</span>${cin(`bisagrasPorAlto.${i}.1`, r[1], { num: 1, style: 'width:50px', label: 'Bisagras' })}</div>`).join('')}</div></div>
     <h3>Optimización</h3><div class="grid4">
