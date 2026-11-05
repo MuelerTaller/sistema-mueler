@@ -617,7 +617,13 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
         R.cantosOCL[mat] = (R.cantosOCL[mat] || 0) + mm(get(C.lf) || get(C.lc)) * cant;
       } else if (tipo === 'accesorio' || tipo === 'hardware') {
         const dims = [mm(get(C.lf)), mm(get(C.af)), mm(get(C.ef))];
-        if (/corr/i.test(des) && /(der|izq|right|left)/i.test(des)) {
+        if (/^part\s*_?movil/i.test(des)) { // pieza del cajón de la guía oculta: da el largo real de la guía
+          const id = (des.match(/#\s*(\d+)/) || [])[1] || ''; const lado = /izq|left/i.test(des) ? 'izq' : 'der';
+          R.moviles = R.moviles || []; for (let q = 0; q < cant; q++) R.moviles.push({ id, lado, largo: Math.max(...dims) });
+        } else if (/corr/i.test(des) && /ocult/i.test(des) && /(der|izq|right|left)/i.test(des)) { // pieza fija (va en el mueble): no sirve para la medida
+          const id = (des.match(/#\s*(\d+)/) || [])[1] || ''; const lado = /izq|left/i.test(des) ? 'izq' : 'der';
+          R.ocultas = R.ocultas || []; for (let q = 0; q < cant; q++) R.ocultas.push({ id, lado, fijo: Math.max(...dims) });
+        } else if (/corr/i.test(des) && /(der|izq|right|left)/i.test(des)) {
           const largo = Math.max(...dims); const k = String(Math.round(largo));
           const g = R.correderas[k] || (R.correderas[k] = { largo: Math.round(largo), der: 0, izq: 0 });
           if (/der|right/i.test(des)) g.der += cant; else g.izq += cant;
@@ -632,6 +638,7 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
         const d2 = get(C.desc);
         if (!mat && d2) { if (!R.modulo) R.modulo = d2; continue; }
         if (/^cajon/i.test(des)) R.cajones += cant;
+        else if (/^led\b/i.test(des)) { const dims = [mm(get(C.lf)), mm(get(C.af)), mm(get(C.ef))]; R.leds = R.leds || []; R.leds.push({ cant, largo: Math.max(...dims) }); }
         else if (/puerta/i.test(des)) { const dims = [mm(get(C.lf)), mm(get(C.af)), mm(get(C.ef))]; const alto = Math.max(...dims); for (let k = 0; k < cant; k++) R.puertas.push({ alto, ancho: Math.min(...dims.filter(x => x > 40)) || 0 }); }
         else if (des) R.otros.push({ desc: cleanName(des), cant, material: mat });
       }
@@ -640,8 +647,21 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
     R.paresCorrederas = Object.values(R.correderas).map(g => {
       const pares = Math.max(g.der, g.izq);
       if (g.der !== g.izq) R.avisos.push(`Correderas ${g.largo} mm: ${g.der} derechas y ${g.izq} izquierdas. Se tomaron ${pares} pares; revisalo.`);
-      return { largo: g.largo, pares };
-    }).sort((a, b) => b.largo - a.largo);
+      return { largo: g.largo, pares, tipo: 'telescopica' };
+    });
+    // Guías ocultas: cada una tiene una pieza fija en el mueble (Corr.Oculta…, 270/314 mm, no indica el largo) y una móvil en el cajón (PartMovil…, ej. 459 → guía de 450).
+    // Se emparejan por el número (#n) y el lado; la medida sale de la pieza móvil.
+    if ((R.ocultas || []).length) {
+      const mov = (R.moviles || []).slice(), og = {};
+      const nominal = l => Math.max(250, Math.floor((l + 20) / 50) * 50);
+      const sinMovil = [];
+      R.ocultas.forEach(o => { let k = mov.findIndex(m => m.id === o.id && m.lado === o.lado); if (k < 0) k = mov.findIndex(m => m.id === o.id); let largo;
+        if (k >= 0) { largo = nominal(mov[k].largo); mov.splice(k, 1); } else { largo = o.fijo >= 300 ? 450 : 300; sinMovil.push(o); }
+        const g = og[largo] || (og[largo] = { largo, der: 0, izq: 0 }); g[o.lado]++; });
+      if (sinMovil.length) R.avisos.push(`${sinMovil.length} pieza${sinMovil.length > 1 ? 's' : ''} de guía oculta sin su parte del cajón (PartMovil): se tomó ${sinMovil[0].fijo >= 300 ? '450' : '300'} mm. Revisá el largo.`);
+      Object.values(og).forEach(g => { const pares = Math.max(g.der, g.izq); if (g.der !== g.izq) R.avisos.push(`Guías ocultas ${g.largo} mm: ${g.der} derechas y ${g.izq} izquierdas. Se tomaron ${pares} pares; revisalo.`); R.paresCorrederas.push({ largo: g.largo, pares, tipo: 'oculta' }); });
+    }
+    R.paresCorrederas.sort((a, b) => b.largo - a.largo);
     const totPares = R.paresCorrederas.reduce((s, g) => s + g.pares, 0);
     if (R.cajones && totPares && R.cajones !== totPares) R.avisos.push(`El modelo tiene ${R.cajones} cajones y ${totPares} pares de correderas. Revisá si hay bandejas o cajones sin corredera.`);
     // cruce cantos por pieza vs filas Canto
@@ -896,9 +916,9 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
     const placasDib = res.groups.map(x => ({ n: x.n, cant: x.cantidad, P: x.pieces.map(p => [Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10, p.w, p.h, p.it.item, p.rotated ? 1 : 0]), uso: x.usedArea / areaPlaca, cortes: x.cuts.length }));
     return { L: pl.L, A: pl.A, veta, noEntran, nPlacas: res.nPlacas, aprov: res.aprovechamiento, cortes: res.cortes, ultimaPct, fraccion: res.fraccion, m2Cortado: res.m2Cortado, placasDib, nPiezas: res.nPiezas, kerf: res.cfg.kerf, ref: res.cfg.refX };
   }
-  function articuloCorredera(largoMm, CFG) {
+  function articuloCorredera(largoMm, CFG, tipo) {
     const cm = Math.round(largoMm / 10);
-    const pat = CFG.correderaPatron || 'CORREDERAS TELESCOPICA C/SUAVE {cm} EUROHARD';
+    const pat = tipo === 'oculta' ? (CFG.guiaOcultaPatron || 'Guía oculta cierre suave {mm} mm · Häfele') : (CFG.correderaPatron || 'CORREDERAS TELESCOPICA C/SUAVE {cm} EUROHARD');
     const names = (CFG.herrajes || []).map(h => h.n);
     const isMM = pat.includes('{mm}');
     const exact = pat.replace('{cm}', cm).replace('{mm}', cm * 10);
@@ -933,9 +953,9 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
     });
     const herrajes = [];
     (R.paresCorrederas || []).forEach(c => {
-      const a = articuloCorredera(c.largo, CFG);
-      if (!a.exacto) avisos.push(a.art ? `No hay corredera de ${a.cm} cm en la lista; se usó "${a.art}".` : `No encontré corredera de ${a.cm} cm en la lista de herrajes.`);
-      herrajes.push({ id: uid(), art: a.art, cant: c.pares, tipo: 'BASE', auto: 'corredera', nota: `${c.pares} pares de ${c.largo} mm en el modelo` });
+      const oc = c.tipo === 'oculta', a = articuloCorredera(c.largo, CFG, c.tipo), q = oc ? 'guía oculta' : 'corredera';
+      if (!a.exacto) avisos.push(a.art ? `No hay ${q} de ${a.cm} cm en la lista; se usó "${a.art}".` : `No encontré ${q} de ${a.cm} cm en la lista de herrajes.`);
+      herrajes.push({ id: uid(), art: a.art, cant: c.pares, tipo: 'BASE', auto: 'corredera', nota: `${c.pares} pares de ${oc ? 'guías ocultas' : 'correderas'} de ${c.largo} mm en el modelo` });
     });
     const sug = CALC.bisagrasSugeridas(R.puertas, CFG.bisagrasPorAlto);
     if (R.bisagras || R.puertas.length) herrajes.push({ id: uid(), art: CFG.bisagraArt, cant: R.bisagras, tipo: 'BASE', auto: 'bisagra', nota: `${R.bisagras} en el modelo · ${R.puertas.length} puertas`, sugeridas: sug });
@@ -957,6 +977,7 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
       ocl: { cajones: R.cajones, puertas: R.puertas, bisagras: R.bisagras, pares: R.paresCorrederas, accesorios: R.accesorios, filas: R.filas },
       grupos, cantosOv: {}, cantosExtra: [], cortesOv: null, herrajes, mecanizados: {}, fleteMat: 1, terceros: [], variantes: [],
       venta: { instalacion: '', flete: '' }, textos: { frentes: txt.frentes, estructura: txt.estructura, cantos: '', herrajes: '' },
+      led: (R.leds || []).length ? { circuitos: [{ id: uid(), nombre: '', interr: true, humedo: false, fuente: '', tramos: R.leds.map(l => ({ id: uid(), donde: 'Del modelo', cant: l.cant, largo: Math.round(l.largo / 10) })) }] } : undefined,
       avisos,
     };
   }
@@ -1599,8 +1620,9 @@ function secHerrajes(M, R) {
   }).join('');
   return `<div class="panel"><header><h3>Herrajes</h3><span class="sum">${money(R.totalHerrajes)}</span></header>
     ${M.herrajes.length ? `<div class="tbox"><table class="t"><thead><tr><th>Tipo</th><th>Artículo</th><th class="n">Cant.</th><th class="n">Precio</th><th class="n">Subtotal</th><th>Detalle</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` : '<p class="note" style="margin:0">Sin herrajes cargados.</p>'}
-    <div class="row"><button class="btn sm" data-act="add-h">+ Herraje</button><button class="btn sm" data-act="add-op">+ Opción de herraje</button>${M.herrajes.some(h => h.tipo !== 'OPCIÓN' && /^CORREDERAS/i.test(h.art || '') && !M.herrajes.some(o => o.tipo === 'OPCIÓN' && o.ref === h.id)) ? '<button class="btn sm" data-act="op-guias">+ Opción: guías ocultas en las correderas</button>' : ''}${R.kits.length ? `<span class="note"><b>Cajones Slim</b>: costo ${money(R.costoKits)} → venta ${money(R.totalKits)}. El margen del taller va solo sobre el lateral (o la guía oculta elegida); el resto, al costo.</span>` : ''}${R.accesorios.length ? `<span class="note"><b>Accesorios</b> (${esc(R.accesorios.map(a => a.art.split(' · ')[0]).join(', '))}): costo ${money(R.costoAcc)} + ${fmt(R.accPct)}% = ${money(R.totalAcc)}. Se suman aparte, sin recargos ni comisión.</span>` : ''}<span class="note">Correderas: cada par derecha + izquierda del modelo cuenta como una. Opción: muestra la diferencia con recargo (las guías pasan sin recargo).</span></div></div>`;
+    <div class="row"><button class="btn sm" data-act="add-h">+ Herraje</button><button class="btn sm" data-act="add-op">+ Opción de herraje</button>${M.herrajes.some(h => h.tipo !== 'OPCIÓN' && esTelesc(h.art) && !M.herrajes.some(o => o.tipo === 'OPCIÓN' && o.ref === h.id)) ? '<button class="btn sm" data-act="op-guias">+ Opción: guías ocultas en las correderas</button>' : ''}${R.kits.length ? `<span class="note"><b>Cajones Slim</b>: costo ${money(R.costoKits)} → venta ${money(R.totalKits)}. El margen del taller va solo sobre el lateral (o la guía oculta elegida); el resto, al costo.</span>` : ''}${R.accesorios.length ? `<span class="note"><b>Accesorios</b> (${esc(R.accesorios.map(a => a.art.split(' · ')[0]).join(', '))}): costo ${money(R.costoAcc)} + ${fmt(R.accPct)}% = ${money(R.totalAcc)}. Se suman aparte, sin recargos ni comisión.</span>` : ''}<span class="note">Correderas: cada par derecha + izquierda del modelo cuenta como una. Opción: muestra la diferencia con recargo (las guías pasan sin recargo).</span></div></div>`;
 }
+function esTelesc(art) { return /^CORREDERAS/i.test(art || '') || /^corredera telesc/i.test(art || ''); }
 function secLed(M, R) {
   const cs = (M.led && M.led.circuitos) || [], L = Calc.ledBase(PC()), RL = R.led;
   const fopts = c => L.fuentes.filter(f => !c.humedo || f.ip67).map(f => ({ v: f.c, t: `${f.n} · ${money(f.p)}` }));
@@ -1949,12 +1971,13 @@ VP.addEventListener('click', e => {
     case 'bis-sug': M.herrajes[j].cant = M.herrajes[j].sugeridas; redo(); break;
     case 'add-t': (M.terceros = M.terceros || []).push({ art: '', cant: '' }); redo(); break;
     case 'del-t': M.terceros.splice(j, 1); redo(); break;
-    case 'op-guias': { const guias = PC().herrajes.map(h => { const m = h.n.match(/^GUIA OCULTA EXT TOTAL\s+(\d+)\s*MM CIERRE SUAVE EUROHARD$/i); return m ? { n: h.n, mm: +m[1] } : null; }).filter(Boolean);
-      if (!guias.length) { toast('No hay guías ocultas Eurohard en la lista de herrajes'); break; }
+    case 'op-guias': { const guias = PC().herrajes.map(h => { let m = h.guia && h.n.match(/(\d{3})\s*mm\s*·\s*(.+)$/i); if (m) return { n: h.n, mm: +m[1], marca: m[2].trim() }; m = h.n.match(/^GUIA OCULTA EXT TOTAL\s+(\d+)\s*MM CIERRE SUAVE EUROHARD$/i); return m ? { n: h.n, mm: +m[1], marca: 'Eurohard' } : null; }).filter(Boolean);
+      if (!guias.length) { toast('No hay guías ocultas en la lista de herrajes'); break; }
       let k = 0;
-      M.herrajes.filter(h => h.tipo !== 'OPCIÓN' && /^CORREDERAS/i.test(h.art || '') && !M.herrajes.some(o => o.tipo === 'OPCIÓN' && o.ref === h.id)).forEach(h => {
-        const cm = +((h.art.match(/\b(\d{2})\b/) || [])[1] || 45), mm = cm * 10;
-        const gsel = guias.slice().sort((x, y) => Math.abs(x.mm - mm) - Math.abs(y.mm - mm))[0];
+      M.herrajes.filter(h => h.tipo !== 'OPCIÓN' && esTelesc(h.art) && !M.herrajes.some(o => o.tipo === 'OPCIÓN' && o.ref === h.id)).forEach(h => {
+        const mmM = h.art.match(/(\d{3})\s*mm/i), cm = +((h.art.match(/\b(\d{2})\b/) || [])[1] || 45), mm = mmM ? +mmM[1] : cm * 10;
+        const marca = (h.art.split(' · ')[1] || '').trim(); const pref = guias.filter(g => g.marca === marca); const pool = pref.length ? pref : guias;
+        const gsel = pool.slice().sort((x, y) => Math.abs(x.mm - mm) - Math.abs(y.mm - mm))[0];
         M.herrajes.push({ id: uid(), art: gsel.n, cant: h.cant, tipo: 'OPCIÓN', ref: h.id }); k++; });
       redo(); toast(`${k} opción${k === 1 ? '' : 'es'} de guías ocultas agregada${k === 1 ? '' : 's'}. Borrá la fila de las correderas que se mantienen.`); break; }
     case 'sug-reset': setPath(M, b.dataset.path, ''); redo(); break;
@@ -2022,6 +2045,7 @@ function reemplazar(viejo, nuevo) {
   const M = nuevo; M.id = viejo.id;
   ['cod', 'desc', 'venta', 'textos', 'terceros', 'mecanizados', 'fleteMat', 'cantosExtra'].forEach(k => { if (viejo[k] != null && viejo[k] !== '') M[k] = viejo[k]; });
   M.sector = viejo.sector;
+  if (viejo.led && (viejo.led.circuitos || []).length) M.led = viejo.led;
   M.textos = Object.assign({}, nuevo.textos, Object.fromEntries(Object.entries(viejo.textos || {}).filter(([, v]) => v)));
   // placa elegida por material OCL
   M.grupos.forEach(g => { const o = viejo.grupos.find(x => x.ocl && x.ocl === g.ocl); if (o && o.art && o.art !== g.art) { g.art = o.art; if (o.veta != null) g.veta = o.veta; reopt(g); } if (o && o.medida && !g.medida) { g.medida = o.medida; reopt(g); } });
