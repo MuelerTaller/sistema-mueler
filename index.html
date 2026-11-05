@@ -1805,8 +1805,13 @@ function filasEstudio(sids) {
   S.rows.forEach((r, k) => { if (multi && (!k || S.rows[k - 1].sector !== r.sector)) out.push({ sector: r.sectorNombre || 'Sector' }); if (r.opcion) return;
     out.push({ cod: r.M.cod || '', desc: r.M.desc || '', base: r.bM, com: r.com, fi: r.i + r.f, total: r.t }); });
   const fs = out.filter(x => !x.sector); const tot = k => fs.reduce((s, x) => s + x[k], 0);
-  return { filas: out, tot: { base: tot('base'), com: tot('com'), fi: tot('fi'), total: tot('total') } };
+  const T = { base: tot('base'), com: tot('com'), fi: tot('fi'), total: tot('total') };
+  // Bonificación del FINAL: sale de los muebles (no del flete e instalación); la comisión se recalcula sobre la base bonificada
+  const fo = P.final || {}, bn = bonifDe(T.total, fo), p = comEstPct();
+  if (bn) { const cli = T.base + T.com - bn; T.bon = bn; T.bonLabel = bonLabel(fo); T.totalBon = T.total - bn; T.comBon = Math.round(cli * p / (100 + p)); T.baseBon = cli - T.comBon; }
+  return { filas: out, tot: T };
 }
+function notaEstudio(X, pctT) { return `La comisión es el ${pctT} del presupuesto base de cada mueble. Flete e instalación no llevan comisión. Si el cliente elige opciones o frentes alternativos, la comisión se calcula igual sobre la base elegida.` + (X.tot.bon ? ` Con la bonificación de ${money(X.tot.bon)} (sale de los muebles, no del flete e instalación), la comisión pasa a ${money(X.tot.comBon)}: el ${pctT} incluido en el total bonificado.` : ''); }
 async function exportEstudio(word, excel) {
   const pct = comEstPct(); if (!pct) { toast('Activá la comisión del estudio primero.'); return; }
   const X = filasEstudio(); const pctT = fmt(pct, 1).replace(',0', '') + '%';
@@ -1827,7 +1832,10 @@ async function exportEstudio(word, excel) {
         if (x.sector) { row.getCell(1).value = x.sector.toUpperCase(); row.getCell(1).font = { bold: true }; ws.mergeCells(row.number, 1, row.number, 6); row.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEF0EC' } }; return; }
         [x.cod, x.desc, x.base, x.com, x.fi, x.total].forEach((v, i) => { const c = row.getCell(i + 1); c.value = v; if (i >= 2) c.numFmt = fmtM; c.border = { bottom: thin }; c.alignment = { vertical: 'top', wrapText: i === 1 }; }); });
       const tr = ws.getRow(r); ['', 'TOTAL', X.tot.base, X.tot.com, X.tot.fi, X.tot.total].forEach((v, i) => { const c = tr.getCell(i + 1); c.value = v; c.font = { bold: true }; if (i >= 2) c.numFmt = fmtM; c.border = { top: { style: 'medium' } }; });
-      ws.getCell(`B${r + 2}`).value = `La comisión es el ${pctT} del presupuesto base de cada mueble. Flete e instalación no llevan comisión. Si el cliente elige opciones o frentes alternativos, la comisión se calcula igual sobre la base elegida.`; ws.getCell(`B${r + 2}`).alignment = { wrapText: true }; ws.mergeCells(r + 2, 2, r + 2, 6); ws.getRow(r + 2).height = 32;
+      if (X.tot.bon) { const b1 = ws.getRow(++r); ['', X.tot.bonLabel, null, null, null, -X.tot.bon].forEach((v, i) => { const c = b1.getCell(i + 1); c.value = v; if (i >= 2) c.numFmt = '"− $ "#,##0;"− $ "#,##0'; c.font = { color: { argb: 'FFB3261E' } }; });
+        const b2 = ws.getRow(++r); ['', 'TOTAL BONIFICADO', X.tot.baseBon, X.tot.comBon, X.tot.fi, X.tot.totalBon].forEach((v, i) => { const c = b2.getCell(i + 1); c.value = v; c.font = { bold: true }; if (i >= 2) c.numFmt = fmtM; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF4D6' } }; }); }
+      const notaE = notaEstudio(X, pctT);
+      ws.getCell(`B${r + 2}`).value = notaE; ws.getCell(`B${r + 2}`).alignment = { wrapText: true }; ws.mergeCells(r + 2, 2, r + 2, 6); ws.getRow(r + 2).height = X.tot.bon ? 48 : 32;
       ws.pageSetup = { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
       await offer(nombre + '.xlsx', new Blob([await wb.xlsx.writeBuffer()], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
     }
@@ -1840,11 +1848,13 @@ async function exportEstudio(word, excel) {
       X.filas.forEach(x => { if (x.sector) rows.push(new D.TableRow({ children: [cell(x.sector.toUpperCase(), { bold: true, fill: 'EEF0EC', span: 6 })] }));
         else rows.push(new D.TableRow({ children: [cell(x.cod, { bold: true }), cell(x.desc), cell(m(x.base), { right: true }), cell(m(x.com), { right: true }), cell(m(x.fi), { right: true }), cell(m(x.total), { right: true })] })); });
       rows.push(new D.TableRow({ children: [cell(''), cell('TOTAL', { bold: true }), cell(m(X.tot.base), { bold: true, right: true }), cell(m(X.tot.com), { bold: true, right: true }), cell(m(X.tot.fi), { bold: true, right: true }), cell(m(X.tot.total), { bold: true, right: true })] }));
+      if (X.tot.bon) { rows.push(new D.TableRow({ children: [cell(''), cell(X.tot.bonLabel, { color: 'B3261E' }), cell(''), cell(''), cell(''), cell('− ' + m(X.tot.bon), { right: true, color: 'B3261E' })] }));
+        rows.push(new D.TableRow({ children: [cell(''), cell('TOTAL BONIFICADO', { bold: true, fill: 'FFF4D6' }), cell(m(X.tot.baseBon), { bold: true, right: true, fill: 'FFF4D6' }), cell(m(X.tot.comBon), { bold: true, right: true, fill: 'FFF4D6' }), cell(m(X.tot.fi), { bold: true, right: true, fill: 'FFF4D6' }), cell(m(X.tot.totalBon), { bold: true, right: true, fill: 'FFF4D6' })] })); }
       const kids = [];
       try { kids.push(new D.Paragraph({ children: [new D.ImageRun({ data: logoBytes(), type: 'png', transformation: { width: 140, height: 58 } })] })); } catch (e) { }
       kids.push(T(tit, { bold: true, size: 28 }), T(sub, { color: '5F6A64', size: 20 }), new D.Paragraph({ children: [] }),
         new D.Table({ rows, width: { size: 100, type: D.WidthType.PERCENTAGE }, columnWidths: [900, 3600, 1500, 1500, 1500, 1500] }),
-        new D.Paragraph({ children: [] }), T(`La comisión es el ${pctT} del presupuesto base de cada mueble. Flete e instalación no llevan comisión. Si el cliente elige opciones o frentes alternativos, la comisión se calcula igual sobre la base elegida.`, { color: '5F6A64', size: 18 }));
+        new D.Paragraph({ children: [] }), T(notaEstudio(X, pctT), { color: '5F6A64', size: 18 }));
       const doc = new D.Document({ sections: [{ properties: { page: { margin: { top: 900, bottom: 900, left: 900, right: 900 } } }, children: kids }] });
       await offer(nombre + '.docx', await D.Packer.toBlob(doc));
     }
@@ -1853,7 +1863,9 @@ async function exportEstudio(word, excel) {
 function dialogoEstudio() {
   const X = filasEstudio(); const pctT = fmt(comEstPct(), 1).replace(',0', '') + '%';
   const d = modal(`${H('Para el estudio')}<p class="note" style="margin:0">Detalle para ${esc(P.arq || 'el estudio')}: presupuesto base de cada mueble, su comisión del ${pctT} y flete + instalación juntos. No es el documento del cliente.</p>
-    <div class="kv"><span>Presupuesto base</span><span>${money(X.tot.base)}</span><span>Comisión ${pctT}</span><span>${money(X.tot.com)}</span><span>Flete + instalación</span><span>${money(X.tot.fi)}</span><span class="sep"></span><span class="strong">Total (igual al del cliente)</span><span class="strong">${money(X.tot.total)}</span></div>
+    <div class="kv"><span>Presupuesto base</span><span>${money(X.tot.base)}</span><span>Comisión ${pctT}</span><span>${money(X.tot.com)}</span><span>Flete + instalación</span><span>${money(X.tot.fi)}</span><span class="sep"></span><span class="strong">Total (igual al del cliente)</span><span class="strong">${money(X.tot.total)}</span>
+      ${X.tot.bon ? `<span>${esc(X.tot.bonLabel)}</span><span>− ${money(X.tot.bon)}</span><span class="strong">Total bonificado</span><span class="strong">${money(X.tot.totalBon)}</span><span>Comisión ${pctT} sobre lo bonificado</span><span>${money(X.tot.comBon)}</span><span>Base Mueler bonificada</span><span>${money(X.tot.baseBon)}</span>` : ''}</div>
+    ${X.tot.bon ? '<span class="note">La bonificación sale del diálogo del Presupuesto FINAL (total sin opciones).</span>' : ''}
     <div class="row" style="justify-content:flex-end"><button class="btn" data-close>Cancelar</button><button class="btn" id="es-x">Excel</button><button class="btn" id="es-w">Word</button><button class="btn primary" id="es-a">Word + Excel</button></div>`);
   d.q('#es-x').onclick = () => { d.close(); exportEstudio(false, true); }; d.q('#es-w').onclick = () => { d.close(); exportEstudio(true, false); }; d.q('#es-a').onclick = () => { d.close(); exportEstudio(true, true); };
 }
@@ -3943,6 +3955,8 @@ const LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAARoAAAB0CAIAAADVWGpzAAAWfmNhQlgAABZ+an
 function logoBytes() { const s = atob(LOGO_B64), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
 function tituloDef() { return `PRESUPUESTO Nº ${P.num || 's/n'}${P.version ? ' ' + P.version : ''} · ${String(P.obra || '').toUpperCase()}`; }
 function subDef() { const arq = String(P.arq || '').trim(); const a = arq ? (/^arq/i.test(arq) ? arq : 'Arq. ' + arq) : ''; return [a, P.cliente].filter(Boolean).join(' · ') + (a || P.cliente ? ' · ' : '') + 'Validez: 15 días'; }
+function bonifDe(total, fo) { if (!fo || !fo.bonif) return 0; if (fo.bonModo === 'monto') return Math.round(N(fo.bonMonto)); return Math.round(total * N(fo.bonPct) / 100); }
+function bonLabel(fo) { return fo.bonModo === 'monto' ? 'Bonificación especial' : `Bonificación ${fmt(fo.bonPct, 1).replace(',0', '')}%`; }
 function varValida(v) { return Object.values((v && v.map) || {}).some(Boolean); }
 function finalModulos(sids) {
   const S = resumen(sids || undefined), multi = (sids ? sids.length : P.sectores.length) > 1, out = [];
@@ -3986,7 +4000,7 @@ function revisarFinal(X) {
 const LEYENDA_LED = 'La instalación de tira leds incluye instalación de leds, fuente e interruptor en el mueble (de aclararse en este mismo presupuesto). Para su instalación deben estar provistos los cables con tensión y de ser necesario al interruptor llave de punto. No incluye otro tipo de trabajo de electricidad ni albañilería que no esté aclarado.';
 function dialogoFinal() {
   if (!P.orden.length) { toast('El presupuesto no tiene muebles'); return; }
-  const fo = Object.assign({ bonif: false, bonPct: 5, bonTexto: '', titulo: '', sub: '', total: true, totalOp: true, labelOp: '', adelanto: true, pct: 70, led: false, extra: '' }, P.final || {});
+  const fo = Object.assign({ bonif: false, bonModo: 'pct', bonPct: 5, bonMonto: '', bonTexto: '', titulo: '', sub: '', total: true, totalOp: true, labelOp: '', adelanto: true, pct: 70, led: false, extra: '' }, P.final || {});
   if (P.orden.some(id => MS[id] && ((MS[id].led || {}).circuitos || []).length)) fo.led = true;
   const multi = P.sectores.length > 1;
   const d = modal(`${H('Presupuesto FINAL (Word y Excel)')}
@@ -4001,7 +4015,11 @@ function dialogoFinal() {
       <label class="row" style="gap:8px"><input type="checkbox" id="fo-adel" ${fo.adelanto ? 'checked' : ''}> Adelanto y saldo · adelanto <input type="text" id="fo-pct" class="n" style="width:60px" value="${fo.pct}" inputmode="decimal" aria-label="Porcentaje de adelanto"> %</label>
     </fieldset>
     <fieldset style="border:1px solid var(--line);border-radius:6px;padding:10px;display:grid;gap:8px"><legend class="lbl">Bonificación (excepcional)</legend>
-      <label class="row" style="gap:8px"><input type="checkbox" id="fo-bon" ${fo.bonif ? 'checked' : ''}> Ofrecer bonificación del <input type="text" id="fo-bpct" class="n" style="width:60px" value="${fo.bonPct}" inputmode="decimal" aria-label="Porcentaje de bonificación"> % <span class="note mono" id="fo-bv"></span></label>
+      <div class="row" style="gap:8px"><label class="row" style="gap:8px"><input type="checkbox" id="fo-bon" ${fo.bonif ? 'checked' : ''}> Ofrecer bonificación</label>
+        <select id="fo-bmodo" aria-label="Tipo de bonificación" style="width:auto"><option value="pct" ${fo.bonModo !== 'monto' ? 'selected' : ''}>por porcentaje</option><option value="monto" ${fo.bonModo === 'monto' ? 'selected' : ''}>monto fijo (no muestra %)</option></select>
+        <span id="fo-bpw" class="row" style="gap:4px"><input type="text" id="fo-bpct" class="n" style="width:60px" value="${fo.bonPct}" inputmode="decimal" aria-label="Porcentaje de bonificación"> %</span>
+        <span id="fo-bmw" class="row" style="gap:4px">$ <input type="text" id="fo-bmonto" class="n" style="width:130px" value="${esc(fo.bonMonto || '')}" inputmode="decimal" placeholder="1.141.000" aria-label="Monto de bonificación"></span></div>
+      <div class="note mono" id="fo-bv" style="display:grid;gap:2px"></div>
       <div class="field"><label class="lbl" for="fo-btx">Texto en las condiciones</label><input type="text" id="fo-btx" value="${esc(fo.bonTexto || '')}" placeholder="Se deja vacío: va el texto sugerido"></div>
       <span class="note">Los precios de cada mueble quedan reales. En los totales se agrega la bonificación y el total bonificado, y el adelanto y saldo se calculan sobre el total bonificado.</span>
     </fieldset>
@@ -4010,19 +4028,22 @@ function dialogoFinal() {
     <div id="fo-rev"></div>
     <div class="row" style="justify-content:flex-end"><button class="btn" data-close>Cancelar</button><button class="btn" id="fo-xlsx">Excel</button><button class="btn" id="fo-docx">Word</button><button class="btn primary" id="fo-ambos">Word + Excel</button></div>`);
   const sids = () => multi ? [...d.m.querySelectorAll('input.fs:checked')].map(x => x.value) : null;
-  const bonDef = p => `Bonificación especial del ${fmt(p, 1).replace(',0', '')}% sobre el total del presupuesto, ya aplicada en los totales.`;
-  const upd = () => { const X = finalModulos(sids()); const bp = N(d.q('#fo-bpct').value) || 0; d.q('#fo-btx').placeholder = bonDef(bp); d.q('#fo-bv').textContent = d.q('#fo-bon').checked ? `− ${money(Math.round(X.sinOp * bp / 100))} sobre ${money(X.sinOp)}` : ''; d.q('#fo-v1').textContent = money(X.sinOp); d.q('#fo-v2').textContent = money(X.conOp); d.q('#fo-oprow').hidden = !X.hayOp; d.q('#fo-crit').textContent = X.hayOp ? 'Con opciones toma: ' + X.criterio.join(' · ') : '';
+  const bonDef = o => o.bonModo === 'monto' ? 'Bonificación especial sobre el total del presupuesto, ya aplicada en los totales.' : `Bonificación especial del ${fmt(o.bonPct, 1).replace(',0', '')}% sobre el total del presupuesto, ya aplicada en los totales.`;
+  const bonFo = () => ({ bonif: d.q('#fo-bon').checked, bonModo: d.q('#fo-bmodo').value, bonPct: N(d.q('#fo-bpct').value) || 0, bonMonto: N(d.q('#fo-bmonto').value) || 0 });
+  const upd = () => { const X = finalModulos(sids()); const bo = bonFo(); d.q('#fo-bpw').hidden = bo.bonModo === 'monto'; d.q('#fo-bmw').hidden = bo.bonModo !== 'monto'; d.q('#fo-btx').placeholder = bonDef(bo);
+    const lin = (t, v) => { const bn = bonifDe(v, bo); return `<span>${t}: ${money(v)} − ${money(bn)} = <b>${money(v - bn)}</b>${bo.bonModo === 'monto' && v ? ` <span class="note">(${fmt(bn / v * 100, 2)}%, no se muestra al cliente)</span>` : ''}</span>`; };
+    d.q('#fo-bv').innerHTML = bo.bonif ? lin(X.hayOp ? 'Sin opciones' : 'Total', X.sinOp) + (X.hayOp ? lin('Con opciones', X.conOp) : '') + (comEstPct() ? `<span class="note">La comisión del estudio se recalcula sobre el total bonificado (ver "Para el estudio").</span>` : '') : ''; d.q('#fo-v1').textContent = money(X.sinOp); d.q('#fo-v2').textContent = money(X.conOp); d.q('#fo-oprow').hidden = !X.hayOp; d.q('#fo-crit').textContent = X.hayOp ? 'Con opciones toma: ' + X.criterio.join(' · ') : '';
     const av = revisarFinal(X); d.q('#fo-rev').innerHTML = av.length ? `<div class="alert"><b>Para revisar antes de mandar</b><ul>${av.map(a => `<li>${esc(a)}</li>`).join('')}</ul></div>` : ''; return X; };
-  d.m.addEventListener('change', e => { if (e.target.id === 'fo-dif') { P.opDif = e.target.checked; touch(); } upd(); }); d.m.addEventListener('input', e => { if (e.target.id === 'fo-bpct') upd(); }); upd();
+  d.m.addEventListener('change', e => { if (e.target.id === 'fo-dif') { P.opDif = e.target.checked; touch(); } if (/^fo-b/.test(e.target.id)) { P.final = Object.assign({}, P.final || {}, bonFo()); touch(); } upd(); }); d.m.addEventListener('input', e => { if (e.target.id === 'fo-bpct' || e.target.id === 'fo-bmonto') upd(); }); upd();
   const go = async (word, excel) => {
     const ids = sids(); if (ids && !ids.length) { toast('Elegí al menos un sector'); return; }
     const X = upd();
-    const o = { bonif: d.q('#fo-bon').checked, bonPct: N(d.q('#fo-bpct').value) || 0, bonTexto: d.q('#fo-btx').value.trim(), titulo: d.q('#fo-tit').value.trim(), sub: d.q('#fo-sub').value.trim(), total: d.q('#fo-total').checked, totalOp: d.q('#fo-totop').checked, labelOp: d.q('#fo-labop').value.trim(), adelanto: d.q('#fo-adel').checked, pct: N(d.q('#fo-pct').value) || 70, led: d.q('#fo-led').checked, extra: d.q('#fo-extra').value };
+    const o = { bonif: d.q('#fo-bon').checked, bonModo: d.q('#fo-bmodo').value, bonPct: N(d.q('#fo-bpct').value) || 0, bonMonto: N(d.q('#fo-bmonto').value) || 0, bonTexto: d.q('#fo-btx').value.trim(), titulo: d.q('#fo-tit').value.trim(), sub: d.q('#fo-sub').value.trim(), total: d.q('#fo-total').checked, totalOp: d.q('#fo-totop').checked, labelOp: d.q('#fo-labop').value.trim(), adelanto: d.q('#fo-adel').checked, pct: N(d.q('#fo-pct').value) || 70, led: d.q('#fo-led').checked, extra: d.q('#fo-extra').value };
     P.final = Object.assign({}, o, { titulo: '', sub: '' }); touch();
     const tot = [];
-    const bloque = (lab, v) => { tot.push({ t: lab, v, bold: true }); if (o.bonif && o.bonPct) { const bn = Math.round(v * o.bonPct / 100); tot.push({ t: `Bonificación ${fmt(o.bonPct, 1).replace(',0', '')}%`, v: bn, neg: true }); v = v - bn; tot.push({ t: 'TOTAL BONIFICADO', v, bold: true }); } if (o.adelanto) { const a = Math.round(v * o.pct / 100); tot.push({ t: `Adelanto ${fmt(o.pct, 0)}%`, v: a }, { t: `Saldo ${fmt(100 - o.pct, 0)}%`, v: v - a }); } };
+    const bloque = (lab, v) => { tot.push({ t: lab, v, bold: true }); const bn = bonifDe(v, o); if (bn) { tot.push({ t: bonLabel(o), v: bn, neg: true }); v = v - bn; tot.push({ t: 'TOTAL BONIFICADO', v, bold: true }); } if (o.adelanto) { const a = Math.round(v * o.pct / 100); tot.push({ t: `Adelanto ${fmt(o.pct, 0)}%`, v: a }, { t: `Saldo ${fmt(100 - o.pct, 0)}%`, v: v - a }); } };
     if (o.total) { const dos = X.hayOp && o.totalOp; bloque(dos ? 'TOTAL SIN OPCIONES' : 'TOTAL', X.sinOp); if (dos) { tot.push(null); bloque(o.labelOp || 'TOTAL CON OPCIONES', X.conOp); } }
-    const D = { titulo: o.titulo || tituloDef(), sub: o.sub || subDef(), modulos: X.modulos, totales: tot, condExtra: [...(o.bonif && o.bonPct ? [o.bonTexto || bonDef(o.bonPct)] : []), ...(o.led ? [LEYENDA_LED] : []), ...String(o.extra || '').split('\n').map(x => x.trim()).filter(Boolean)] };
+    const D = { titulo: o.titulo || tituloDef(), sub: o.sub || subDef(), modulos: X.modulos, totales: tot, condExtra: [...(bonifDe(X.sinOp, o) ? [o.bonTexto || bonDef(o)] : []), ...(o.led ? [LEYENDA_LED] : []), ...String(o.extra || '').split('\n').map(x => x.trim()).filter(Boolean)] };
     const uno = ids && ids.length === 1 && P.sectores.length > 1;
     const hoy = new Date(), dm = String(hoy.getDate()).padStart(2, '0') + '-' + String(hoy.getMonth() + 1).padStart(2, '0');
     const base = `Presupuesto_${P.num || 'sn'}${P.version ? '_' + P.version : ''}_${P.obra || 'Obra'}${uno ? ' ' + sectorDe(ids[0]).nombre : ''} ${dm}`.replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim();
