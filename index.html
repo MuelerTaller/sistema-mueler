@@ -1809,6 +1809,11 @@ function filasEstudio(sids) {
   // Bonificación del FINAL: sale de los muebles (no del flete e instalación); la comisión se recalcula sobre la base bonificada
   const fo = P.final || {}, bn = bonifDe(T.total, fo), p = comEstPct();
   if (bn) { const cli = T.base + T.com - bn; T.bon = bn; T.bonLabel = bonLabel(fo); T.totalBon = T.total - bn; T.comBon = Math.round(cli * p / (100 + p)); T.baseBon = cli - T.comBon; }
+  // Escenario con opciones (lo que toma el "Total con opciones" del FINAL), con su propia bonificación
+  const XF = finalModulos(sids || undefined);
+  if (XF.hayOp) { const fi = T.fi, cli = XF.conOp - fi, com = Math.round(cli * p / (100 + p)); const O = { total: XF.conOp, fi, com, base: cli - com, crit: XF.criterio };
+    const bo = bonifDe(XF.conOp, fo, true); if (bo) { const c2 = cli - bo; O.bon = bo; O.totalBon = XF.conOp - bo; O.comBon = Math.round(c2 * p / (100 + p)); O.baseBon = c2 - O.comBon; }
+    T.op = O; }
   return { filas: out, tot: T };
 }
 function notaEstudio(X, pctT) { return `La comisión es el ${pctT} del presupuesto base de cada mueble. Flete e instalación no llevan comisión. Si el cliente elige opciones o frentes alternativos, la comisión se calcula igual sobre la base elegida.` + (X.tot.bon ? ` Con la bonificación de ${money(X.tot.bon)} (sale de los muebles, no del flete e instalación), la comisión pasa a ${money(X.tot.comBon)}: el ${pctT} incluido en el total bonificado.` : ''); }
@@ -1834,6 +1839,11 @@ async function exportEstudio(word, excel) {
       const tr = ws.getRow(r); ['', 'TOTAL', X.tot.base, X.tot.com, X.tot.fi, X.tot.total].forEach((v, i) => { const c = tr.getCell(i + 1); c.value = v; c.font = { bold: true }; if (i >= 2) c.numFmt = fmtM; c.border = { top: { style: 'medium' } }; });
       if (X.tot.bon) { const b1 = ws.getRow(++r); ['', X.tot.bonLabel, null, null, null, -X.tot.bon].forEach((v, i) => { const c = b1.getCell(i + 1); c.value = v; if (i >= 2) c.numFmt = '"− $ "#,##0;"− $ "#,##0'; c.font = { color: { argb: 'FFB3261E' } }; });
         const b2 = ws.getRow(++r); ['', 'TOTAL BONIFICADO', X.tot.baseBon, X.tot.comBon, X.tot.fi, X.tot.totalBon].forEach((v, i) => { const c = b2.getCell(i + 1); c.value = v; c.font = { bold: true }; if (i >= 2) c.numFmt = fmtM; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF4D6' } }; }); }
+      if (X.tot.op) { const O = X.tot.op; r++;
+        const put = (vals, st) => { const row = ws.getRow(++r); vals.forEach((v, i) => { const c = row.getCell(i + 1); c.value = v; if (i >= 2 && typeof v === 'number') c.numFmt = st && st.neg ? '"− $ "#,##0;"− $ "#,##0' : fmtM; if (st && st.bold) c.font = { bold: true }; if (st && st.red) c.font = { color: { argb: 'FFB3261E' } }; if (st && st.fill) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: st.fill } }; if (i === 1) c.alignment = { wrapText: true }; }); };
+        put(['', 'TOTAL CON OPCIONES', O.base, O.com, O.fi, O.total], { bold: true, fill: 'FFEEF0EC' });
+        if (O.bon) { put(['', X.tot.bonLabel, null, null, null, -O.bon], { neg: true, red: true }); put(['', 'TOTAL CON OPCIONES BONIFICADO', O.baseBon, O.comBon, O.fi, O.totalBon], { bold: true, fill: 'FFFFF4D6' }); }
+        put(['', 'Incluye: ' + O.crit.join(' · ')]); ws.mergeCells(r, 2, r, 6); ws.getRow(r).height = 30; }
       const notaE = notaEstudio(X, pctT);
       ws.getCell(`B${r + 2}`).value = notaE; ws.getCell(`B${r + 2}`).alignment = { wrapText: true }; ws.mergeCells(r + 2, 2, r + 2, 6); ws.getRow(r + 2).height = X.tot.bon ? 48 : 32;
       ws.pageSetup = { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
@@ -1850,6 +1860,10 @@ async function exportEstudio(word, excel) {
       rows.push(new D.TableRow({ children: [cell(''), cell('TOTAL', { bold: true }), cell(m(X.tot.base), { bold: true, right: true }), cell(m(X.tot.com), { bold: true, right: true }), cell(m(X.tot.fi), { bold: true, right: true }), cell(m(X.tot.total), { bold: true, right: true })] }));
       if (X.tot.bon) { rows.push(new D.TableRow({ children: [cell(''), cell(X.tot.bonLabel, { color: 'B3261E' }), cell(''), cell(''), cell(''), cell('− ' + m(X.tot.bon), { right: true, color: 'B3261E' })] }));
         rows.push(new D.TableRow({ children: [cell(''), cell('TOTAL BONIFICADO', { bold: true, fill: 'FFF4D6' }), cell(m(X.tot.baseBon), { bold: true, right: true, fill: 'FFF4D6' }), cell(m(X.tot.comBon), { bold: true, right: true, fill: 'FFF4D6' }), cell(m(X.tot.fi), { bold: true, right: true, fill: 'FFF4D6' }), cell(m(X.tot.totalBon), { bold: true, right: true, fill: 'FFF4D6' })] })); }
+      if (X.tot.op) { const O = X.tot.op; const fila = (t, a, b, c, d, o = {}) => new D.TableRow({ children: [cell(''), cell(t, { bold: o.bold, fill: o.fill, color: o.color }), cell(a == null ? '' : m(a), { bold: o.bold, right: true, fill: o.fill }), cell(b == null ? '' : m(b), { bold: o.bold, right: true, fill: o.fill }), cell(c == null ? '' : m(c), { bold: o.bold, right: true, fill: o.fill }), cell(d == null ? '' : (o.neg ? '− ' : '') + m(d), { bold: o.bold, right: true, fill: o.fill, color: o.color })] });
+        rows.push(fila('TOTAL CON OPCIONES', O.base, O.com, O.fi, O.total, { bold: true, fill: 'EEF0EC' }));
+        if (O.bon) { rows.push(fila(X.tot.bonLabel, null, null, null, O.bon, { neg: true, color: 'B3261E' })); rows.push(fila('TOTAL CON OPCIONES BONIFICADO', O.baseBon, O.comBon, O.fi, O.totalBon, { bold: true, fill: 'FFF4D6' })); }
+        rows.push(new D.TableRow({ children: [cell(''), cell('Incluye: ' + O.crit.join(' · '), { span: 5, color: '5F6A64' })] })); }
       const kids = [];
       try { kids.push(new D.Paragraph({ children: [new D.ImageRun({ data: logoBytes(), type: 'png', transformation: { width: 140, height: 58 } })] })); } catch (e) { }
       kids.push(T(tit, { bold: true, size: 28 }), T(sub, { color: '5F6A64', size: 20 }), new D.Paragraph({ children: [] }),
@@ -1865,7 +1879,8 @@ function dialogoEstudio() {
   const d = modal(`${H('Para el estudio')}<p class="note" style="margin:0">Detalle para ${esc(P.arq || 'el estudio')}: presupuesto base de cada mueble, su comisión del ${pctT} y flete + instalación juntos. No es el documento del cliente.</p>
     <div class="kv"><span>Presupuesto base</span><span>${money(X.tot.base)}</span><span>Comisión ${pctT}</span><span>${money(X.tot.com)}</span><span>Flete + instalación</span><span>${money(X.tot.fi)}</span><span class="sep"></span><span class="strong">Total (igual al del cliente)</span><span class="strong">${money(X.tot.total)}</span>
       ${X.tot.bon ? `<span>${esc(X.tot.bonLabel)}</span><span>− ${money(X.tot.bon)}</span><span class="strong">Total bonificado</span><span class="strong">${money(X.tot.totalBon)}</span><span>Comisión ${pctT} sobre lo bonificado</span><span>${money(X.tot.comBon)}</span><span>Base Mueler bonificada</span><span>${money(X.tot.baseBon)}</span>` : ''}</div>
-    ${X.tot.bon ? '<span class="note">La bonificación sale del diálogo del Presupuesto FINAL (total sin opciones).</span>' : ''}
+    ${X.tot.op ? `<div class="kv"><span class="strong">Total con opciones</span><span class="strong">${money(X.tot.op.total)}</span><span>Comisión ${pctT}</span><span>${money(X.tot.op.com)}</span>${X.tot.op.bon ? `<span>${esc(X.tot.bonLabel)}</span><span>− ${money(X.tot.op.bon)}</span><span class="strong">Con opciones bonificado</span><span class="strong">${money(X.tot.op.totalBon)}</span><span>Comisión ${pctT} sobre lo bonificado</span><span>${money(X.tot.op.comBon)}</span>` : ''}</div><span class="note">Con opciones incluye: ${esc(X.tot.op.crit.join(' · '))}</span>` : ''}
+    ${X.tot.bon || (X.tot.op && X.tot.op.bon) ? '<span class="note">Las bonificaciones salen del diálogo del Presupuesto FINAL.</span>' : ''}
     <div class="row" style="justify-content:flex-end"><button class="btn" data-close>Cancelar</button><button class="btn" id="es-x">Excel</button><button class="btn" id="es-w">Word</button><button class="btn primary" id="es-a">Word + Excel</button></div>`);
   d.q('#es-x').onclick = () => { d.close(); exportEstudio(false, true); }; d.q('#es-w').onclick = () => { d.close(); exportEstudio(true, false); }; d.q('#es-a').onclick = () => { d.close(); exportEstudio(true, true); };
 }
