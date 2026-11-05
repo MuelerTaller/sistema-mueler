@@ -3943,6 +3943,7 @@ const LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAARoAAAB0CAIAAADVWGpzAAAWfmNhQlgAABZ+an
 function logoBytes() { const s = atob(LOGO_B64), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
 function tituloDef() { return `PRESUPUESTO Nº ${P.num || 's/n'}${P.version ? ' ' + P.version : ''} · ${String(P.obra || '').toUpperCase()}`; }
 function subDef() { const arq = String(P.arq || '').trim(); const a = arq ? (/^arq/i.test(arq) ? arq : 'Arq. ' + arq) : ''; return [a, P.cliente].filter(Boolean).join(' · ') + (a || P.cliente ? ' · ' : '') + 'Validez: 15 días'; }
+function varValida(v) { return Object.values((v && v.map) || {}).some(Boolean); }
 function finalModulos(sids) {
   const S = resumen(sids || undefined), multi = (sids ? sids.length : P.sectores.length) > 1, out = [];
   let conOp = 0; const criterio = [];
@@ -3953,7 +3954,7 @@ function finalModulos(sids) {
     const fr = [[t.frentes || '', t.estructura || '', can, r.t]];
     const alts = [];
     const dif = !!P.opDif;
-    (r.M.variantes || []).forEach(v => { const RV = calcVar(r.M, v); const tv = cliB(RV.precio) + r.i + r.f; fr.push([v.nombre || 'Frente alternativo', t.estructura || '', can, dif ? tv - r.t : tv, dif ? 'dif' : '']); alts.push({ n: v.nombre || 'frente alternativo', v: cliB(RV.precio) + r.i + r.f }); });
+    (r.M.variantes || []).filter(varValida).forEach(v => { const RV = calcVar(r.M, v); const tv = cliB(RV.precio) + r.i + r.f; fr.push([v.nombre || 'Frente alternativo', t.estructura || '', can, dif ? tv - r.t : tv, dif ? 'dif' : '']); alts.push({ n: v.nombre || 'frente alternativo', v: cliB(RV.precio) + r.i + r.f }); });
     S.rows.filter(o => o.opcion && o.M.opcionDe === r.id).forEach(o => { const ot = o.M.textos || {}; const nom = o.M.opcionNombre || ot.frentes || 'opción'; fr.push(['OPCIÓN — ' + (o.M.opcionNombre || ot.frentes || ''), ot.estructura || t.estructura || '', ot.cantos || sugCantos(o.R) || can, dif ? o.t - r.t : o.t, dif ? 'dif' : '']); alts.push({ n: nom, v: o.t }); });
     const herr = String(t.herrajes || sugHerrajes(r.M) || '').split('\n').map(x => x.trim()).filter(Boolean);
     const OA = opcionesAgrupadas(r.M, r.R).map(o => Object.assign({}, o, { deltaRnd: cliB(o.deltaRnd) })); const ex = OA.map(o => ['OPCIÓN — ' + textoOpcion(o), 'delta', o.deltaRnd]);
@@ -3976,6 +3977,7 @@ function revisarFinal(X) {
     if (!t.frentes) av.push(`${c} no tiene texto de Frentes.`);
     if (!t.estructura) av.push(`${c} no tiene texto de Estructura.`);
     if (!r.t) av.push(`${c} no tiene precio.`);
+    (r.M.variantes || []).filter(v => !varValida(v)).forEach(v => av.push(`${c}: el frente alternativo "${v.nombre || 'sin nombre'}" no cambia ninguna placa; no sale en el presupuesto. Completalo o borralo.`));
   });
   const cods = X.S.rows.filter(r => !r.opcion).map(r => r.sector + '|' + r.M.cod); const rep = cods.filter((x, i) => cods.indexOf(x) !== i);
   if (rep.length) av.push('Hay códigos repetidos dentro de un mismo sector: ' + [...new Set(rep.map(x => x.split('|')[1]))].join(', '));
