@@ -4023,7 +4023,7 @@ function dialogoFinal() {
     <div class="field"><label class="lbl" for="fo-tit">Título</label><input type="text" id="fo-tit" value="${esc(tituloDef())}"></div>
     <div class="field"><label class="lbl" for="fo-sub">Subtítulo</label><input type="text" id="fo-sub" value="${esc(subDef())}"></div>
     <fieldset style="border:1px solid var(--line);border-radius:6px;padding:10px;display:grid;gap:8px"><legend class="lbl">Totales</legend>
-      <label class="row" style="gap:8px"><input type="checkbox" id="fo-total" ${fo.total ? 'checked' : ''}> Agregar total <span class="note mono" id="fo-v1"></span></label>
+      <label class="row" style="gap:8px"><input type="checkbox" id="fo-total" ${fo.total ? 'checked' : ''}> <span id="fo-tl">Total sin opciones</span> <span class="note mono" id="fo-v1"></span></label>
       <div class="row" id="fo-oprow" style="gap:8px"><label class="row" style="gap:8px"><input type="checkbox" id="fo-totop" ${fo.totalOp ? 'checked' : ''}> Total con opciones</label><input type="text" id="fo-labop" style="flex:1;min-width:180px" value="${esc(fo.labelOp)}" placeholder="TOTAL CON OPCIONES" aria-label="Título del total con opciones"><span class="note mono" id="fo-v2"></span></div>
       <div class="note" id="fo-crit"></div>
       <label class="row" style="gap:8px"><input type="checkbox" id="fo-dif" ${P.opDif ? 'checked' : ''}> Frentes alternativos y opciones de mueble como diferencia (+ $) en vez del precio completo</label>
@@ -4048,7 +4048,7 @@ function dialogoFinal() {
   const bonFo = () => ({ bonif: d.q('#fo-bon').checked, bonModo: d.q('#fo-bmodo').value, bonPct: N(d.q('#fo-bpct').value) || 0, bonMonto: N(d.q('#fo-bmonto').value) || 0, bonMontoOp: d.q('#fo-bmontoop').value.trim() === '' ? '' : N(d.q('#fo-bmontoop').value) });
   const upd = () => { const X = finalModulos(sids()); const bo = bonFo(); d.q('#fo-bpw').hidden = bo.bonModo === 'monto'; d.q('#fo-bmw').hidden = bo.bonModo !== 'monto'; d.q('#fo-bmow').hidden = !X.hayOp; d.q('#fo-bml').hidden = !X.hayOp; d.q('#fo-btx').placeholder = bonDef(bo);
     const lin = (t, v, op) => { const bn = bonifDe(v, bo, op); return `<span>${t}: ${money(v)} − ${money(bn)} = <b>${money(v - bn)}</b>${bo.bonModo === 'monto' && v ? ` <span class="note">(${fmt(bn / v * 100, 2)}%, no se muestra al cliente)</span>` : ''}</span>`; };
-    d.q('#fo-bv').innerHTML = bo.bonif ? lin(X.hayOp ? 'Sin opciones' : 'Total', X.sinOp) + (X.hayOp ? lin('Con opciones', X.conOp, true) : '') + (comEstPct() ? `<span class="note">La comisión del estudio se recalcula sobre el total bonificado (ver "Para el estudio").</span>` : '') : ''; d.q('#fo-v1').textContent = money(X.sinOp); d.q('#fo-v2').textContent = money(X.conOp); d.q('#fo-oprow').hidden = !X.hayOp; d.q('#fo-crit').textContent = X.hayOp ? 'Con opciones toma: ' + X.criterio.join(' · ') : '';
+    d.q('#fo-bv').innerHTML = bo.bonif ? lin(X.hayOp ? 'Sin opciones' : 'Total', X.sinOp) + (X.hayOp ? lin('Con opciones', X.conOp, true) : '') + (comEstPct() ? `<span class="note">La comisión del estudio se recalcula sobre el total bonificado (ver "Para el estudio").</span>` : '') : ''; d.q('#fo-v1').textContent = money(X.sinOp); d.q('#fo-v2').textContent = money(X.conOp); d.q('#fo-oprow').hidden = !X.hayOp; d.q('#fo-tl').textContent = X.hayOp ? 'Total sin opciones' : 'Agregar total'; d.q('#fo-labop').placeholder = d.q('#fo-total').checked ? 'TOTAL CON OPCIONES' : 'TOTAL (solo con opciones)'; d.q('#fo-crit').textContent = X.hayOp ? 'Con opciones toma: ' + X.criterio.join(' · ') : '';
     const av = revisarFinal(X); d.q('#fo-rev').innerHTML = av.length ? `<div class="alert"><b>Para revisar antes de mandar</b><ul>${av.map(a => `<li>${esc(a)}</li>`).join('')}</ul></div>` : ''; return X; };
   d.m.addEventListener('change', e => { if (e.target.id === 'fo-dif') { P.opDif = e.target.checked; touch(); } if (/^fo-b/.test(e.target.id)) { P.final = Object.assign({}, P.final || {}, bonFo()); touch(); } upd(); }); d.m.addEventListener('input', e => { if (/^fo-b(pct|monto)/.test(e.target.id)) upd(); }); upd();
   const go = async (word, excel) => {
@@ -4058,8 +4058,11 @@ function dialogoFinal() {
     P.final = Object.assign({}, o, { titulo: '', sub: '' }); touch();
     const tot = [];
     const bloque = (lab, v, op) => { tot.push({ t: lab, v, bold: true }); const bn = bonifDe(v, o, op); if (bn) { tot.push({ t: bonLabel(o), v: bn, neg: true }); v = v - bn; tot.push({ t: 'TOTAL BONIFICADO', v, bold: true }); } if (o.adelanto) { const a = Math.round(v * o.pct / 100); tot.push({ t: `Adelanto ${fmt(o.pct, 0)}%`, v: a }, { t: `Saldo ${fmt(100 - o.pct, 0)}%`, v: v - a }); } };
-    if (o.total) { const dos = X.hayOp && o.totalOp; bloque(dos ? 'TOTAL SIN OPCIONES' : 'TOTAL', X.sinOp); if (dos) { tot.push(null); bloque(o.labelOp || 'TOTAL CON OPCIONES', X.conOp, true); } }
-    const D = { titulo: o.titulo || tituloDef(), sub: o.sub || subDef(), modulos: X.modulos, totales: tot, condExtra: [...(bonifDe(X.sinOp, o) || (X.hayOp && o.totalOp && bonifDe(X.conOp, o, true)) ? [o.bonTexto || bonDef(o)] : []), ...(o.led ? [LEYENDA_LED] : []), ...String(o.extra || '').split('\n').map(x => x.trim()).filter(Boolean)] };
+    const conO = X.hayOp && o.totalOp;
+    if (o.total && conO) { bloque('TOTAL SIN OPCIONES', X.sinOp); tot.push(null); bloque(o.labelOp || 'TOTAL CON OPCIONES', X.conOp, true); }
+    else if (o.total) bloque('TOTAL', X.sinOp);
+    else if (conO) bloque(o.labelOp || 'TOTAL', X.conOp, true);
+    const D = { titulo: o.titulo || tituloDef(), sub: o.sub || subDef(), modulos: X.modulos, totales: tot, condExtra: [...((o.total && bonifDe(X.sinOp, o)) || (X.hayOp && o.totalOp && bonifDe(X.conOp, o, true)) ? [o.bonTexto || bonDef(o)] : []), ...(o.led ? [LEYENDA_LED] : []), ...String(o.extra || '').split('\n').map(x => x.trim()).filter(Boolean)] };
     const uno = ids && ids.length === 1 && P.sectores.length > 1;
     const hoy = new Date(), dm = String(hoy.getDate()).padStart(2, '0') + '-' + String(hoy.getMonth() + 1).padStart(2, '0');
     const base = `Presupuesto_${P.num || 'sn'}${P.version ? '_' + P.version : ''}_${P.obra || 'Obra'}${uno ? ' ' + sectorDe(ids[0]).nombre : ''} ${dm}`.replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim();
