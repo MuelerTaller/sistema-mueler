@@ -2464,7 +2464,7 @@ const MAT_DB = [
  ['P15','Melamina Faplac Aglo 18mm 303 NEGRO PROFUNDO',2750,1830,18,0,'T23'],['P18','Melamina Faplac Aglo 18mm 031-ROBLE DAKAR',2750,1830,18,1,'T32'],
  ['P33','Melamina Faplac Aglo 18mm 089-HELSINKI',2750,1830,18,1,'T64'],['P34','Melamina Faplac Aglo 18mm 096 OLMO FINLANDES',2750,1830,18,1,'T55'],
  ['P10','Melamina Faplac Aglo 18mm 040-ROJO',2750,1830,18,0,'T268'],['P2','Melamina Faplac Aglo 15mm 135-BLANCO',2750,1830,15,0,'T240'],
- ['P4','Melamina Faplac Aglo 25mm 135-BLANCO',2750,1830,25,0,'T240'],['P629','Melamina Trupan MDF 18mm 135- BLANCO',2750,1830,18,0,'T240'],
+ ['P4','Melamina Faplac Aglo 25mm 135-BLANCO',2750,1830,25,0,'T240'],['P629','Melamina Trupan MDF 18mm 135- BLANCO',2750,1830,18,0,'T240'],['P633','Melamina Trupan MDF 18mm 180-ALMENDRA',2750,1830,18,0,'TALM'],
  ['P320','Melamina Trupan MDP 18mm 135-BLANCO RH',2750,1830,18,0,'T240'],['P315','Melamina Trupan MDF 12mm 135-BLANCO',2750,1830,12,0,'T240'],
  ['P331','Melamina Trupan MDF 18mm 105-CENIZA',2750,1830,18,0,'T13'],['P337','Melamina Trupan MDF 18mm 107-GRAFITO',2750,1830,18,0,'T21'],
  ['P357','Melamina Trupan MDF 18mm 089-HELSINKI',2750,1830,18,1,'T64'],['P361','Melamina Trupan MDF 18mm 099-TEKA OSLO',2750,1830,18,1,'T57'],
@@ -2500,12 +2500,13 @@ const MAT_DB = [
  ['SC29','Fibroplus Egger MDF 5.5mm Negro U999 ST9',2600,1830,5.5,0,'T97'],
  ['SC30','Fibroplus Egger MDF 5.5mm R. Kendal Nat. H3170 ST12',2600,1830,5.5,1,'T100'],
  ['SC31','Fibroplus Egger MDF 5.5mm Gris Perla U763 ST9',2600,1830,5.5,0,'T93'],
+ ['SC32','Fibroplus Trupan MDF 3mm 180-ALMENDRA',2750,1830,3,0,'TALM'],
 ].map(a => ({ code: a[0], desc: a[1], largo: a[2], ancho: a[3], esp: a[4], veta: !!a[5], canto: a[6] }));
 const TAPA_DB = [
  ['T240','Blanco 22x0.45 Rehau',22,0.45],['T0B2','Blanco 22x2',22,2],['T62','Lino Blanco 22x0.45',22,0.45],['T118','Lino Blanco 22x2 F422 ST10',22,2],
  ['T158','Blanco Alpino 22x0.45 W1100 ST9',22,0.45],['T13','Ceniza 22x0.45',22,0.45],['T21','Grafito 22x0.45',22,0.45],['T22','Gris Humo 22x0.45',22,0.45],
  ['T23','Negro Profundo 22x0.45',22,0.45],['T32','Roble Dakar 22x0.45',22,0.45],['T64','Helsinki 22x0.45',22,0.45],['T55','Olmo Finlandes 22x0.45',22,0.45],
- ['T97','Negro U999 22x2',22,2],['T93','Gris Perla U763 22x2',22,2],['T100','R. Kendal Nat. H3170 22x2',22,2],['T103','Gris Macadan 22x2 U732 ST9',22,2],
+ ['TALM','Almendra 22x0.45',22,0.45],['T97','Negro U999 22x2',22,2],['T93','Gris Perla U763 22x2',22,2],['T100','R. Kendal Nat. H3170 22x2',22,2],['T103','Gris Macadan 22x2 U732 ST9',22,2],
  ['T0MG','Mirror Gloss Blanco 22x1.3',22,1.3],['T0G45','Blanco 45x0.5 (grueso)',45,0.5],
 ].map(a => ({ code: a[0], desc: a[1], ancho: a[2], esp: a[3] }));
 const isDef = art => MAT_DB.some(x => x.desc === art);
