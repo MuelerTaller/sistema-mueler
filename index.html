@@ -585,8 +585,8 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
       lc: col('Longitud - cruda', 'Length - raw'), ac: col('Ancho - crudo', 'Width - raw'), ec: col('Espesor - crudo', 'Thickness - raw'),
       lf: col('Longitud', 'Length'), af: col('Anchura', 'Width'), ef: col('Grosor', 'Thickness'),
       tipo: col('Tipo', 'Tipo de material', 'Type', 'Material type'), mat: col('Material', 'Nombre del material', 'Material name'), desc: col('Descripción', 'Description'), inst: col('Nombres de instancias', 'Instance names'),
-      b1: col('Longitud del borde 1', 'Edge length 1'), b2: col('Longitud del borde 2', 'Edge length 2'),
-      b3: col('Ancho del borde 1', 'Edge width 1'), b4: col('Ancho de borde 2', 'Ancho del borde 2', 'Edge width 2'),
+      b1: col('Longitud del borde 1', 'Edge length 1', 'L1', 'L 1'), b2: col('Longitud del borde 2', 'Edge length 2', 'L2', 'L 2'),
+      b3: col('Ancho del borde 1', 'Edge width 1', 'A1', 'A 1'), b4: col('Ancho de borde 2', 'Ancho del borde 2', 'Edge width 2', 'A2', 'A 2'),
     };
     // Si OpenCutList cambió los nombres de columna, se detectan por contenido
     if (C.tipo < 0 || C.mat < 0) {
@@ -666,7 +666,7 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
     if (R.cajones && totPares && R.cajones !== totPares) R.avisos.push(`El modelo tiene ${R.cajones} cajones y ${totPares} pares de correderas. Revisá si hay bandejas o cajones sin corredera.`);
     // cruce cantos por pieza vs filas Canto
     const sumT = k => Object.values(R.tableros).reduce((s, t) => s + t.cantoMm[k], 0);
-    ['1', '2'].forEach(k => { const a = sumT(+k), b = R.cantosOCL[k] || 0; if (b && Math.abs(a - b) > 5) R.avisos.push(`Canto ${k}: las piezas suman ${(a / 1000).toFixed(2)} m y el resumen de OCL ${(b / 1000).toFixed(2)} m.`); });
+    ['1', '2'].forEach(k => { const a = sumT(+k), b = R.cantosOCL[k] || 0; if (b && Math.abs(a - b) > Math.max(100, b * 0.005)) R.avisos.push(`Canto ${k}: las piezas suman ${(a / 1000).toFixed(2)} m y el resumen de OCL ${(b / 1000).toFixed(2)} m.`); });
     Object.keys(R.cantosOCL).filter(k => k !== '1' && k !== '2').forEach(k => R.avisos.push(`Canto con material "${k}" (${(R.cantosOCL[k] / 1000).toFixed(2)} m): se tomó como canto 0,45 mm. Revisalo.`));
     if (!R.modulo && fileName) { const m = fileName.match(/\bM\s*0*(\d+)\b/i); if (m) R.modulo = 'M' + m[1].padStart(2, '0'); }
     if (!Object.keys(R.tableros).length) R.avisos.push('El archivo no tiene filas de tipo Tablero.');
