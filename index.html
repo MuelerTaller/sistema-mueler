@@ -2595,7 +2595,9 @@ const CATH = []; CAT.forEach(p => { marcasDe(p).forEach(m => { const pr = precio
 function lineaTxt(h) { const p = CATP[h.prod]; if (!p) return h.art || '—'; const a = CATA[h.cod]; return `${p.n} · ${h.marca}${a && a.a.col ? ' · ' + a.a.col : ''}`; }
 /* ---- Líneas de pedido (herrajes y cantos) ---- */
 const TIPOS = { herrajes: { t: 'Herrajes', pre: 'H', prov: 'All Sur', u: 'u.' }, cantos: { t: 'Cantos', pre: 'C', prov: 'Del Carril', u: 'm' }, placas: { t: 'Madera', pre: 'P', prov: 'Dilegno', u: 'placas' } };
-const PROVS_PLACA = ['Dilegno', 'Alnora', 'Trumar', 'Dac Maderas'];
+const PROV_TALLER = 'Taller (stock)';
+const PROVS_PLACA = ['Dilegno', 'Alnora', 'Trumar', 'Dac Maderas', PROV_TALLER];
+const esTaller = pv => pv === PROV_TALLER;
 const PROVS_CANTO = ['Del Carril', 'Alnora', 'Dilegno'];
 const MEDIDAS = ['0,45x22', '0,45x45', '0,45x50', '2x22', '2x45', 'Enchapado 22', 'Enchapado 45'];
 const tipoDe = p => p.tipo || 'herrajes';
@@ -3136,7 +3138,7 @@ function maderaSegHTML() {
       ${llega.map(x => { const d = diasDesde(x.it.fPedido || x.p.fEnviado); return `<tr><td class="mono">${esc(x.it.fPedido || x.p.fEnviado || '—')}${d != null ? `<div class="note">hace ${d} día${d === 1 ? '' : 's'}</div>` : ''}</td>
         <td><b>${esc(x.it.cod)}</b>${modoIt(x.it, x.p) === 'entera' ? '<div class="note">placa entera · se corta en el taller</div>' : ''}</td><td class="n"><b>${fmt(x.it.pedir)}</b></td>
         <td>${esc(provIt(x.it, x.p))}${x.it.nroProv ? `<div class="note mono">Nº ${esc(x.it.nroProv)}</div>` : /dilegno/i.test(provIt(x.it, x.p)) ? '<div class="note falta-t">falta el Nº de plano</div>' : ''}</td>
-        <td>${chip(EST_PL[x.e])}${x.e === 'confirmado' && x.it.fConf ? `<div class="note">${esc(x.it.fConf)}</div>` : ''}</td><td>${proyCelda(x.p, x.it.cod)}</td><td>${abrir(x)}</td></tr>`; }).join('')}
+        <td>${chip(chipPl(x.it, x.p, x.e))}${x.e === 'confirmado' && x.it.fConf ? `<div class="note">${esc(x.it.fConf)}</div>` : ''}</td><td>${proyCelda(x.p, x.it.cod)}</td><td>${abrir(x)}</td></tr>`; }).join('')}
     </tbody></table></div>` : '<p class="note" style="margin:0">No hay madera en camino.</p>'}</div>
     <div class="panel"><header><div><h2>En el taller</h2><span class="note">Lo último que llegó primero. Es la madera con la que se puede armar.</span></div><span class="sum">${fmt(nPl(taller))} placa${nPl(taller) === 1 ? '' : 's'}</span></header>
     ${taller.length ? `<div class="tbox"><table class="t segt"><thead><tr><th>Llegó</th><th>Madera</th><th class="n">Placas</th><th>Proveedor · factura</th><th>Para</th><th></th></tr></thead><tbody>
@@ -3357,14 +3359,16 @@ function proyCelda(p, cod) {
 /* Cada placa (tipo de melamina / enchapado) es una línea con su propio recorrido dentro del pedido:
    Por pedir → Pedido (Nº de plano / pedido del proveedor) → Confirmado (presupuesto aceptado) → En taller.
    El pedido P-n es el lote: se cierra a nuevos módulos cuando se pide la primera placa, y queda "Pedido parcial" hasta que se piden todas. */
-const PROV_MODO = { 'Trumar': 'entera', 'Dac Maderas': 'entera' };
+const PROV_MODO = { 'Trumar': 'entera', 'Dac Maderas': 'entera', 'Taller (stock)': 'entera' };
 const PROV_INFO = {
   'Dilegno': 'Un archivo por tipo de placa: se importa en su optimizador y genera un Nº de plano. El vendedor manda un presupuesto por cada Nº y, al confirmar, agrupa todo en una factura.',
   'Alnora': 'Un Excel por placa, por mail. Se pueden juntar varias placas en un mismo mail o mandarlas en días distintos.',
   'Trumar': 'Por lo general placa entera: la optimización queda para cortar en el taller.',
   'Dac Maderas': 'Por lo general placa entera: la optimización queda para cortar en el taller.',
+  'Taller (stock)': 'Placa que ya está en el taller: no se pide, se corta acá con la optimización. Cuando esté cortada, marcala como cortada.',
 };
 const EST_PL = { armado: { t: 'Por pedir', c: 'e2' }, pedido: { t: 'Pedido', c: 'e3' }, confirmado: { t: 'Confirmado', c: 'e1' }, recibido: { t: 'En taller', c: 'e4' } };
+const chipPl = (it, p, e) => esTaller(provIt(it, p)) ? (e === 'recibido' ? { t: 'Cortada', c: 'e4' } : { t: 'Cortar en taller', c: 'e2' }) : EST_PL[e];
 const itEst = (it, p) => it.est || (p.estado === 'recibido' ? 'recibido' : p.estado === 'enviado' ? 'pedido' : 'armado');
 const modoIt = (it, p) => it.modo || PROV_MODO[provIt(it, p)] || 'corte';
 const sinCantosIt = (it, p) => it.sinCantos != null ? !!it.sinCantos : !!p.sinCantos;
@@ -3395,7 +3399,7 @@ function lineasPlacasHTML(p) {
   const lote = p.estado === 'borrador';
   return `<div class="pedt plgrid">${provsOrden(p).map(({ pv, ls }) => { const arm = ls.filter(x => itEst(x.it, p) === 'armado' && N(x.it.pedir) > 0); const n = ls.reduce((s, x) => s + N(x.it.pedir), 0);
     return `<section class="provgrp"><header><div><h3>${esc(pv)}</h3><span class="note">${ls.length} tipo${ls.length === 1 ? '' : 's'} de placa · ${fmt(n)} placa${n === 1 ? '' : 's'}</span></div>
-      <div class="row">${arm.length ? `<button class="btn sm" data-pe="pl-copy" data-prov="${esc(pv)}">Copiar ${/alnora/i.test(pv) ? 'mail' : 'mensaje'} con ${arm.length === 1 ? 'la placa' : 'las ' + arm.length + ' placas'} por pedir</button>` : ''}${arm.length > 1 && !/dilegno/i.test(pv) ? `<button class="btn sm" data-pe="pl-pedtodas" data-prov="${esc(pv)}">Marcar las ${arm.length} como pedidas</button>` : ''}</div></header>
+      <div class="row">${arm.length && !esTaller(pv) ? `<button class="btn sm" data-pe="pl-copy" data-prov="${esc(pv)}">Copiar ${/alnora/i.test(pv) ? 'mail' : 'mensaje'} con ${arm.length === 1 ? 'la placa' : 'las ' + arm.length + ' placas'} por pedir</button>` : ''}${arm.length > 1 && !/dilegno/i.test(pv) && !esTaller(pv) ? `<button class="btn sm" data-pe="pl-pedtodas" data-prov="${esc(pv)}">Marcar las ${arm.length} como pedidas</button>` : ''}</div></header>
       ${ls.map(({ it, k }) => lineaPlacaHTML(p, it, k, lote)).join('')}</section>`; }).join('')}</div>`;
 }
 function lineaPlacaHTML(p, it, k, lote) {
@@ -3420,7 +3424,8 @@ function lineaPlacaHTML(p, it, k, lote) {
   const nroIn = `<input type="text" class="nro" data-ps="${k}.nroProv" value="${esc(it.nroProv || '')}" placeholder="${nroPh}">`;
   // acción principal según el paso
   let accion;
-  if (e === 'armado') accion = `<button class="btn sm primary" data-pe="pl-pedido" data-k="${k}">Marcar como pedida</button>`;
+  if (esTaller(pv)) accion = e === 'recibido' ? `<span class="note">Cortada el ${esc(it.fRecib || '—')}</span>` : `<button class="btn sm primary" data-pe="pl-cortada" data-k="${k}">Marcar como cortada</button>`;
+  else if (e === 'armado') accion = `<button class="btn sm primary" data-pe="pl-pedido" data-k="${k}">Marcar como pedida</button>`;
   else if (e === 'pedido') accion = `${!it.nroProv ? `<input type="text" class="nro sm" data-ps="${k}.nroProv" value="" placeholder="${dil ? 'Cargá el Nº de plano' : 'Nº de pedido'}" aria-label="Nº de pedido">` : ''}<button class="btn sm primary" data-pe="pl-conf" data-k="${k}">Confirmar compra</button>`;
   else if (e === 'confirmado') accion = dd('lleg', 'Llegó', `${fld('Recibidas', `<input type="text" class="n q" data-pi="${k}.recib" value="${esc(it.recib ?? it.pedir)}" aria-label="Placas recibidas">`)}
     
@@ -3428,7 +3433,7 @@ function lineaPlacaHTML(p, it, k, lote) {
     <div class="row"><button class="btn sm" data-pe="pl-fact" data-k="${k}">📎 Adjuntar factura (foto o PDF)</button>${(it.factAdj || []).length ? `<span class="note">${(it.factAdj || []).map(a => esc(a.nombre)).join(', ')}</span>` : ''}</div>
     <button class="btn primary" data-pe="pl-recib" data-k="${k}">Confirmar recepción</button>`, 'primary');
   else accion = `<span class="note">Llegaron ${fmt(it.recib ?? it.pedir)} el ${esc(it.fRecib || '—')}</span>${it.recib != null && N(it.recib) < N(it.pedir) ? `<span class="chip e2">Faltan ${fmt(N(it.pedir) - N(it.recib))}</span><button class="btn sm" data-pe="faltantes">Pasar lo que faltó al pedido en armado</button>` : ''}`;
-  const filesMenu = `${PROV_INFO[pv] ? `<p class="note" style="margin:0">${esc(PROV_INFO[pv])}</p>` : ''}${modo === 'entera' ? `<button class="btn sm primary" data-pe="pl-copy1" data-k="${k}">Copiar mensaje para ${esc(pv)}</button>`
+  const filesMenu = `${PROV_INFO[pv] ? `<p class="note" style="margin:0">${esc(PROV_INFO[pv])}</p>` : ''}${esTaller(pv) ? '' : modo === 'entera' ? `<button class="btn sm primary" data-pe="pl-copy1" data-k="${k}">Copiar mensaje para ${esc(pv)}</button>`
     : hayPz ? (dil ? `<button class="btn sm primary" data-pe="pl-txt1" data-k="${k}">.txt para Importar en Dilegno</button><button class="btn sm" data-pe="pl-xls1" data-k="${k}">Excel</button>`
       : `<button class="btn sm primary" data-pe="pl-xls1" data-k="${k}">Excel para ${esc(pv)}</button><button class="btn sm" data-pe="pl-txt1" data-k="${k}">.txt (formato Dilegno)</button>`) + `<button class="btn sm" data-pe="pl-csv1" data-k="${k}">CSV</button>` : '<span class="note">Sin despiece: son placas enteras.</span>'}`;
   const tallerMenu = `${optl}${hayPz ? `<button class="btn sm" data-pe="pl-impk" data-k="${k}">Imprimir despiece (A4)</button><button class="btn sm ${OPTPOPEN[it.cod] ? 'primary' : ''}" data-pe="pl-ver" data-cod="${esc(it.cod)}">${OPTPOPEN[it.cod] ? 'Ocultar placas' : 'Ver optimización'}</button><button class="btn sm" data-pe="pl-opti" data-cod="${esc(it.cod)}">Abrir en el Optimizador</button>` : ''}`;
@@ -3436,10 +3441,10 @@ function lineaPlacaHTML(p, it, k, lote) {
     ${e === 'armado' ? `<div class="row">${lote ? `<button class="btn sm" data-pe="edit-it" data-cod="${esc(it.cod)}">Cambiar placa…</button>` : ''}<button class="btn sm danger" data-pe="pl-del" data-k="${k}">Eliminar del pedido…</button></div>` : '<span class="note">Ya pedida: para cambiarla o eliminarla, volvé el paso atrás en Seguimiento.</span>'}`;
   const seguimiento = `${fld(dil ? 'Nº de plano' : 'Nº de pedido', nroIn)}${e !== 'armado' ? fld('Nº de presupuesto', `<input type="text" class="nro" data-ps="${k}.presu" value="${esc(it.presu || '')}" placeholder="${dil ? 'Ej. PR 13694' : 'Opcional'}">`) : ''}
     ${[it.fPedido && `Pedida ${it.fPedido}`, it.fConf && `Confirmada ${it.fConf}`, it.fRecib && `Recibida ${it.fRecib}${it.factNum ? ' · factura ' + it.factNum : ''}${it.precioF && ESADMIN() ? ' · $' + fmt(it.precioF) + ' c/u' : ''}`].filter(Boolean).map(x => `<span class="note">${esc(x)}</span>`).join('')}
-    ${e !== 'armado' ? `<button class="btn sm ghost" data-pe="pl-undo" data-k="${k}">← Volver a ${{ pedido: 'Por pedir', confirmado: 'Pedido', recibido: 'Confirmado' }[e]}</button>` : ''}`;
+    ${e !== 'armado' ? `<button class="btn sm ghost" data-pe="pl-undo" data-k="${k}">← Volver a ${esTaller(pv) ? 'Cortar en taller' : { pedido: 'Por pedir', confirmado: 'Pedido', recibido: 'Confirmado' }[e]}</button>` : ''}`;
   const resumen = `${esc(pv)} · ${modo === 'entera' ? 'placa entera' : 'con corte · ' + (sc ? 'sin cantos' : 'con cantos')}${it.nroProv ? ' · Nº ' + esc(it.nroProv) : ''}`;
   return `<div class="plcard e-${e}">
-    <div class="pltop"><div style="min-width:0;display:grid;gap:6px"><div class="row" style="gap:8px"><b>${esc(it.cod)}</b>${chip(EST_PL[e])}</div>
+    <div class="pltop"><div style="min-width:0;display:grid;gap:6px"><div class="row" style="gap:8px"><b>${esc(it.cod)}</b>${chip(chipPl(it, p, e))}</div>
         <div class="plinfo">${proyCelda(p, it.cod)}<span class="note">${resumen}</span></div>
         <div class="plbar">${accion}${e !== 'armado' ? `<button class="btn sm ghost" data-pe="pl-undo" data-k="${k}" title="Volver a ${{ pedido: 'Por pedir', confirmado: 'Pedido', recibido: 'Confirmado' }[e]}">↶ Deshacer</button>` : ''}${dd('arch', 'Archivos', filesMenu)}${dd('tall', 'Taller', tallerMenu)}${dd('aj', 'Ajustes', ajustes)}${dd('seg', 'Seguimiento', seguimiento)}</div></div>
       <div class="plq"><div class="qty">${o || man ? fmt(it.pedir) : '…'}</div><div class="note">${parts.join(' · ') || (o ? '' : 'calculando')}</div>${stockCtl(it, k, 'placas', e === 'armado' && lote)}</div></div>
@@ -3584,13 +3589,15 @@ $('view-ped').addEventListener('click', async e => {
     const eraLote = PED.estado === 'borrador'; ks.forEach(k => { const it = PED.items[k]; it.est = 'pedido'; it.fPedido = today(); }); syncEstadoPl(PED); savePED(true); renderPedDet();
     const sinNro = ks.some(k => !PED.items[k].nroProv && /dilegno/i.test(provIt(PED.items[k], PED)));
     toast((ks.length > 1 ? `${ks.length} placas pedidas.` : 'Placa pedida.') + (sinNro ? ' Cargá el Nº de plano cuando te llegue el mail de Dilegno.' : '') + (eraLote ? ` Los módulos nuevos van a un pedido nuevo.` : '')); return; }
+  if (a === 'pl-cortada') { fijarEst(PED); const it = PED.items[+b.dataset.k]; it.est = 'recibido'; it.recib = N(it.pedir); it.fPedido = it.fPedido || today(); it.fRecib = today(); syncEstadoPl(PED); savePED(true); renderPedDet(); toast('Cortada: figura En taller en cada módulo.'); return; }
   if (a === 'pl-conf') { fijarEst(PED); const it = PED.items[+b.dataset.k]; it.est = 'confirmado'; it.fConf = today(); syncEstadoPl(PED); savePED(true); renderPedDet(); toast('Compra confirmada. Cuando llegue, cargá lo recibido.'); return; }
   if (a === 'pl-recib') { fijarEst(PED); const it = PED.items[+b.dataset.k]; if (it.recib == null) it.recib = N(it.pedir);
     try { await borrarMovs(x => x.ref === PED.id && x.cod === it.cod && x.motivo === 'recepcion'); const tall = manualDe(PED, it.cod).filter(o => (o.para || 'Taller') === 'Taller').reduce((s2, o) => s2 + N(o.cant), 0);
       const sob = Math.floor(N(it.recib) + N(it.deStock) - (N(it.req) - tall) + 1e-6); if (sob > 0) await movStock({ tipo: 'placas', cod: it.cod, nombre: it.nombre || it.cod, cant: sob, motivo: 'recepcion', ref: PED.id, refNum: numPed(PED), nota: 'Sobrante del pedido' }); } catch (er) { toast('No se pudo registrar el stock.'); }
     it.est = 'recibido'; it.fRecib = today(); syncEstadoPl(PED); savePED(true); renderPedDet(); toast('Recibida: figura En taller en cada módulo.'); return; }
   if (a === 'pl-undo') { fijarEst(PED); const it = PED.items[+b.dataset.k];
-    if (it.est === 'recibido') { try { await borrarMovs(x => x.ref === PED.id && x.cod === it.cod && x.motivo === 'recepcion'); } catch (er) { } it.est = 'confirmado'; it.fRecib = ''; }
+    if (it.est === 'recibido' && esTaller(provIt(it, PED))) { it.est = 'armado'; it.fRecib = ''; it.fPedido = ''; }
+    else if (it.est === 'recibido') { try { await borrarMovs(x => x.ref === PED.id && x.cod === it.cod && x.motivo === 'recepcion'); } catch (er) { } it.est = 'confirmado'; it.fRecib = ''; }
     else if (it.est === 'confirmado') { it.est = 'pedido'; it.fConf = ''; } else if (it.est === 'pedido') { it.est = 'armado'; it.fPedido = ''; }
     syncEstadoPl(PED); savePED(true); renderPedDet(); return; }
   if (a === 'rnd') { const it = PED.items[+b.dataset.k]; it.pedir = +b.dataset.v; it.pedirEd = true; savePED(); renderPedDet(); return; }
