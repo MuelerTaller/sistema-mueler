@@ -2624,8 +2624,11 @@ function lineaEst(h, T) {
   if (p.estado === 'enviado') return { t: 'Pedido ' + numPed(p), c: 'e3', p };
   return { t: 'En armado ' + numPed(p), c: 'e1', p };
 }
+const FUERA_T = { pedido: { t: 'Pedido por fuera', c: 'e3' }, taller: { t: 'En taller (por fuera)', c: 'e4' } };
+function fueraDe(m, T) { return (m && m.fuera && FUERA_T[m.fuera[T]]) ? m.fuera[T] : ''; }
 function estadoT(m, T) {
   const all = lineasDe(m, T), ls = all.filter(h => lineaOK(h, T));
+  { const fz = fueraDe(m, T); if (fz && !all.some(h => h.ped && pedDe(h.ped))) return Object.assign({}, FUERA_T[fz]); }
   if (T === 'placas' && !m.csv) return { t: 'Sin CSV', c: 'e0' };
   if (!ls.length) return { t: all.length ? (T === 'herrajes' ? 'Falta catálogo' : T === 'placas' ? 'Definir placa' : 'Falta definir') : (T === 'cantos' ? 'Sin cantos' : T === 'placas' ? 'Sin placas' : 'Sin herrajes'), c: all.length ? 'e2' : 'e0' };
   const est = ls.map(h => lineaEst(h, T)); const pend = est.filter(x => !x).length;
@@ -2665,6 +2668,7 @@ async function aprobarDlg() {
     <div class="field"><label class="lbl" for="ap-fecha">Fecha de aprobación</label><input type="text" id="ap-fecha" value="${esc(today())}"></div></div>
     <p class="note" style="margin:0">Marcá lo que tomó el cliente. Cada mueble elegido pasa al proyecto como un módulo, con sus textos y herrajes. Los herrajes que existen en el catálogo de All Sur ya pasan con código.</p>
     <div class="apr-list">${body}</div>
+    <details class="panel" style="padding:8px 10px"><summary class="lbl">Obra en curso: algo ya se pidió por fuera del sistema</summary><p class="note" style="margin:6px 0">Se aplica a todos los módulos del proyecto. Lo marcado no aparece en Compras.</p>${fueraSelHTML('apf')}</details>
     <div class="row" style="justify-content:space-between"><span class="note" id="ap-tot"></span><div class="row"><button class="btn" data-close>Cancelar</button><button class="btn primary" data-ap="crear">Crear proyecto</button></div></div>`);
   d.m.querySelector('.dlg').style.width = 'min(720px,100%)';
   const leer = () => {
@@ -2696,6 +2700,7 @@ async function aprobarDlg() {
         frenteTipo: tx.frentes || '', frenteDef: '', estrTipo: tx.estructura || '', estrDef: '', canto: tx.cantos || sugCantos(r.R) || '', agarre: 'A definir', laqueado: '',
         herrajesTxt: tx.herrajes || '', herrajes: hs.map(h => Object.assign(h, { hid: h.hid || uid() })), led: ledProyecto(M, r.R), estDiseno: 'Pendiente', estMadera: 'Sin pedir', estArmado: 'Pendiente', estInstal: 'Pendiente', coment: '', notas: '', csv: null, cantos: [], csvMap: {}, csvVeta: {} };
     });
+    { const fo = fueraLeer(d.m, 'apf'); if (Object.keys(fo).length) modulos.forEach(m => fueraAplicar(m, fo)); }
     const doc = { id: nid('r'), num, presId: P.id, presNum: P.num || '', presVersion: P.version || '', obra: P.obra || '', cliente: P.cliente || '', arq: P.arq || '',
       fechaAprob: $('ap-fecha').value.trim(), creado: Date.now(), upd: Date.now(), notas: '', modulos };
     try {
@@ -2774,7 +2779,7 @@ function renderProyDet() {
       <div class="field"><label class="lbl">Aprobado</label>${pin('fechaAprob', p.fechaAprob, { label: 'Fecha de aprobación' })}</div>
       <div class="field"><label class="lbl">Presupuesto</label><button class="btn" data-pa="ver-pres" ${PRES.some(x => x.id === p.presId) ? '' : 'disabled'}>${p.sinPres ? 'Sin presupuesto' : esc(p.presNum || '—')}${p.presVersion ? ' ' + esc(p.presVersion) : ''} →</button></div>
     </div>
-    <div class="panel"><header><h2>Tablero de módulos</h2><div class="row"><span class="note">Tocá un módulo para abrir su ficha.</span><button class="btn sm" data-pa="mod-csv">+ Módulos desde CSV</button><button class="btn sm" data-pa="mod-mano">+ Módulo a mano</button></div></header>
+    <div class="panel"><header><h2>Tablero de módulos</h2><div class="row"><span class="note">Tocá un módulo para abrir su ficha.</span><button class="btn sm" data-pa="mod-csv">+ Módulos desde CSV</button><button class="btn sm" data-pa="mod-mano">+ Módulo a mano</button>${(p.modulos || []).length ? '<button class="btn sm" data-pa="fuera">Ya pedido por fuera…</button>' : ''}</div></header>
     ${!(p.modulos || []).length ? '<div class="empty"><b>Este proyecto todavía no tiene módulos.</b><span>Cargá los CSV de OpenCutList (uno por módulo: M01, M02…) o agregalos a mano.</span></div>' : ''}
     <div class="tbox"><table class="t prt"><thead><tr><th>Módulo</th><th>Materiales</th><th>Diseño</th><th>Madera</th><th>Cantos</th><th>Herrajes</th><th>Armado</th><th>Instalación</th></tr></thead><tbody>
     ${secs.map(s => `${secs.length > 1 || s ? `<tr class="secrow"><td colspan="8">${esc(s || 'Sin sector')}</td></tr>` : ''}${ms.map((m, i) => m.sector !== s ? '' : `<tr class="click ${PSEL === m.id ? 'sel' : ''}" data-pa="mod" data-id="${esc(m.id)}">
@@ -2787,6 +2792,25 @@ function renderProyDet() {
     <div class="row" style="justify-content:flex-end"><button class="btn sm danger" data-pa="del">Borrar proyecto</button></div>
     <datalist id="dl-mel">${MELAMINAS().map(x => `<option value="${esc(x)}">`).join('')}</datalist>`;
   renderFicha();
+}
+// Proyectos en curso: madera, cantos o herrajes que ya se pidieron antes de usar el sistema. No pasan a Compras ni a "Para pedir".
+const FUERA_OPS = [['', 'No cambiar'], ['no', 'Lo pide el sistema'], ['pedido', 'Pedido por fuera'], ['taller', 'Ya está en el taller']];
+const FUERA_TS = [['placas', 'Madera'], ['cantos', 'Cantos'], ['herrajes', 'Herrajes']];
+function fueraSelHTML(pre) { return `<div class="grid3">${FUERA_TS.map(([T, n]) => `<div class="field"><label class="lbl" for="${pre}-${T}">${n}</label><select id="${pre}-${T}">${FUERA_OPS.map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select></div>`).join('')}</div>`; }
+function fueraLeer(root, pre) { const o = {}; FUERA_TS.forEach(([T]) => { const v = root.querySelector('#' + pre + '-' + T).value; if (v) o[T] = v; }); return o; }
+function fueraAplicar(m, o) { Object.entries(o).forEach(([T, v]) => { m.fuera = m.fuera || {}; if (v === 'no') delete m.fuera[T]; else m.fuera[T] = v; }); }
+function fueraDlg() {
+  const ms = PR.modulos || [];
+  const d = modal(`${H('Ya pedido por fuera del sistema')}
+    <p class="note" style="margin:0">Para obras que ya estaban en curso: lo que marques no aparece en Compras ni en "Para pedir", aunque el diseño esté Listo. Si después algo hay que pedirlo igual, volvé acá y elegí "Lo pide el sistema".</p>
+    ${fueraSelHTML('fz')}
+    <div class="field"><span class="lbl">Módulos</span><label class="row" style="gap:6px"><input type="checkbox" id="fz-all" checked> Todos</label>
+      <div style="display:grid;gap:2px;max-height:240px;overflow:auto">${ms.map(m => `<label class="row" style="gap:6px"><input type="checkbox" class="fz-m" value="${esc(m.id)}" checked> <b>${esc(m.cod || '—')}</b> ${esc(m.desc || '')} <span class="note">${FUERA_TS.map(([T, n]) => fueraDe(m, T) ? n + ': ' + FUERA_T[m.fuera[T]].t.toLowerCase() : '').filter(Boolean).join(' · ')}</span></label>`).join('')}</div></div>
+    <div class="row" style="justify-content:flex-end"><button class="btn" data-close>Cancelar</button><button class="btn primary" id="fz-ok">Aplicar</button></div>`);
+  d.q('#fz-all').onchange = e => d.m.querySelectorAll('.fz-m').forEach(x => { x.checked = e.target.checked; });
+  d.q('#fz-ok').onclick = () => { const o = fueraLeer(d.m, 'fz'); if (!Object.keys(o).length) { toast('Elegí qué marcar (Madera, Cantos o Herrajes).'); return; }
+    const ids = [...d.m.querySelectorAll('.fz-m:checked')].map(x => x.value); if (!ids.length) { toast('Elegí al menos un módulo.'); return; }
+    ms.filter(m => ids.includes(m.id)).forEach(m => fueraAplicar(m, o)); savePR(); d.close(); renderProyDet(); updTabs(); toast(`Listo: ${ids.length} módulo${ids.length === 1 ? '' : 's'} actualizado${ids.length === 1 ? '' : 's'}.`); };
 }
 function famDe(h) { const c = h.prod || ''; let x; if ((x = c.match(/^(TEL|TELCS|GOC)-(\d+)/))) return { f: 'corr', l: +x[2] }; if ((x = c.match(/^CAJ-[A-Z0-9]+-(\d+)$/))) return { f: 'corr', l: +x[1] }; if (/^BIS/.test(c)) return { f: 'bis' }; return null; }
 function recuentoHTML(m) {
@@ -2987,6 +3011,7 @@ $('view-proy').addEventListener('click', async e => {
   if (a === 'cerrar-ficha') { PSEL = null; renderProyDet(); }
   if (a === 'nuevo-sp') { nuevoProyManualDlg(); return; }
   if (a === 'mod-mano') { agregarModuloDlg(); return; }
+  if (a === 'fuera') { fueraDlg(); return; }
   if (a === 'mod-csv') { fModCsv.click(); return; }
   if (a === 'dis' && m) { const era = m.estDiseno; m.estDiseno = b.dataset.v; savePR(); renderProyDet(); updTabs(); if (b.dataset.v === 'Listo' && era !== 'Listo') autoSumar(PR.id, m.id); }
   if (a === 'csv') fCsvP.click();
@@ -3025,10 +3050,10 @@ function proximoPedido(T) { const ns = PEDS.filter(p => tipoDe(p) === T).map(p =
 const cartsDe = T => PEDS.filter(p => tipoDe(p) === T && p.estado === 'borrador').sort((a, b) => a.creado - b.creado);
 function porPedir(T) {
   const out = [];
-  PROYS.forEach(p => { const P2 = (PR && PR.id === p.id) ? PR : p; (P2.modulos || []).forEach(m => { if (normEst('estDiseno', m.estDiseno) !== 'Listo') return; const ls = lineasDe(m, T).filter(h => lineaOK(h, T) && !(h.ped && pedDe(h.ped))); if (ls.length) out.push({ p: P2, m, ls }); }); });
+  PROYS.forEach(p => { const P2 = (PR && PR.id === p.id) ? PR : p; (P2.modulos || []).forEach(m => { if (normEst('estDiseno', m.estDiseno) !== 'Listo' || fueraDe(m, T)) return; const ls = lineasDe(m, T).filter(h => lineaOK(h, T) && !(h.ped && pedDe(h.ped))); if (ls.length) out.push({ p: P2, m, ls }); }); });
   return out;
 }
-function pendientesDef(T) { let n = 0; PROYS.forEach(p => (p.modulos || []).forEach(m => { if (normEst('estDiseno', m.estDiseno) !== 'Listo' && lineasDe(m, T).some(h => lineaOK(h, T) && !h.ped)) n++; })); return n; }
+function pendientesDef(T) { let n = 0; PROYS.forEach(p => (p.modulos || []).forEach(m => { if (normEst('estDiseno', m.estDiseno) !== 'Listo' && !fueraDe(m, T) && lineasDe(m, T).some(h => lineaOK(h, T) && !h.ped)) n++; })); return n; }
 function updTabs() { const el = $('tab-ped'); if (!el) return; const n = porPedir('herrajes').length + porPedir('cantos').length + porPedir('placas').length; el.innerHTML = 'Compras' + (n ? ` <span class="dot" title="${n} para sumar a un pedido"></span>` : ''); }
 function consolidar(origen, prev, T) {
   prev = prev || []; const map = new Map();
