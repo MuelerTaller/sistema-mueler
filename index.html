@@ -3107,7 +3107,7 @@ function renderCompras() {
         : `<p class="note" style="margin:0">No hay ningún pedido en armado. Se abre solo cuando sumás el primer módulo o un faltante del taller.</p>`}
       <div class="row"><button class="btn sm" data-pe="faltante">+ Agregar faltante del taller</button><span class="note">Lo que el taller va detectando en el día se suma acá, y un día lo enviás todo junto.</span></div></div>
     <div class="panel"><header><h2>Listos para sumar</h2>${pp.length ? `<button class="btn primary" data-pe="sumar-todo">Sumar todo al pedido</button>` : ''}</header>
-      ${pp.length ? `<div class="pplist2">${Object.values(grp).map(g => `<div class="ppgrp"><div class="lbl">Proyecto ${esc(g.p.num)} · ${esc(g.p.obra || '')}</div>${g.ms.map(x => `<details class="ppmod"><summary><span><b>${esc(x.m.cod)}</b> ${esc(x.m.desc || '')}</span><span class="note">${x.ls.length} línea${x.ls.length === 1 ? '' : 's'}${T === 'cantos' ? ' · ' + fmt(x.ls.reduce((s, h) => s + N(h.m), 0)) + ' m' : ''}</span><button class="btn sm" data-pe="sumar" data-id="${esc(g.p.id)}|${esc(x.m.id)}">Sumar al pedido</button></summary>
+      ${pp.length ? `<div class="pplist2">${Object.values(grp).map(g => `<div class="ppgrp"><div class="lbl">Proyecto ${esc(g.p.num)} · ${esc(g.p.obra || '')}</div>${g.ms.map(x => `<details class="ppmod"><summary><span><b>${esc(x.m.cod)}</b> ${esc(x.m.desc || '')}</span><span class="note">${x.ls.length} línea${x.ls.length === 1 ? '' : 's'}${T === 'cantos' ? ' · ' + fmt(x.ls.reduce((s, h) => s + N(h.m), 0)) + ' m' : ''}</span><span class="row" style="gap:6px;flex-wrap:nowrap"><button class="btn sm ghost" data-pe="fuera1" data-id="${esc(g.p.id)}|${esc(x.m.id)}" title="Ya lo pediste antes de usar el sistema: no se suma a ningún pedido">Ya pedido por fuera</button><button class="btn sm" data-pe="sumar" data-id="${esc(g.p.id)}|${esc(x.m.id)}">Sumar al pedido</button></span></summary>
           <div class="tbox"><table class="t"><tbody>${x.ls.map(h => lineaEd(x, h)).join('')}</tbody></table></div>
           <div class="row"><button class="btn sm ghost" data-pe="ficha" data-id="${esc(g.p.id)}|${esc(x.m.id)}">Abrir la ficha para agregar o cambiar →</button></div></details>`).join('')}</div>`).join('')}</div>`
         : `<p class="note" style="margin:0">Nada para sumar. ${pendientesDef(T) ? `Hay ${pendientesDef(T)} módulo${pendientesDef(T) === 1 ? '' : 's'} con ${TIPOS[T].t.toLowerCase()} cargados pero el diseño todavía no está en Listo.` : 'Cuando un módulo pase a diseño Listo, aparece acá.'}</p>`}</div>
@@ -3531,12 +3531,13 @@ fAdjPed.addEventListener('change', async () => {
 });
 $('view-ped').addEventListener('click', async e => {
   const b = e.target.closest('[data-pe]'); if (!b) return; const a = b.dataset.pe; const T = PED ? tipoDe(PED) : CTIPO;
-  if (b.closest('summary') && a !== 'sumar') return;
-  if (a === 'sumar') e.preventDefault();
+  if (b.closest('summary') && a !== 'sumar' && a !== 'fuera1') return;
+  if (a === 'sumar' || a === 'fuera1') e.preventDefault();
   if (a === 'tipo') { CTIPO = b.dataset.v; renderPed(); }
   if (a === 'mvista') { MVISTA = b.dataset.v; LS.set('mueler_mvista', MVISTA); renderPed(); }
   if (a === 'abrir') { PED = clone(PEDS.find(p => p.id === b.dataset.id)); renderPed(); window.scrollTo(0, 0); }
   if (a === 'volver') { await flushPED(); PED = null; PEDIT = null; renderPed(); }
+  if (a === 'fuera1') { const [pid, mid] = b.dataset.id.split('|'); (async () => { await conProyecto(pid, doc => { const m = (doc.modulos || []).find(x => x.id === mid); if (m) { m.fuera = m.fuera || {}; m.fuera[T] = 'pedido'; } }); [PR, PROYS.find(p => p.id === pid)].forEach(p => { const m = p && p.id === pid && (p.modulos || []).find(x => x.id === mid); if (m) { m.fuera = m.fuera || {}; m.fuera[T] = 'pedido'; } }); renderPed(); updTabs(); toast(`Marcado como pedido por fuera. Se deshace en el proyecto con "Ya pedido por fuera…" → "Lo pide el sistema".`); })(); return; }
   if (a === 'sumar') { const [pid, mid] = b.dataset.id.split('|'); sumarAlPedido(T, porPedir(T).filter(x => x.p.id === pid && x.m.id === mid)); }
   if (a === 'sumar-todo') sumarAlPedido(T, porPedir(T));
   if (a === 'ficha') { const [pid, mid] = b.dataset.id.split('|'); abrirProy(pid, mid); }
