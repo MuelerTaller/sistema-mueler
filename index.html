@@ -3274,6 +3274,33 @@ function stockPanel(T) {
       <div class="field" style="flex:2 1 200px"><label class="lbl">Motivo</label><input type="text" id="aj-nota" placeholder="Ej: conteo del taller"></div>
       <button class="btn" data-pe="ajuste-ok">Guardar</button></div></details></div>`;
 }
+// Pasar una placa a otro pedido de madera (ej. en la implementación: ya se había pedido en el P-1)
+function moverPlacaDlg(it) {
+  const otros = PEDS.filter(p => p.id !== PED.id && tipoDe(p) === 'placas').sort((a, b) => (+String(numPed(a)).replace(/\D/g, '') || 0) - (+String(numPed(b)).replace(/\D/g, '') || 0));
+  if (!otros.length) { toast('No hay otro pedido de madera. Si ya la pediste por fuera, eliminala de este pedido y marcá el módulo como "Ya pedido por fuera".'); return; }
+  const ests = [['armado', 'Por pedir'], ['pedido', 'Pedido'], ['confirmado', 'Confirmado'], ['recibido', 'En taller']];
+  const d = modal(`${H('Pasar ' + esc(it.cod) + ' a otro pedido')}
+    <div class="field"><label class="lbl" for="mv-ped">Pedido de destino</label><select id="mv-ped">${otros.map(p => `<option value="${esc(p.id)}">${esc(numPed(p))} · ${esc(estPl(p).t)} · ${esc(p.fEnviado || p.fCreado || '')}</option>`).join('')}</select></div>
+    <div class="field"><span class="lbl">Cómo queda esta placa en ese pedido</span><div class="seg" id="mv-est">${ests.map(([v, t]) => `<button type="button" data-v="${v}" aria-pressed="${v === 'pedido'}">${t}</button>`).join('')}</div></div>
+    <div class="field"><label class="lbl" for="mv-nro">Nº de plano o de pedido (opcional)</label><input type="text" id="mv-nro" value="${esc(it.nroProv || '')}"></div>
+    <p class="note" style="margin:0">Pasan la placa, sus módulos (${esc([...new Set((PED.origen || []).filter(o => o.cod === it.cod && !o.manual).map(o => o.prNum + ' ' + o.modCod))].join(', ') || '—')}) y lo agregado aparte. El proveedor y los datos de la placa se mantienen.</p>
+    <div class="row" style="justify-content:flex-end"><button class="btn" data-close>Cancelar</button><button class="btn primary" id="mv-ok">Pasar</button></div>`);
+  let est = 'pedido'; d.q('#mv-est').onclick = e => { const x = e.target.closest('[data-v]'); if (!x) return; est = x.dataset.v; d.m.querySelectorAll('#mv-est [data-v]').forEach(y => y.setAttribute('aria-pressed', String(y === x))); };
+  d.q('#mv-ok').onclick = async () => {
+    const dst0 = PEDS.find(p => p.id === d.q('#mv-ped').value); if (!dst0) return; const dst = clone(dst0); const nro = d.q('#mv-nro').value.trim();
+    const os = (PED.origen || []).filter(o => o.cod === it.cod); const src = clone(it);
+    try {
+      dst.origen = (dst.origen || []).concat(os); dst.items = consolidar(dst.origen, dst.items || [], 'placas'); fijarEst(dst);
+      const di = dst.items.find(x => x.cod === it.cod);
+      if (di) { ['prov', 'provOtro', 'modo', 'sinCantos', 'presu', 'factNum', 'factAdj'].forEach(k2 => { if (di[k2] == null && src[k2] != null) di[k2] = src[k2]; }); if (nro) di.nroProv = nro; else if (!di.nroProv && src.nroProv) di.nroProv = src.nroProv;
+        di.est = est; const hoy = today(); if (est !== 'armado') di.fPedido = di.fPedido || src.fPedido || dst.fEnviado || hoy; if (est === 'confirmado' || est === 'recibido') di.fConf = di.fConf || src.fConf || hoy; if (est === 'recibido') { di.recib = di.recib ?? N(di.pedir); di.fRecib = di.fRecib || hoy; } }
+      if (dst.estado !== 'borrador' || est !== 'armado') syncEstadoPl(dst);
+      await guardarPed(dst); await marcarModulos(os.filter(o => !o.manual), dst.id, 'placas');
+      PED.origen = PED.origen.filter(o => o.cod !== it.cod); PED.items = consolidar(PED.origen, PED.items, 'placas'); if (PED.estado !== 'borrador') syncEstadoPl(PED); PEDIT = null;
+      d.close(); savePED(true); renderPedDet(); updTabs(); toast(`${it.cod} pasó al ${numPed(dst)}.`);
+    } catch (er) { console.error(er); toast('No se pudo pasar. Revisá la conexión.'); }
+  };
+}
 function renderPedDet() {
   const v = $('view-ped'); const p = PED; const T = tipoDe(p); const st = p.estado; const ed = st === 'borrador'; const u = TIPOS[T].u;
   const pasos = ['borrador', 'enviado', 'recibido']; const ip = pasos.indexOf(st);
@@ -3438,7 +3465,7 @@ function lineaPlacaHTML(p, it, k, lote) {
       : `<button class="btn sm primary" data-pe="pl-xls1" data-k="${k}">Excel para ${esc(pv)}</button><button class="btn sm" data-pe="pl-txt1" data-k="${k}">.txt (formato Dilegno)</button>`) + `<button class="btn sm" data-pe="pl-csv1" data-k="${k}">CSV</button>` : '<span class="note">Sin despiece: son placas enteras.</span>'}`;
   const tallerMenu = `${optl}${hayPz ? `<button class="btn sm" data-pe="pl-impk" data-k="${k}">Imprimir despiece (A4)</button><button class="btn sm ${OPTPOPEN[it.cod] ? 'primary' : ''}" data-pe="pl-ver" data-cod="${esc(it.cod)}">${OPTPOPEN[it.cod] ? 'Ocultar placas' : 'Ver optimización'}</button><button class="btn sm" data-pe="pl-opti" data-cod="${esc(it.cod)}">Abrir en el Optimizador</button>` : ''}`;
   const ajustes = `${fld('Proveedor', provSel)}${fld('Cómo se pide', seg('pl-modo', modo, [['corte', 'Con corte'], ['entera', 'Placa entera']]))}${modo === 'corte' ? fld('Cantos', seg('pl-cantos1', sc ? 1 : 0, [[0, 'Con cantos'], [1, 'Sin cantos']])) : ''}
-    ${e === 'armado' ? `<div class="row">${lote ? `<button class="btn sm" data-pe="edit-it" data-cod="${esc(it.cod)}">Cambiar placa…</button>` : ''}<button class="btn sm danger" data-pe="pl-del" data-k="${k}">Eliminar del pedido…</button></div>` : '<span class="note">Ya pedida: para cambiarla o eliminarla, volvé el paso atrás en Seguimiento.</span>'}`;
+    ${e === 'armado' ? `<div class="row">${lote ? `<button class="btn sm" data-pe="edit-it" data-cod="${esc(it.cod)}">Cambiar placa…</button>` : ''}<button class="btn sm" data-pe="pl-mover" data-k="${k}">Pasar a otro pedido…</button><button class="btn sm danger" data-pe="pl-del" data-k="${k}">Eliminar del pedido…</button></div>` : '<span class="note">Ya pedida: para cambiarla o eliminarla, volvé el paso atrás en Seguimiento.</span>'}`;
   const seguimiento = `${fld(dil ? 'Nº de plano' : 'Nº de pedido', nroIn)}${e !== 'armado' ? fld('Nº de presupuesto', `<input type="text" class="nro" data-ps="${k}.presu" value="${esc(it.presu || '')}" placeholder="${dil ? 'Ej. PR 13694' : 'Opcional'}">`) : ''}
     ${[it.fPedido && `Pedida ${it.fPedido}`, it.fConf && `Confirmada ${it.fConf}`, it.fRecib && `Recibida ${it.fRecib}${it.factNum ? ' · factura ' + it.factNum : ''}${it.precioF && ESADMIN() ? ' · $' + fmt(it.precioF) + ' c/u' : ''}`].filter(Boolean).map(x => `<span class="note">${esc(x)}</span>`).join('')}
     ${e !== 'armado' ? `<button class="btn sm ghost" data-pe="pl-undo" data-k="${k}">← Volver a ${esTaller(pv) ? 'Cortar en taller' : { pedido: 'Por pedir', confirmado: 'Pedido', recibido: 'Confirmado' }[e]}</button>` : ''}`;
@@ -3578,6 +3605,7 @@ $('view-ped').addEventListener('click', async e => {
   if (a === 'pl-csv1') { bajarCsvPl(PED, +b.dataset.k); return; }
   if (a === 'pl-copy') { copiarTxt(txtProvPl(PED, b.dataset.prov), 'Mensaje para ' + b.dataset.prov); return; }
   if (a === 'pl-copy1') { const k = +b.dataset.k; copiarTxt(txtProvPl(PED, provIt(PED.items[k], PED), k), 'Mensaje para ' + provIt(PED.items[k], PED)); return; }
+  if (a === 'pl-mover') { OPENDD = null; const k = +b.dataset.k; const it = PED.items[k]; if (!it) return; moverPlacaDlg(it); return; }
   if (a === 'pl-del') { OPENDD = null; const k = +b.dataset.k; const it = PED.items[k]; if (!it) return;
     const os = (PED.origen || []).filter(o => o.cod === it.cod); const mods = [...new Set(os.filter(o => !o.manual).map(o => `${o.prNum} ${o.modCod}`))]; const man = os.filter(o => o.manual).length;
     confirmDlg(`Eliminar ${esc(it.cod)} del pedido ${esc(numPed(PED))}`, `¿Estás seguro? Esta placa sale del pedido.${mods.length ? ` <b>${mods.map(esc).join(', ')}</b> ${mods.length === 1 ? 'vuelve' : 'vuelven'} a “Listos para sumar” en Compras, para pedirla más adelante.` : ''}${man ? ` Lo agregado aparte (${man}) se borra.` : ''} La ficha del módulo no cambia.`, 'Eliminar', async () => {
