@@ -40,6 +40,8 @@ nav.tabs button[aria-selected="true"]{opacity:1;background:rgba(255,255,255,.12)
 nav.tabs button:disabled{opacity:.35;cursor:default}
 .bar .spacer{flex:1}
 .savest{font:500 12px var(--f-mono);opacity:.75}
+@media (max-width:1100px){.cfgtxt{display:none}}
+@media (max-width:1600px){.brand small{display:none}.savest{font-size:11px;max-width:150px;line-height:1.2}}
 .btn{font:600 13px var(--f-body);border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:7px 12px;border-radius:var(--r);cursor:pointer;display:inline-flex;gap:6px;align-items:center;white-space:nowrap}
 .btn:hover{border-color:var(--muted)} .btn:disabled{opacity:.5;cursor:not-allowed}
 .bar .btn{background:transparent;color:var(--bar-ink);border-color:rgba(255,255,255,.22)}
@@ -280,7 +282,7 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
   </nav>
   <div class="spacer"></div>
   <span class="savest" id="savest"></span>
-  <div class="cfgmenu"><button class="btn" id="b-config" aria-haspopup="menu" aria-expanded="false">⚙ Configuración</button><div class="cfgpop" id="cfgpop" role="menu" hidden><button role="menuitem" id="tab-cat" data-view="cat"><b>Catálogo de herrajes</b><span>Lista All Sur, marcas y códigos</span></button><button role="menuitem" id="tab-precios" data-view="precios"><b>Precios y taller</b><span>Placas, cantos, mano de obra y recargos</span></button><button role="menuitem" id="tab-usuarios" data-view="usuarios"><b>Usuarios</b><span>Quién entra y quién ve precios</span></button><button role="menuitem" id="b-limpiar"><b>Limpiar datos de prueba</b><span>Sacar proyectos y pedidos que no son reales</span></button><button role="menuitem" id="b-backup"><b>Copia de seguridad</b><span>Bajar o subir todos los datos</span></button></div></div>
+  <div class="cfgmenu"><button class="btn" id="b-config" aria-haspopup="menu" aria-expanded="false" title="Configuración">⚙ <span class="cfgtxt">Configuración</span></button><div class="cfgpop" id="cfgpop" role="menu" hidden><button role="menuitem" id="tab-cat" data-view="cat"><b>Catálogo de herrajes</b><span>Lista All Sur, marcas y códigos</span></button><button role="menuitem" id="tab-precios" data-view="precios"><b>Precios y taller</b><span>Placas, cantos, mano de obra y recargos</span></button><button role="menuitem" id="tab-usuarios" data-view="usuarios"><b>Usuarios</b><span>Quién entra y quién ve precios</span></button><button role="menuitem" id="b-limpiar"><b>Limpiar datos de prueba</b><span>Sacar proyectos y pedidos que no son reales</span></button><button role="menuitem" id="b-backup"><b>Copia de seguridad</b><span>Bajar o subir todos los datos</span></button></div></div>
   <button class="btn" id="b-user" hidden title="Cerrar sesión o cambiar de usuario"></button>
   <button class="btn" id="b-abrir">Abrir archivo</button>
   <button class="btn primary" id="b-nuevo">+ Nuevo presupuesto</button>
@@ -636,7 +638,7 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
         else { const k = cleanName(des) || mat || 'Accesorio'; R.accesorios[k] = (R.accesorios[k] || 0) + cant; }
       } else {
         const d2 = get(C.desc);
-        if (!mat && d2) { if (!R.modulo) R.modulo = d2; continue; }
+        if (!mat && d2) { const mc = String(d2).trim().match(/^M\s*0*(\d+(?:\.\d+)?)$/i); if (!R.modulo && mc) R.modulo = 'M' + mc[1].padStart(2, '0'); continue; }
         if (/^cajon/i.test(des)) R.cajones += cant;
         else if (/^led\b/i.test(des)) { const dims = [mm(get(C.lf)), mm(get(C.af)), mm(get(C.ef))]; R.leds = R.leds || []; R.leds.push({ cant, largo: Math.max(...dims) }); }
         else if (/puerta/i.test(des)) { const dims = [mm(get(C.lf)), mm(get(C.af)), mm(get(C.ef))]; const alto = Math.max(...dims); for (let k = 0; k < cant; k++) R.puertas.push({ alto, ancho: Math.min(...dims.filter(x => x > 40)) || 0 }); }
@@ -668,7 +670,7 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
     const sumT = k => Object.values(R.tableros).reduce((s, t) => s + t.cantoMm[k], 0);
     ['1', '2'].forEach(k => { const a = sumT(+k), b = R.cantosOCL[k] || 0; if (b && Math.abs(a - b) > Math.max(100, b * 0.005)) R.avisos.push(`Canto ${k}: las piezas suman ${(a / 1000).toFixed(2)} m y el resumen de OCL ${(b / 1000).toFixed(2)} m.`); });
     Object.keys(R.cantosOCL).filter(k => k !== '1' && k !== '2').forEach(k => R.avisos.push(`Canto con material "${k}" (${(R.cantosOCL[k] / 1000).toFixed(2)} m): se tomó como canto 0,45 mm. Revisalo.`));
-    if (!R.modulo && fileName) { const m = fileName.match(/\bM\s*0*(\d+)\b/i); if (m) R.modulo = 'M' + m[1].padStart(2, '0'); }
+    if (!R.modulo && fileName) { const m = fileName.match(/(?:^|[^a-z0-9])M\s*0*(\d+)(?=[^\d]|$)/i); if (m) R.modulo = 'M' + m[1].padStart(2, '0'); }
     if (!Object.keys(R.tableros).length) R.avisos.push('El archivo no tiene filas de tipo Tablero.');
     // piezas finitas: forzar enteros
     Object.values(R.tableros).forEach(t => { t.nPiezas = t.piezas.reduce((s, p) => s + p.cant, 0); t.cantoM = { 1: t.cantoMm[1] / 1000, 2: t.cantoMm[2] / 1000 }; });
@@ -1308,7 +1310,7 @@ function svgPlaca(g, b, items) {
 function show(v) {
   VIEW = v; if (!ESADMIN() && (v === 'precios' || v === 'usuarios')) v = 'inicio'; VIEW = v; ['inicio', 'lista', 'pres', 'proy', 'ped', 'cat', 'precios', 'usuarios', 'opti'].forEach(x => { $('view-' + x).hidden = x !== v; $('tab-' + x).setAttribute('aria-selected', x === v); });
   $('tab-pres').disabled = !P;
-  if (v === 'lista') renderLista(); if (v === 'pres') renderPres(); if (v === 'precios') renderPrecios(); if (v === 'proy') renderProy(); if (v === 'ped') renderPed(); if (v === 'cat') renderCat(); if (v === 'inicio') renderInicio(); if (v === 'usuarios') renderUsuarios(); if (v === 'opti') ensureOpti(); $('b-config').classList.toggle('on', v === 'cat' || v === 'precios' || v === 'usuarios'); $('cfgpop').hidden = true; $('b-config').setAttribute('aria-expanded', 'false'); $('b-nuevo').hidden = !['lista', 'pres'].includes(v); $('b-abrir').hidden = !['lista', 'pres'].includes(v);
+  if (v === 'lista') renderLista(); if (v === 'pres') renderPres(); if (v === 'precios') renderPrecios(); if (v === 'proy') renderProy(); if (v === 'ped') renderPed(); if (v === 'cat') renderCat(); if (v === 'inicio') renderInicio(); if (v === 'usuarios') renderUsuarios(); if (v === 'opti') ensureOpti(); $('b-config').classList.toggle('on', v === 'cat' || v === 'precios' || v === 'usuarios'); $('cfgpop').hidden = true; $('b-config').setAttribute('aria-expanded', 'false'); $('b-nuevo').hidden = v !== 'lista'; $('b-abrir').hidden = v !== 'lista';
   window.scrollTo(0, 0);
 }
 document.querySelector('nav.tabs').addEventListener('click', e => { const b = e.target.closest('button[data-view]'); if (b && !b.disabled) show(b.dataset.view); });
@@ -2671,6 +2673,7 @@ async function aprobarDlg() {
     <div class="field"><label class="lbl" for="ap-fecha">Fecha de aprobación</label><input type="text" id="ap-fecha" value="${esc(today())}"></div></div>
     <p class="note" style="margin:0">Marcá lo que tomó el cliente. Cada mueble elegido pasa al proyecto como un módulo, con sus textos y herrajes. Los herrajes que existen en el catálogo de All Sur ya pasan con código.</p>
     <div class="apr-list">${body}</div>
+    <label class="row" style="gap:8px"><input type="checkbox" id="ap-csv" checked> Usar el CSV de cada mueble del presupuesto como CSV definitivo <span class="note">(si después cambia, se reemplaza en la ficha)</span></label>
     <details class="panel" style="padding:8px 10px"><summary class="lbl">Obra en curso: algo ya se pidió por fuera del sistema</summary><p class="note" style="margin:6px 0">Se aplica a todos los módulos del proyecto. Lo marcado no aparece en Compras.</p>${fueraSelHTML('apf')}</details>
     <div class="row" style="justify-content:space-between"><span class="note" id="ap-tot"></span><div class="row"><button class="btn" data-close>Cancelar</button><button class="btn primary" data-ap="crear">Crear proyecto</button></div></div>`);
   d.m.querySelector('.dlg').style.width = 'min(720px,100%)';
@@ -2708,7 +2711,10 @@ async function aprobarDlg() {
       fechaAprob: $('ap-fecha').value.trim(), creado: Date.now(), upd: Date.now(), notas: '', modulos };
     try {
       await StoreP.put(doc); if (!DB) PROYS = Object.values(LOC('mueler_proyectos'));
-      d.close(); PR = clone(doc); PSEL = null; show('proy'); toast(`Proyecto ${num} creado con ${modulos.length} módulo${modulos.length === 1 ? '' : 's'}.`);
+      const usarCsv = d.q('#ap-csv') && d.q('#ap-csv').checked;
+      d.close(); PR = clone(doc); PSEL = null; let nCsv = 0;
+      if (usarCsv) { for (const m of PR.modulos) { const src = MS[m.mid] && MS[m.mid].src; if (src && src.csv) { PSEL = m.id; if (await cargarCSVTexto(src.csv, src.archivo || (m.cod + '.csv'), true)) nCsv++; } } PSEL = null; if (nCsv) savePR(true); }
+      show('proy'); toast(`Proyecto ${num} creado con ${modulos.length} módulo${modulos.length === 1 ? '' : 's'}${nCsv ? ` · ${nCsv} con el CSV del presupuesto` : ''}.`);
     } catch (err) { b.disabled = false; toast('No se pudo crear el proyecto. Revisá la conexión y volvé a intentar.'); }
   });
 }
@@ -2966,21 +2972,27 @@ async function cargarPiezas(m) {
 }
 const piezasDe = R => Object.values(R.tableros).flatMap(t => t.piezas.map(p => Object.assign({ mat: t.material }, p)));
 async function cargarCSV(file) {
-  const i = PR.modulos.findIndex(m => m.id === PSEL); if (i < 0) return; const m = PR.modulos[i];
-  const eraPend = m.estDiseno === 'Pendiente';
   if (!/\.(csv|txt)$/i.test(file.name || '')) { toast('Ese archivo no es un CSV. Exportalo desde OpenCutList.'); return; }
+  try { await cargarCSVTexto(await file.text(), file.name); } catch (e) { console.error(e); toast('No se pudo leer el CSV.'); }
+}
+async function cargarCSVTexto(text, nombre, quiet) {
+  const file = { name: nombre };
+  const i = PR.modulos.findIndex(m => m.id === PSEL); if (i < 0) return false; const m = PR.modulos[i];
+  const eraPend = m.estDiseno === 'Pendiente';
   try {
-    const text = await file.text(); const R = OCL.parseOCL(text, file.name);
-    if (!Object.keys(R.tableros).length) { toast('El archivo no tiene piezas. ¿Es el CSV de OpenCutList?'); return; }
+    const R = OCL.parseOCL(text, file.name);
+    if (!Object.keys(R.tableros).length) { if (!quiet) toast('El archivo no tiene piezas. ¿Es el CSV de OpenCutList?'); return false; }
     FICHAS[m.id] = { text, archivo: file.name, R }; if (eraPend) m.estDiseno = 'En curso';
     const M = buildFicha(m);
     m.csv = Object.assign(resumenCSV(m, M, R, file.name), { fecha: Date.now(), cantosOk: true });
     cantosDesdeCSV(m, R, M);
     await StoreF.put({ id: m.id, prId: PR.id, modId: m.id, archivo: file.name, fecha: Date.now(), upd: Date.now(), csv: text });
+    if (quiet) return true;
     savePR(true); renderProyDet();
     toast(`CSV cargado: ${fmt(m.csv.piezas)} piezas · ${fmt(m.cantos.filter(c => c.auto).reduce((s, x) => s + N(x.m), 0))} m de canto.`);
     const sinPlaca = M.grupos.filter(g => !g.art).map(g => g.ocl); if (sinPlaca.length) setTimeout(() => toast(`Elegí la placa para: ${sinPlaca.join(', ')}`), 3400);
-  } catch (e) { console.error(e); toast('No se pudo leer el CSV.'); }
+    return true;
+  } catch (e) { console.error(e); if (!quiet) toast('No se pudo leer el CSV.'); return false; }
 }
 function recalcFicha(m) { const F = FICHAS[m.id]; if (!F || !F.R) return; const M = buildFicha(m); const fecha = m.csv.fecha; m.csv = Object.assign(resumenCSV(m, M, F.R, F.archivo), { fecha, cantosOk: true }); cantosDesdeCSV(m, F.R, M); savePR(); renderFicha(); }
 function optiFicha(m, k) {
