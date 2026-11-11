@@ -2618,6 +2618,7 @@ function lineaEst(h, T) {
   if (!h.ped) return null; const p = pedDe(h.ped); if (!p) return null;
   if (T === 'placas') { const it = (p.items || []).find(i => i.cod === lineaCod(h, T)); if (it) { const e = itEst(it, p);
     if (N(it.deStock) >= N(it.req) && N(it.req) > 0) return { t: 'De stock', c: 'e4', p };
+    if (e === 'recibido' && cortaTaller(it, p)) return it.fCorte ? { t: 'Cortada', c: 'e4', p } : { t: 'Cortar en taller', c: 'e1', p };
     if (e === 'recibido') return it.recib != null && N(it.recib) < N(it.pedir) ? { t: 'Faltante ' + numPed(p), c: 'e2', p } : { t: 'En taller', c: 'e4', p };
     if (e === 'pedido' || e === 'confirmado') return { t: 'Pedido ' + numPed(p) + (it.nroProv ? ' · ' + it.nroProv : ''), c: 'e3', p };
     return { t: 'En armado ' + numPed(p), c: 'e1', p }; } }
@@ -2635,7 +2636,7 @@ function estadoT(m, T) {
   if (!ls.length) return { t: all.length ? (T === 'herrajes' ? 'Falta catálogo' : T === 'placas' ? 'Definir placa' : 'Falta definir') : (T === 'cantos' ? 'Sin cantos' : T === 'placas' ? 'Sin placas' : 'Sin herrajes'), c: all.length ? 'e2' : 'e0' };
   const est = ls.map(h => lineaEst(h, T)); const pend = est.filter(x => !x).length;
   if (pend === ls.length) return m.estDiseno === 'Listo' ? { t: 'Para pedir', c: 'e2' } : { t: 'Sin pedir', c: 'e0' };
-  const ord = ['En armado', 'Pedido', 'Faltante', 'En taller']; const peor = est.filter(Boolean).sort((a, b) => ord.findIndex(o => a.t.startsWith(o)) - ord.findIndex(o => b.t.startsWith(o)))[0];
+  const ord = ['En armado', 'Pedido', 'Faltante', 'Cortar en taller', 'En taller', 'Cortada']; const peor = est.filter(Boolean).sort((a, b) => ord.findIndex(o => a.t.startsWith(o)) - ord.findIndex(o => b.t.startsWith(o)))[0];
   return pend ? { t: peor.t + ` · faltan ${pend}`, c: 'e2' } : peor;
 }
 const hLineEst = h => lineaEst(h, 'herrajes');
@@ -3098,7 +3099,7 @@ function renderCompras() {
   v.innerHTML = `<div class="row stickhead" style="justify-content:space-between"><div class="row"><h2>Compras</h2>
       <div class="seg" role="tablist">${Object.entries(TIPOS).map(([k, x]) => `<button data-pe="tipo" data-v="${k}" aria-pressed="${T === k}">${x.t}${cnt(k) ? ` · ${cnt(k)}` : ''}</button>`).join('')}</div></div>
       <span class="note">${T === 'herrajes' ? 'Proveedor: All Sur' : T === 'placas' ? 'El proveedor se elige por placa dentro del pedido' : 'Proveedor por defecto: Del Carril (se cambia en el pedido)'}</span></div>
-    ${T === 'placas' ? `<div class="seg segbig" role="tablist"><button data-pe="mvista" data-v="pedir" aria-pressed="${MVISTA === 'pedir'}">Por pedir${pp.length + carts.reduce((s2, c) => s2 + (c.items || []).length, 0) ? ` · ${pp.length + carts.reduce((s2, c) => s2 + (c.items || []).length, 0)}` : ''}</button><button data-pe="mvista" data-v="seg" aria-pressed="${MVISTA === 'seg'}">Pedida y en taller</button></div>` : ''}
+    ${T === 'placas' ? `<div class="seg segbig" role="tablist"><button data-pe="mvista" data-v="pedir" aria-pressed="${MVISTA === 'pedir'}">Por pedir${pp.length + carts.reduce((s2, c) => s2 + (c.items || []).length, 0) ? ` · ${pp.length + carts.reduce((s2, c) => s2 + (c.items || []).length, 0)}` : ''}</button><button data-pe="mvista" data-v="seg" aria-pressed="${MVISTA === 'seg'}">Pedida y en taller</button><button data-pe="mvista" data-v="cortar" aria-pressed="${MVISTA === 'cortar'}">Cortar en taller${paraCortar().length ? ' · ' + paraCortar().length : ''}</button></div>` : ''}
     ${T !== 'placas' || MVISTA === 'pedir' ? `
     ${carts.length > 1 ? `<div class="alert">Hay ${carts.length} pedidos de ${TIPOS[T].t.toLowerCase()} en armado (${carts.map(numPed).join(', ')}). <button class="btn sm primary" data-pe="unir">Unirlos en ${numPed(carts[0])}</button> <span class="note">Los dos se ven abajo; al unirlos queda uno solo con todo.</span></div>` : ''}
     <div class="panel cartp"><header><h2>Pedido en armado</h2>${cart ? chip(ESTPED.borrador) : ''}</header>
@@ -3115,6 +3116,7 @@ function renderCompras() {
         : `<p class="note" style="margin:0">Nada para sumar. ${pendientesDef(T) ? `Hay ${pendientesDef(T)} módulo${pendientesDef(T) === 1 ? '' : 's'} con ${TIPOS[T].t.toLowerCase()} cargados pero el diseño todavía no está en Listo.` : 'Cuando un módulo pase a diseño Listo, aparece acá.'}</p>`}</div>
     ` : ''}
     ${T === 'placas' && MVISTA === 'seg' ? maderaSegHTML() : ''}
+    ${T === 'placas' && MVISTA === 'cortar' ? cortarHTML() : ''}
     ${T !== 'placas' || MVISTA === 'seg' ? `
     ${stockPanel(T)}
     <div class="panel"><header><h2>Pedidos hechos</h2></header>
@@ -3127,6 +3129,23 @@ let MVISTA = LS.get('mueler_mvista', 'seg'); let FACT_K = null;
 const dkey = s => { const m = String(s || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); return m ? m[3] + m[2].padStart(2, '0') + m[1].padStart(2, '0') : ''; };
 const diasDesde = s => { const k = dkey(s); if (!k) return null; const d = new Date(+k.slice(0, 4), +k.slice(4, 6) - 1, +k.slice(6, 8)); return Math.max(0, Math.round((Date.now() - d) / 864e5)); };
 function lineasMadera() { return PEDS.filter(p => tipoDe(p) === 'placas').flatMap(p => (p.items || []).map((it, k) => ({ p, it, k, e: itEst(it, p) })).filter(x => N(x.it.pedir) > 0)); }
+// ---- Cortar en taller: placas enteras (Trumar, Dac, stock del taller) que se cortan acá ----
+function lineasCorte() { return lineasMadera().filter(x => cortaTaller(x.it, x.p)); }
+function paraCortar() { return lineasCorte().filter(x => x.e === 'recibido' && !x.it.fCorte); }
+function cortarHTML() {
+  const ls = lineasCorte(); const para = ls.filter(x => x.e === 'recibido' && !x.it.fCorte).sort((a, b) => dkey(a.it.fRecib || a.p.fRecibido || a.p.fCreado).localeCompare(dkey(b.it.fRecib || b.p.fRecibido || b.p.fCreado)));
+  const espera = ls.filter(x => x.e !== 'recibido'); const hechas = ls.filter(x => x.it.fCorte).sort((a, b) => dkey(b.it.fCorte).localeCompare(dkey(a.it.fCorte))).slice(0, 15);
+  const n = arr => arr.reduce((s2, x) => s2 + N(x.it.recib ?? x.it.pedir), 0);
+  const btns = x => `<div class="row" style="gap:6px;justify-content:flex-end"><button class="btn sm" data-pe="ct-imp" data-id="${esc(x.p.id)}" data-k="${x.k}">Imprimir despiece</button><button class="btn sm" data-pe="abrir" data-id="${esc(x.p.id)}">${esc(numPed(x.p))} →</button>${x.e === 'recibido' ? (x.it.fCorte ? `<button class="btn sm ghost" data-pe="ct-no" data-id="${esc(x.p.id)}" data-k="${x.k}">↶ No está cortada</button>` : `<button class="btn sm primary" data-pe="ct-si" data-id="${esc(x.p.id)}" data-k="${x.k}">Marcar como cortada</button>`) : ''}</div>`;
+  const tabla = (arr, fecha) => `<div class="tbox"><table class="t segt"><thead><tr><th>${fecha}</th><th>Madera</th><th class="n">Placas</th><th>De dónde sale</th><th>Para</th><th></th></tr></thead><tbody>
+    ${arr.map(x => `<tr><td class="mono">${esc((fecha === 'Cortada' ? x.it.fCorte : fecha === 'Pedida' ? (x.it.fPedido || x.p.fEnviado) : (x.it.fRecib || x.p.fRecibido || x.p.fCreado)) || '—')}</td><td><b>${esc(x.it.cod)}</b></td><td class="n"><b>${fmt(x.it.recib ?? x.it.pedir)}</b></td>
+      <td>${esc(provIt(x.it, x.p))}${esTaller(provIt(x.it, x.p)) ? '' : `<div class="note">${esc(EST_PL[x.e].t)}</div>`}</td><td>${proyCelda(x.p, x.it.cod)}</td><td>${btns(x)}</td></tr>`).join('')}</tbody></table></div>`;
+  return `<div class="panel"><header><div><h2>Para cortar</h2><span class="note">Placas enteras que ya están en el taller (del stock o que llegaron de Trumar, Dac…). Imprimí el despiece, cortalas y marcalas como cortadas.</span></div><span class="sum">${fmt(n(para))} placa${n(para) === 1 ? '' : 's'}</span></header>
+      ${para.length ? tabla(para, 'Desde') : '<p class="note" style="margin:0">No hay nada para cortar.</p>'}</div>
+    ${espera.length ? `<div class="panel"><header><div><h2>Esperando la placa</h2><span class="note">Placas enteras pedidas que todavía no llegaron. Cuando llegan pasan a "Para cortar".</span></div><span class="sum">${fmt(n(espera))} placa${n(espera) === 1 ? '' : 's'}</span></header>${tabla(espera, 'Pedida')}</div>` : ''}
+    ${hechas.length ? `<details class="panel"><summary><h2 style="display:inline">Cortadas</h2> <span class="note">últimas ${hechas.length}</span></summary>${tabla(hechas, 'Cortada')}</details>` : ''}
+    <p class="note">Para mandar una placa a esta lista desde un pedido: Ajustes → Proveedor → "Taller (stock)" si sale del stock, o "Placa entera" si se compra entera.</p>`;
+}
 function maderaSegHTML() {
   const ls = lineasMadera();
   const llega = ls.filter(x => x.e === 'pedido' || x.e === 'confirmado').sort((a, b) => dkey(a.it.fPedido || a.p.fEnviado).localeCompare(dkey(b.it.fPedido || b.p.fEnviado)));
@@ -3395,11 +3414,13 @@ const PROV_INFO = {
   'Taller (stock)': 'Placa que ya está en el taller: no se pide, se corta acá con la optimización. Cuando esté cortada, marcala como cortada.',
 };
 const EST_PL = { armado: { t: 'Por pedir', c: 'e2' }, pedido: { t: 'Pedido', c: 'e3' }, confirmado: { t: 'Confirmado', c: 'e1' }, recibido: { t: 'En taller', c: 'e4' } };
-const chipPl = (it, p, e) => esTaller(provIt(it, p)) ? (e === 'recibido' ? { t: 'Cortada', c: 'e4' } : { t: 'Cortar en taller', c: 'e2' }) : EST_PL[e];
-const itEst = (it, p) => it.est || (p.estado === 'recibido' ? 'recibido' : p.estado === 'enviado' ? 'pedido' : 'armado');
+const chipPl = (it, p, e) => cortaTaller(it, p) && e === 'recibido' ? (it.fCorte ? { t: 'Cortada', c: 'e4' } : { t: 'Cortar en taller', c: 'e2' }) : EST_PL[e];
+const itEst = (it, p) => esTaller(provIt(it, p)) ? 'recibido' : (it.est || (p.estado === 'recibido' ? 'recibido' : p.estado === 'enviado' ? 'pedido' : 'armado'));
+// Corte en taller: placas enteras (Trumar, Dac, del stock del taller). Se cortan acá; it.fCorte = fecha en que se cortaron.
+const cortaTaller = (it, p) => modoIt(it, p) === 'entera';
 const modoIt = (it, p) => it.modo || PROV_MODO[provIt(it, p)] || 'corte';
 const sinCantosIt = (it, p) => it.sinCantos != null ? !!it.sinCantos : !!p.sinCantos;
-const activasPl = p => (p.items || []).filter(it => N(it.pedir) > 0);
+const activasPl = p => (p.items || []).filter(it => N(it.pedir) > 0 && !esTaller(provIt(it, p)));
 function fijarEst(p) { (p.items || []).forEach(it => { it.est = itEst(it, p); }); }
 function syncEstadoPl(p) {
   fijarEst(p); const act = activasPl(p); if (!act.length) return; const es = act.map(it => it.est);
@@ -3451,7 +3472,8 @@ function lineaPlacaHTML(p, it, k, lote) {
   const nroIn = `<input type="text" class="nro" data-ps="${k}.nroProv" value="${esc(it.nroProv || '')}" placeholder="${nroPh}">`;
   // acción principal según el paso
   let accion;
-  if (esTaller(pv)) accion = e === 'recibido' ? `<span class="note">Cortada el ${esc(it.fRecib || '—')}</span>` : `<button class="btn sm primary" data-pe="pl-cortada" data-k="${k}">Marcar como cortada</button>`;
+  const corteBtn = cortaTaller(it, p) && e === 'recibido' ? (it.fCorte ? `<span class="note">Cortada el ${esc(it.fCorte)}</span><button class="btn sm ghost" data-pe="pl-nocortada" data-k="${k}">↶ No está cortada</button>` : `<button class="btn sm primary" data-pe="pl-cortada" data-k="${k}">Marcar como cortada</button>`) : '';
+  if (esTaller(pv)) accion = corteBtn;
   else if (e === 'armado') accion = `<button class="btn sm primary" data-pe="pl-pedido" data-k="${k}">Marcar como pedida</button>`;
   else if (e === 'pedido') accion = `${!it.nroProv ? `<input type="text" class="nro sm" data-ps="${k}.nroProv" value="" placeholder="${dil ? 'Cargá el Nº de plano' : 'Nº de pedido'}" aria-label="Nº de pedido">` : ''}<button class="btn sm primary" data-pe="pl-conf" data-k="${k}">Confirmar compra</button>`;
   else if (e === 'confirmado') accion = dd('lleg', 'Llegó', `${fld('Recibidas', `<input type="text" class="n q" data-pi="${k}.recib" value="${esc(it.recib ?? it.pedir)}" aria-label="Placas recibidas">`)}
@@ -3459,7 +3481,7 @@ function lineaPlacaHTML(p, it, k, lote) {
     ${fld('Nº factura / remito', `<input type="text" class="nro" data-ps="${k}.factNum" value="${esc(it.factNum || '')}" placeholder="Puede ser la misma para varias">`)}
     <div class="row"><button class="btn sm" data-pe="pl-fact" data-k="${k}">📎 Adjuntar factura (foto o PDF)</button>${(it.factAdj || []).length ? `<span class="note">${(it.factAdj || []).map(a => esc(a.nombre)).join(', ')}</span>` : ''}</div>
     <button class="btn primary" data-pe="pl-recib" data-k="${k}">Confirmar recepción</button>`, 'primary');
-  else accion = `<span class="note">Llegaron ${fmt(it.recib ?? it.pedir)} el ${esc(it.fRecib || '—')}</span>${it.recib != null && N(it.recib) < N(it.pedir) ? `<span class="chip e2">Faltan ${fmt(N(it.pedir) - N(it.recib))}</span><button class="btn sm" data-pe="faltantes">Pasar lo que faltó al pedido en armado</button>` : ''}`;
+  else accion = `${corteBtn}<span class="note">Llegaron ${fmt(it.recib ?? it.pedir)} el ${esc(it.fRecib || '—')}</span>${it.recib != null && N(it.recib) < N(it.pedir) ? `<span class="chip e2">Faltan ${fmt(N(it.pedir) - N(it.recib))}</span><button class="btn sm" data-pe="faltantes">Pasar lo que faltó al pedido en armado</button>` : ''}`;
   const filesMenu = `${PROV_INFO[pv] ? `<p class="note" style="margin:0">${esc(PROV_INFO[pv])}</p>` : ''}${esTaller(pv) ? '' : modo === 'entera' ? `<button class="btn sm primary" data-pe="pl-copy1" data-k="${k}">Copiar mensaje para ${esc(pv)}</button>`
     : hayPz ? (dil ? `<button class="btn sm primary" data-pe="pl-txt1" data-k="${k}">.txt para Importar en Dilegno</button><button class="btn sm" data-pe="pl-xls1" data-k="${k}">Excel</button>`
       : `<button class="btn sm primary" data-pe="pl-xls1" data-k="${k}">Excel para ${esc(pv)}</button><button class="btn sm" data-pe="pl-txt1" data-k="${k}">.txt (formato Dilegno)</button>`) + `<button class="btn sm" data-pe="pl-csv1" data-k="${k}">CSV</button>` : '<span class="note">Sin despiece: son placas enteras.</span>'}`;
@@ -3468,12 +3490,12 @@ function lineaPlacaHTML(p, it, k, lote) {
     ${e === 'armado' ? `<div class="row">${lote ? `<button class="btn sm" data-pe="edit-it" data-cod="${esc(it.cod)}">Cambiar placa…</button>` : ''}<button class="btn sm" data-pe="pl-mover" data-k="${k}">Pasar a otro pedido…</button><button class="btn sm danger" data-pe="pl-del" data-k="${k}">Eliminar del pedido…</button></div>` : '<span class="note">Ya pedida: para cambiarla o eliminarla, volvé el paso atrás en Seguimiento.</span>'}`;
   const seguimiento = `${fld(dil ? 'Nº de plano' : 'Nº de pedido', nroIn)}${e !== 'armado' ? fld('Nº de presupuesto', `<input type="text" class="nro" data-ps="${k}.presu" value="${esc(it.presu || '')}" placeholder="${dil ? 'Ej. PR 13694' : 'Opcional'}">`) : ''}
     ${[it.fPedido && `Pedida ${it.fPedido}`, it.fConf && `Confirmada ${it.fConf}`, it.fRecib && `Recibida ${it.fRecib}${it.factNum ? ' · factura ' + it.factNum : ''}${it.precioF && ESADMIN() ? ' · $' + fmt(it.precioF) + ' c/u' : ''}`].filter(Boolean).map(x => `<span class="note">${esc(x)}</span>`).join('')}
-    ${e !== 'armado' ? `<button class="btn sm ghost" data-pe="pl-undo" data-k="${k}">← Volver a ${esTaller(pv) ? 'Cortar en taller' : { pedido: 'Por pedir', confirmado: 'Pedido', recibido: 'Confirmado' }[e]}</button>` : ''}`;
+    ${e !== 'armado' ? `${esTaller(pv) ? '' : `<button class="btn sm ghost" data-pe="pl-undo" data-k="${k}">← Volver a ${{ pedido: 'Por pedir', confirmado: 'Pedido', recibido: 'Confirmado' }[e]}</button>`}` : ''}`;
   const resumen = `${esc(pv)} · ${modo === 'entera' ? 'placa entera' : 'con corte · ' + (sc ? 'sin cantos' : 'con cantos')}${it.nroProv ? ' · Nº ' + esc(it.nroProv) : ''}`;
   return `<div class="plcard e-${e}">
     <div class="pltop"><div style="min-width:0;display:grid;gap:6px"><div class="row" style="gap:8px"><b>${esc(it.cod)}</b>${chip(chipPl(it, p, e))}</div>
         <div class="plinfo">${proyCelda(p, it.cod)}<span class="note">${resumen}</span></div>
-        <div class="plbar">${accion}${e !== 'armado' ? `<button class="btn sm ghost" data-pe="pl-undo" data-k="${k}" title="Volver a ${{ pedido: 'Por pedir', confirmado: 'Pedido', recibido: 'Confirmado' }[e]}">↶ Deshacer</button>` : ''}${dd('arch', 'Archivos', filesMenu)}${dd('tall', 'Taller', tallerMenu)}${dd('aj', 'Ajustes', ajustes)}${dd('seg', 'Seguimiento', seguimiento)}</div></div>
+        <div class="plbar">${accion}${e !== 'armado' && !esTaller(pv) ? `<button class="btn sm ghost" data-pe="pl-undo" data-k="${k}" title="Volver a ${{ pedido: 'Por pedir', confirmado: 'Pedido', recibido: 'Confirmado' }[e]}">↶ Deshacer</button>` : ''}${dd('arch', 'Archivos', filesMenu)}${dd('tall', 'Taller', tallerMenu)}${dd('aj', 'Ajustes', ajustes)}${dd('seg', 'Seguimiento', seguimiento)}</div></div>
       <div class="plq"><div class="qty">${o || man ? fmt(it.pedir) : '…'}</div><div class="note">${parts.join(' · ') || (o ? '' : 'calculando')}</div>${stockCtl(it, k, 'placas', e === 'armado' && lote)}</div></div>
     ${lote && e === 'armado' && PEDIT && PEDIT.cod === it.cod ? `<table class="t"><tbody>${editorItemHTML(it, 'placas')}</tbody></table>` : ''}</div>`;
 }
@@ -3605,6 +3627,9 @@ $('view-ped').addEventListener('click', async e => {
   if (a === 'pl-csv1') { bajarCsvPl(PED, +b.dataset.k); return; }
   if (a === 'pl-copy') { copiarTxt(txtProvPl(PED, b.dataset.prov), 'Mensaje para ' + b.dataset.prov); return; }
   if (a === 'pl-copy1') { const k = +b.dataset.k; copiarTxt(txtProvPl(PED, provIt(PED.items[k], PED), k), 'Mensaje para ' + provIt(PED.items[k], PED)); return; }
+  if (a === 'ct-si' || a === 'ct-no' || a === 'ct-imp') { const p0 = PEDS.find(p => p.id === b.dataset.id); if (!p0) return; const k = +b.dataset.k;
+    if (a === 'ct-imp') { bajarImprimirPl(p0, k); return; }
+    const p = clone(p0); const it = p.items[k]; if (!it) return; it.fCorte = a === 'ct-si' ? today() : ''; try { await guardarPed(p); const i = PEDS.findIndex(x => x.id === p.id); if (i >= 0) PEDS[i] = p; renderPed(); toast(a === 'ct-si' ? `${it.cod}: cortada.` : `${it.cod}: vuelve a "Para cortar".`); } catch (er) { toast('No se pudo guardar. Revisá la conexión.'); } return; }
   if (a === 'pl-mover') { OPENDD = null; const k = +b.dataset.k; const it = PED.items[k]; if (!it) return; moverPlacaDlg(it); return; }
   if (a === 'pl-del') { OPENDD = null; const k = +b.dataset.k; const it = PED.items[k]; if (!it) return;
     const os = (PED.origen || []).filter(o => o.cod === it.cod); const mods = [...new Set(os.filter(o => !o.manual).map(o => `${o.prNum} ${o.modCod}`))]; const man = os.filter(o => o.manual).length;
@@ -3617,14 +3642,14 @@ $('view-ped').addEventListener('click', async e => {
     const eraLote = PED.estado === 'borrador'; ks.forEach(k => { const it = PED.items[k]; it.est = 'pedido'; it.fPedido = today(); }); syncEstadoPl(PED); savePED(true); renderPedDet();
     const sinNro = ks.some(k => !PED.items[k].nroProv && /dilegno/i.test(provIt(PED.items[k], PED)));
     toast((ks.length > 1 ? `${ks.length} placas pedidas.` : 'Placa pedida.') + (sinNro ? ' Cargá el Nº de plano cuando te llegue el mail de Dilegno.' : '') + (eraLote ? ` Los módulos nuevos van a un pedido nuevo.` : '')); return; }
-  if (a === 'pl-cortada') { fijarEst(PED); const it = PED.items[+b.dataset.k]; it.est = 'recibido'; it.recib = N(it.pedir); it.fPedido = it.fPedido || today(); it.fRecib = today(); syncEstadoPl(PED); savePED(true); renderPedDet(); toast('Cortada: figura En taller en cada módulo.'); return; }
+  if (a === 'pl-cortada' || a === 'pl-nocortada') { const it = PED.items[+b.dataset.k]; it.fCorte = a === 'pl-cortada' ? today() : ''; savePED(true); renderPedDet(); toast(a === 'pl-cortada' ? 'Cortada: los módulos ya tienen su madera.' : 'Vuelve a "Cortar en taller".'); return; }
   if (a === 'pl-conf') { fijarEst(PED); const it = PED.items[+b.dataset.k]; it.est = 'confirmado'; it.fConf = today(); syncEstadoPl(PED); savePED(true); renderPedDet(); toast('Compra confirmada. Cuando llegue, cargá lo recibido.'); return; }
   if (a === 'pl-recib') { fijarEst(PED); const it = PED.items[+b.dataset.k]; if (it.recib == null) it.recib = N(it.pedir);
     try { await borrarMovs(x => x.ref === PED.id && x.cod === it.cod && x.motivo === 'recepcion'); const tall = manualDe(PED, it.cod).filter(o => (o.para || 'Taller') === 'Taller').reduce((s2, o) => s2 + N(o.cant), 0);
       const sob = Math.floor(N(it.recib) + N(it.deStock) - (N(it.req) - tall) + 1e-6); if (sob > 0) await movStock({ tipo: 'placas', cod: it.cod, nombre: it.nombre || it.cod, cant: sob, motivo: 'recepcion', ref: PED.id, refNum: numPed(PED), nota: 'Sobrante del pedido' }); } catch (er) { toast('No se pudo registrar el stock.'); }
     it.est = 'recibido'; it.fRecib = today(); syncEstadoPl(PED); savePED(true); renderPedDet(); toast('Recibida: figura En taller en cada módulo.'); return; }
   if (a === 'pl-undo') { fijarEst(PED); const it = PED.items[+b.dataset.k];
-    if (it.est === 'recibido' && esTaller(provIt(it, PED))) { it.est = 'armado'; it.fRecib = ''; it.fPedido = ''; }
+    if (esTaller(provIt(it, PED))) { it.fCorte = ''; }
     else if (it.est === 'recibido') { try { await borrarMovs(x => x.ref === PED.id && x.cod === it.cod && x.motivo === 'recepcion'); } catch (er) { } it.est = 'confirmado'; it.fRecib = ''; }
     else if (it.est === 'confirmado') { it.est = 'pedido'; it.fConf = ''; } else if (it.est === 'pedido') { it.est = 'armado'; it.fPedido = ''; }
     syncEstadoPl(PED); savePED(true); renderPedDet(); return; }
@@ -3937,7 +3962,7 @@ $('view-usuarios').addEventListener('click', async e => {
 $('view-usuarios').addEventListener('change', async e => { const t = e.target; if (t.dataset.us !== 'rol') return; const u = USERS.find(x => x.id === t.dataset.id); if (!u) return; u.rol = t.value; try { await guardarUsuarios(); } catch (er) { toast('No se pudo guardar.'); } if (USR && USR.id === u.id) setUser(u); else renderUsuarios(); });
 
 /* ---------------- Inicio: pendientes del taller ---------------- */
-function materialesOK(m) { return ['placas', 'cantos', 'herrajes'].every(T => { const e = estadoT(m, T); return e.t === 'En taller' || e.t === 'De stock' || /^Sin (cantos|herrajes|placas)$/.test(e.t); }); }
+function materialesOK(m) { return ['placas', 'cantos', 'herrajes'].every(T => { const e = estadoT(m, T); return e.t === 'En taller' || e.t === 'Cortada' || e.t === 'De stock' || /^Sin (cantos|herrajes|placas)$/.test(e.t); }); }
 function faltaMod(m) { const out = []; if (!m.csv) out.push('Falta el CSV'); [['placas', 'Madera'], ['cantos', 'Cantos'], ['herrajes', 'Herrajes']].forEach(([T, n]) => { const e = estadoT(m, T); if (e.c === 'e2' && /definir|catálogo|Definir/.test(e.t)) out.push(`${n}: ${e.t.toLowerCase()}`); }); return out; }
 function renderInicio() {
   const v = $('view-inicio');
@@ -3953,9 +3978,10 @@ function renderInicio() {
   const cap = (arr, f, n = 8) => arr.slice(0, n).map(f).join('') + (arr.length > n ? `<div class="note">y ${arr.length - n} más…</div>` : '');
   const fila = (izq, der, attrs, btn) => `<div class="infila"><div style="min-width:0">${izq}</div><div class="row" style="gap:8px">${der || ''}<button class="btn sm" ${attrs}>${btn}</button></div></div>`;
   const modTxt = ({ pr, m }) => `<b>${esc(pr.num)}</b> ${esc(pr.obra || '')} · <b>${esc(m.cod || '—')}</b> ${esc(m.desc || '')}`;
-  const tot = sumar.length + madPedir.length + madConf.length + madLlega.length + armando.length + llegar.length + definir.length + armar.length;
+  const cortar = paraCortar();
+  const tot = cortar.length + sumar.length + madPedir.length + madConf.length + madLlega.length + armando.length + llegar.length + definir.length + armar.length;
   v.innerHTML = `<div class="row stickhead" style="justify-content:space-between"><h2>Inicio</h2><span class="note">${USR ? 'Hola, ' + esc(USR.nombre) + '. ' : ''}Lo que hay que hacer hoy, de lo más urgente a lo que espera.</span></div>
-    <div class="tiles">${tile(sumar.reduce((s, x) => s + x.ls.length, 0) + madPedir.length + armando.length, 'Para pedir', 'módulos y pedidos sin mandar', 'sec-pedir')}${tile(madConf.length, 'Esperando presupuesto', 'pedidas, falta confirmar', 'sec-conf')}${tile(madLlega.length + llegar.length, 'Por llegar', 'confirmado, sin recibir', 'sec-llega')}${tile(definir.length, 'Para definir', 'módulos con diseño abierto', 'sec-def')}${tile(armar.length, 'Listos para armar', 'con todo el material', 'sec-armar')}</div>
+    <div class="tiles">${tile(sumar.reduce((s, x) => s + x.ls.length, 0) + madPedir.length + armando.length, 'Para pedir', 'módulos y pedidos sin mandar', 'sec-pedir')}${tile(madConf.length, 'Esperando presupuesto', 'pedidas, falta confirmar', 'sec-conf')}${tile(madLlega.length + llegar.length, 'Por llegar', 'confirmado, sin recibir', 'sec-llega')}${tile(definir.length, 'Para definir', 'módulos con diseño abierto', 'sec-def')}${tile(cortar.length, 'Para cortar en taller', 'placas enteras listas para cortar', 'sec-cortar')}${tile(armar.length, 'Listos para armar', 'con todo el material', 'sec-armar')}</div>
     ${!tot ? '<div class="empty"><b>Todo al día.</b><span>No hay nada pendiente.</span></div>' : ''}
     ${sumar.length || madPedir.length || armando.length ? `<div class="panel" id="sec-pedir"><header><h2>Para pedir</h2></header>
       ${cap(sumar, x => fila(`<b>${x.n}</b> · ${x.ls.length} módulo${x.ls.length === 1 ? '' : 's'} con diseño Listo sin sumar a un pedido <span class="note">${x.ls.map(y => esc(y.p.num + ' ' + y.m.cod)).join(', ')}</span>`, '', `data-in="compras" data-t="${x.T}"`, 'Ir a Compras'))}
@@ -3966,6 +3992,8 @@ function renderInicio() {
     ${madLlega.length || llegar.length ? `<div class="panel" id="sec-llega"><header><h2>Por llegar</h2><span class="note">Cuando llegue, confirmá la recepción para que figure En taller.</span></header>
       ${cap(madLlega, x => fila(`<b>${esc(x.it.cod)}</b> <span class="note">· ${fmt(x.it.pedir)} placa${N(x.it.pedir) === 1 ? '' : 's'} · ${esc(provIt(x.it, x.p))} · confirmada ${esc(x.it.fConf || '')}</span>`, '', `data-in="ped" data-id="${esc(x.p.id)}"`, 'Registrar llegada'))}
       ${cap(llegar, p => fila(`${TIPOS[tipoDe(p)].t} <b>${esc(numPed(p))}</b> <span class="note">· ${esc(p.prov || TIPOS[tipoDe(p)].prov)} · pedido ${esc(p.fEnviado || '')}</span>`, '', `data-in="ped" data-id="${esc(p.id)}"`, 'Registrar llegada'))}</div>` : ''}
+    ${cortar.length ? `<div class="panel" id="sec-cortar"><header><h2>Para cortar en taller</h2><span class="note">Placas enteras que ya están en el taller.</span></header>
+      ${cap(cortar, x => fila(`<b>${esc(x.it.cod)}</b> <span class="note">· ${fmt(x.it.recib ?? x.it.pedir)} placa${N(x.it.recib ?? x.it.pedir) === 1 ? '' : 's'} · ${esc(provIt(x.it, x.p))} · ${esc(numPed(x.p))}</span><div class="note">${proyCelda(x.p, x.it.cod)}</div>`, '', `data-in="cortar"`, 'Ir a Cortar en taller'))}</div>` : ''}
     ${definir.length ? `<div class="panel" id="sec-def"><header><h2>Para definir</h2><span class="note">Módulos con el diseño sin terminar o con materiales sin definir. Cuando pasan a Listo, sus materiales se suman solos al pedido.</span></header>
       ${cap(definir, x => { const f = faltaMod(x.m); return fila(modTxt(x) + (f.length ? `<div class="note falta-t">${f.map(esc).join(' · ')}</div>` : ''), chip({ t: 'Diseño ' + normEst('estDiseno', x.m.estDiseno).toLowerCase(), c: estCls('estDiseno', normEst('estDiseno', x.m.estDiseno)) }), `data-in="mod" data-pr="${esc(x.pr.id)}" data-id="${esc(x.m.id)}"`, 'Abrir ficha'); }, 12)}</div>` : ''}
     ${armar.length ? `<div class="panel" id="sec-armar"><header><h2>Listos para armar</h2><span class="note">Diseño listo y todo el material en el taller.</span></header>
@@ -3975,6 +4003,7 @@ $('view-inicio').addEventListener('click', e => {
   const b = e.target.closest('[data-in]'); if (!b) return; const a = b.dataset.in;
   if (a.startsWith('sec-')) { const s = $(a); if (s) s.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
   if (a === 'compras') { CTIPO = b.dataset.t; PED = null; show('ped'); }
+  if (a === 'cortar') { CTIPO = 'placas'; MVISTA = 'cortar'; PED = null; show('ped'); return; }
   if (a === 'ped') { const p = PEDS.find(x => x.id === b.dataset.id); if (!p) return; CTIPO = tipoDe(p); PED = clone(p); show('ped'); }
   if (a === 'mod') abrirProy(b.dataset.pr, b.dataset.id);
 });
