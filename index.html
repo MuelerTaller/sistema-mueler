@@ -618,7 +618,7 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
         if (!mat || /^sin\s*canto/i.test(mat)) continue;
         R.cantosOCL[mat] = (R.cantosOCL[mat] || 0) + mm(get(C.lf) || get(C.lc)) * cant;
       } else if (tipo === 'accesorio' || tipo === 'hardware') {
-        const dims = [mm(get(C.lf)), mm(get(C.af)), mm(get(C.ef))];
+        const dims = [mm(get(C.lf)) || mm(get(C.lc)), mm(get(C.af)) || mm(get(C.ac)), mm(get(C.ef)) || mm(get(C.ec))];
         if (/^part\s*_?movil/i.test(des)) { // pieza del cajón de la guía oculta: da el largo real de la guía
           const id = (des.match(/#\s*(\d+)/) || [])[1] || ''; const lado = /izq|left/i.test(des) ? 'izq' : 'der';
           R.moviles = R.moviles || []; for (let q = 0; q < cant; q++) R.moviles.push({ id, lado, largo: Math.max(...dims) });
@@ -640,8 +640,8 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
         const d2 = get(C.desc);
         if (!mat && d2) { const mc = String(d2).trim().match(/^M\s*0*(\d+(?:\.\d+)?)$/i); if (!R.modulo && mc) R.modulo = 'M' + mc[1].padStart(2, '0'); continue; }
         if (/^cajon/i.test(des)) R.cajones += cant;
-        else if (/^led\b/i.test(des)) { const dims = [mm(get(C.lf)), mm(get(C.af)), mm(get(C.ef))]; R.leds = R.leds || []; R.leds.push({ cant, largo: Math.max(...dims) }); }
-        else if (/puerta/i.test(des)) { const dims = [mm(get(C.lf)), mm(get(C.af)), mm(get(C.ef))]; const alto = Math.max(...dims); for (let k = 0; k < cant; k++) R.puertas.push({ alto, ancho: Math.min(...dims.filter(x => x > 40)) || 0 }); }
+        else if (/^led\b/i.test(des)) { const dims = [mm(get(C.lf)) || mm(get(C.lc)), mm(get(C.af)) || mm(get(C.ac)), mm(get(C.ef)) || mm(get(C.ec))]; R.leds = R.leds || []; R.leds.push({ cant, largo: Math.max(...dims) }); }
+        else if (/puerta/i.test(des)) { const dims = [mm(get(C.lf)) || mm(get(C.lc)), mm(get(C.af)) || mm(get(C.ac)), mm(get(C.ef)) || mm(get(C.ec))]; const alto = Math.max(...dims); for (let k = 0; k < cant; k++) R.puertas.push({ alto, ancho: Math.min(...dims.filter(x => x > 40)) || 0 }); }
         else if (des) R.otros.push({ desc: cleanName(des), cant, material: mat });
       }
     }
