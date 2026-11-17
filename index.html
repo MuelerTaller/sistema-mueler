@@ -4164,6 +4164,34 @@ function finalModulos(sids) {
   });
   return { modulos: out, sinOp: S.totBase, conOp, hayOp: criterio.length > 0, criterio, S };
 }
+/* Presupuesto interactivo para el cliente: una página estática (cliente.html) que lee todo del link.
+   Solo precios de venta al cliente (con la comisión ya incluida, sin mostrarla); nada de costos. */
+const URL_CLIENTE = 'https://muelertaller.github.io/sistema-mueler/cliente.html';
+const WA_MUELER = '5491122790181';
+function datosCliente(ids, o) {
+  const S = resumen(ids || undefined), multi = (ids ? ids.length : P.sectores.length) > 1, sec = []; let cur = null;
+  S.rows.forEach(r => {
+    if (!cur || (multi && cur.id !== r.sector)) { cur = { id: r.sector, n: multi ? (r.sectorNombre || 'Sector').toUpperCase() : '', m: [] }; sec.push(cur); }
+    if (r.opcion) return;
+    const t = r.M.textos || {}, can = t.cantos || sugCantos(r.R) || 'ABS 045';
+    const fr = [{ n: t.frentes || 'Frentes', v: r.t }];
+    (r.M.variantes || []).filter(varValida).forEach(v => { const RV = calcVar(r.M, v); fr.push({ n: v.nombre || 'Frente alternativo', v: cliB(RV.precio) + r.i + r.f }); });
+    S.rows.filter(x => x.opcion && x.M.opcionDe === r.id).forEach(x => { const ot = x.M.textos || {}; fr.push({ n: x.M.opcionNombre || ot.frentes || 'Opción', v: x.t }); });
+    const op = opcionesAgrupadas(r.M, r.R).map(x => ({ n: textoOpcion(x), v: cliB(x.deltaRnd) }));
+    const herr = String(t.herrajes || sugHerrajes(r.M) || '').split('\n').map(x => x.trim()).filter(Boolean);
+    cur.m.push({ c: r.M.cod || '', d: r.M.desc || '', est: t.estructura || '', can, h: herr, fr, op });
+  });
+  return { v: 1, tit: o.titulo || tituloDef(), sub: o.sub || subDef(), pct: o.adelanto ? N(o.pct) : 0,
+    bon: o.bonif ? { modo: o.bonModo, pct: o.bonPct, monto: o.bonMonto, montoOp: o.bonMontoOp, label: bonLabel(o) } : null,
+    wa: WA_MUELER, cond: MuelerFinal.COND.concat(o.led ? [LEYENDA_LED] : [], String(o.extra || '').split('\n').map(x => x.trim()).filter(Boolean)),
+    pie: 'Mueler Taller · WhatsApp: 11 2279-0181 · muelertaller@gmail.com · IG: @muelertaller', sec: sec.filter(x => x.m.length).map(x => ({ n: x.n, m: x.m })) };
+}
+async function linkCliente(obj) {
+  const u8 = new TextEncoder().encode(JSON.stringify(obj)); let tipo = 'j', out = u8;
+  if (window.CompressionStream) { try { const st = new Blob([u8]).stream().pipeThrough(new CompressionStream('deflate')); out = new Uint8Array(await new Response(st).arrayBuffer()); tipo = 'z'; } catch (e) { out = u8; tipo = 'j'; } }
+  let bin = ''; for (let i = 0; i < out.length; i += 8192) bin += String.fromCharCode.apply(null, out.subarray(i, i + 8192));
+  return URL_CLIENTE + '#d=' + tipo + btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
 function revisarFinal(X) {
   const av = [];
   if (esDup()) av.push(`Ya hay otro presupuesto con el Nº ${P.num}${P.version ? ' ' + P.version : ''}.`);
@@ -4212,7 +4240,7 @@ function dialogoFinal() {
     <label class="row" style="gap:8px"><input type="checkbox" id="fo-led" ${fo.led ? 'checked' : ''}> Agregar la leyenda de LED en las condiciones</label>
     <div class="field"><label class="lbl" for="fo-extra">Condiciones extra o “No incluye” (una por línea)</label><textarea id="fo-extra" rows="2" placeholder="Ej: No incluye espejo del vestidor.">${esc(fo.extra || '')}</textarea></div>
     <div id="fo-rev"></div>
-    <div class="row" style="justify-content:flex-end"><button class="btn" data-close>Cancelar</button><button class="btn" id="fo-xlsx">Excel</button><button class="btn" id="fo-docx">Word</button><button class="btn primary" id="fo-ambos">Word + Excel</button></div>`);
+    <div class="row" style="justify-content:space-between"><button class="btn" id="fo-link" title="Página para el celular: el cliente elige frentes y opciones y ve el total, adelanto y saldo">Link interactivo para el cliente</button><div class="row"><button class="btn" data-close>Cancelar</button><button class="btn" id="fo-xlsx">Excel</button><button class="btn" id="fo-docx">Word</button><button class="btn primary" id="fo-ambos">Word + Excel</button></div></div>`);
   const sids = () => multi ? [...d.m.querySelectorAll('input.fs:checked')].map(x => x.value) : null;
   const bonDef = o => o.bonModo === 'monto' ? 'Bonificación especial sobre el total del presupuesto, ya aplicada en los totales.' : `Bonificación especial del ${fmt(o.bonPct, 1).replace(',0', '')}% sobre el total del presupuesto, ya aplicada en los totales.`;
   const bonFo = () => ({ bonif: d.q('#fo-bon').checked, bonModo: d.q('#fo-bmodo').value, bonPct: N(d.q('#fo-bpct').value) || 0, bonMonto: N(d.q('#fo-bmonto').value) || 0, bonMontoOp: d.q('#fo-bmontoop').value.trim() === '' ? '' : N(d.q('#fo-bmontoop').value) });
@@ -4241,6 +4269,20 @@ function dialogoFinal() {
       if (word) { if (!window.docx) throw new Error('word'); const blob = await window.docx.Packer.toBlob(MuelerFinal.wordDoc(D, logoBytes(), window.docx)); await offer(base + '.docx', blob); }
       if (excel) { if (!window.ExcelJS) throw new Error('excel'); const buf = await MuelerFinal.excelBuffer(D, LOGO_B64, window.ExcelJS); await offer(base + '.xlsx', new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })); }
     } catch (e) { console.error(e); toast(e && e.message === 'word' ? 'No se pudo cargar el generador de Word. Recargá la página.' : e && e.message === 'excel' ? 'No se pudo cargar el generador de Excel. Recargá la página.' : 'No se pudo armar el documento'); }
+  };
+  d.q('#fo-link').onclick = async () => {
+    const ids = sids(); if (ids && !ids.length) { toast('Elegí al menos un sector'); return; }
+    const o = { bonif: d.q('#fo-bon').checked, bonModo: d.q('#fo-bmodo').value, bonPct: N(d.q('#fo-bpct').value) || 0, bonMonto: N(d.q('#fo-bmonto').value) || 0, bonMontoOp: d.q('#fo-bmontoop').value.trim() === '' ? '' : N(d.q('#fo-bmontoop').value), titulo: d.q('#fo-tit').value.trim(), sub: d.q('#fo-sub').value.trim(), adelanto: d.q('#fo-adel').checked, pct: N(d.q('#fo-pct').value) || 70, led: d.q('#fo-led').checked, extra: d.q('#fo-extra').value };
+    const av = revisarFinal(upd());
+    let url; try { url = await linkCliente(datosCliente(ids, o)); } catch (e) { console.error(e); toast('No se pudo armar el link'); return; }
+    const msg = `Hola! Te paso el presupuesto ${P.num ? 'Nº ' + P.num + ' ' : ''}de Mueler Taller. Podés elegir los frentes y las opciones y ver el total, el adelanto y el saldo:\n${url}`;
+    d.close();
+    const m = modal(`${H('Link interactivo para el cliente')}
+      <p class="note" style="margin:0">Se abre en el celular: el cliente elige el frente de cada mueble, tilda las opciones y ve el total, el adelanto y el saldo. Con "Confirmar por WhatsApp" te manda lo que eligió. Muestra solo precios de venta (sin comisión ni costos). Si cambiás el presupuesto, generá un link nuevo.</p>
+      ${av.length ? `<div class="alert"><b>Para revisar antes de mandar</b><ul>${av.map(a => `<li>${esc(a)}</li>`).join('')}</ul></div>` : ''}
+      <textarea id="lc-url" rows="3" readonly style="font-family:var(--f-mono);font-size:11.5px">${esc(url)}</textarea>
+      <div class="row" style="justify-content:flex-end"><a class="btn" href="${esc(url)}" target="_blank" rel="noopener">Ver cómo queda</a><button class="btn" id="lc-cp">Copiar link</button><a class="btn primary" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Mandar por WhatsApp</a></div>`);
+    m.q('#lc-cp').onclick = async () => { try { await navigator.clipboard.writeText(url); toast('Link copiado: pegalo en WhatsApp.'); } catch (e) { const t = m.q('#lc-url'); t.focus(); t.select(); toast('Copialo con Ctrl+C'); } };
   };
   d.q('#fo-docx').onclick = () => go(true, false); d.q('#fo-xlsx').onclick = () => go(false, true); d.q('#fo-ambos').onclick = () => go(true, true);
 }
