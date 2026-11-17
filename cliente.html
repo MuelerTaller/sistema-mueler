@@ -99,7 +99,13 @@ const KEYS = () => D.sec.flatMap((s, si) => s.m.map((m, mi) => si + '.' + mi));
 function selStr() { return KEYS().map(k => SEL[k].f + Object.keys(SEL[k].o).filter(i => SEL[k].o[i]).map(i => 'o' + i).join('')).join('_'); }
 function selLeer() { const m = location.hash.match(/(?:^|&)s=([^&]+)/); if (!m) return false; const ps = m[1].split('_'); KEYS().forEach((k, i) => { const p = ps[i]; if (!p) return; const mm = p.match(/^(\d+)((?:o\d+)*)$/); if (!mm) return; const [si, mi] = k.split('.').map(Number); const M = D.sec[si].m[mi]; SEL[k].f = Math.min(+mm[1], M.fr.length - 1); (mm[2].match(/\d+/g) || []).forEach(o => { if (+o < M.op.length) SEL[k].o[+o] = true; }); }); return true; }
 function linkEleccion() { return location.href.split('#')[0] + '#' + location.hash.replace(/^#/, '').replace(/&s=[^&]*/, '') + '&s=' + selStr(); }
-function textoWA() {
+async function acortar(url) {
+  for (const base of ['https://is.gd/create.php?format=json&url=', 'https://v.gd/create.php?format=json&url=']) {
+    try { const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 4000); const r = await fetch(base + encodeURIComponent(url), { signal: ctl.signal }); clearTimeout(tm); const j = await r.json(); if (j && j.shorturl) return j.shorturl; } catch (e) { }
+  }
+  return null;
+}
+function textoWA(link) {
   const T = totales(); const L = [`Hola! Esta es mi elección del *${D.tit}*`, ''];
   D.sec.forEach((s, si) => { if (s.n) L.push(`— ${s.n} —`); s.m.forEach((m, mi) => { const k = si + '.' + mi, S = SEL[k];
     L.push(`*${[m.c, m.d].filter(Boolean).join(' · ')}*`);
@@ -108,7 +114,7 @@ function textoWA() {
     L.push(''); }); });
   if (T.bn) L.push(`${D.bon.label || 'Bonificación'}: − ${money(T.bn)}`);
   L.push(`*Total: ${money(T.fin)}*`); if (D.pct) L.push(`Adelanto ${N(D.pct)}%: ${money(T.ad)} · Saldo ${100 - N(D.pct)}%: ${money(T.sal)}`);
-  L.push('', 'Ver mi elección: ' + linkEleccion());
+  L.push('', 'Ver mi elección: ' + (link || linkEleccion()));
   return L.join('\n');
 }
 /* Imagen de la elección (PNG) para mandar por WhatsApp */
@@ -187,7 +193,8 @@ function render() {
   if (selLeer()) { app.querySelectorAll('input[data-k]').forEach(i => { const S = SEL[i.dataset.k]; if (i.dataset.f != null) i.checked = +i.dataset.f === S.f; if (i.dataset.o != null) i.checked = !!S.o[+i.dataset.o]; }); const it = app.querySelector('.intro'); if (it) it.innerHTML = '<b>Elección del cliente.</b> Así quedó marcado; se puede cambiar.'; }
   app.addEventListener('change', e => { const x = e.target; const k = x.dataset.k; if (!k) return;
     if (x.dataset.f != null) SEL[k].f = +x.dataset.f; if (x.dataset.o != null) SEL[k].o[+x.dataset.o] = x.checked; pintarTot(); });
-  $('b-wa').addEventListener('click', e => { e.currentTarget.href = 'https://wa.me/' + (D.wa || '') + '?text=' + encodeURIComponent(textoWA()); });
+  $('b-wa').addEventListener('click', async e => { e.preventDefault(); const bt = e.currentTarget; if (bt.dataset.busy) return; bt.dataset.busy = 1; const t0 = bt.textContent; bt.textContent = 'Abriendo WhatsApp…';
+    const corto = await acortar(linkEleccion()); const href = 'https://wa.me/' + (D.wa || '') + '?text=' + encodeURIComponent(textoWA(corto)); bt.href = href; delete bt.dataset.busy; bt.textContent = t0; location.href = href; });
   $('b-img').addEventListener('click', enviarImagen);
   document.title = D.tit + ' · Mueler Taller';
   pintarTot();

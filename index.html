@@ -4192,6 +4192,13 @@ async function linkCliente(obj) {
   let bin = ''; for (let i = 0; i < out.length; i += 8192) bin += String.fromCharCode.apply(null, out.subarray(i, i + 8192));
   return URL_CLIENTE + '#d=' + tipo + btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
+/* Link corto: is.gd / v.gd (aceptan links de hasta ~5.000 caracteres y mantienen todo lo que va después del #) */
+async function acortar(url) {
+  for (const base of ['https://is.gd/create.php?format=json&url=', 'https://v.gd/create.php?format=json&url=']) {
+    try { const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 5000); const r = await fetch(base + encodeURIComponent(url), { signal: ctl.signal }); clearTimeout(tm); const j = await r.json(); if (j && j.shorturl) return j.shorturl; } catch (e) { }
+  }
+  return null;
+}
 function revisarFinal(X) {
   const av = [];
   if (esDup()) av.push(`Ya hay otro presupuesto con el Nº ${P.num}${P.version ? ' ' + P.version : ''}.`);
@@ -4274,13 +4281,15 @@ function dialogoFinal() {
     const ids = sids(); if (ids && !ids.length) { toast('Elegí al menos un sector'); return; }
     const o = { bonif: d.q('#fo-bon').checked, bonModo: d.q('#fo-bmodo').value, bonPct: N(d.q('#fo-bpct').value) || 0, bonMonto: N(d.q('#fo-bmonto').value) || 0, bonMontoOp: d.q('#fo-bmontoop').value.trim() === '' ? '' : N(d.q('#fo-bmontoop').value), titulo: d.q('#fo-tit').value.trim(), sub: d.q('#fo-sub').value.trim(), adelanto: d.q('#fo-adel').checked, pct: N(d.q('#fo-pct').value) || 70, led: d.q('#fo-led').checked, extra: d.q('#fo-extra').value };
     const av = revisarFinal(upd());
-    let url; try { url = await linkCliente(datosCliente(ids, o)); } catch (e) { console.error(e); toast('No se pudo armar el link'); return; }
-    const msg = `Hola! Te paso el presupuesto ${P.num ? 'Nº ' + P.num + ' ' : ''}de Mueler Taller. Podés elegir los frentes y las opciones y ver el total, el adelanto y el saldo:\n${url}`;
+    let largo; try { largo = await linkCliente(datosCliente(ids, o)); } catch (e) { console.error(e); toast('No se pudo armar el link'); return; }
+    toast('Armando el link…'); const corto = await acortar(largo); const url = corto || largo;
+    const msg = `Hola! Te paso el presupuesto ${P.num ? 'Nº ' + P.num + ' ' : ''}de Mueler Taller. Elegí los frentes y las opciones y mirá el total acá: ${url}`;
     d.close();
     const m = modal(`${H('Link interactivo para el cliente')}
       <p class="note" style="margin:0">Se abre en el celular: el cliente elige el frente de cada mueble, tilda las opciones y ve el total, el adelanto y el saldo. Con "Confirmar por WhatsApp" te manda lo que eligió. Muestra solo precios de venta (sin comisión ni costos). Si cambiás el presupuesto, generá un link nuevo.</p>
       ${av.length ? `<div class="alert"><b>Para revisar antes de mandar</b><ul>${av.map(a => `<li>${esc(a)}</li>`).join('')}</ul></div>` : ''}
-      <textarea id="lc-url" rows="3" readonly style="font-family:var(--f-mono);font-size:11.5px">${esc(url)}</textarea>
+      ${corto ? '' : `<div class="alert">No se pudo acortar el link${EN_CLAUDE() ? ' desde claude.ai: generalo desde la web (muelertaller.github.io/sistema-mueler) para que salga corto' : ' (sin internet o el presupuesto es muy grande)'}. Funciona igual, pero se ve largo en WhatsApp.</div>`}
+      <textarea id="lc-url" rows="${corto ? 1 : 3}" readonly style="font-family:var(--f-mono);font-size:${corto ? 15 : 11.5}px">${esc(url)}</textarea>
       <div class="row" style="justify-content:flex-end"><a class="btn" href="${esc(url)}" target="_blank" rel="noopener">Ver cómo queda</a><button class="btn" id="lc-cp">Copiar link</button><a class="btn primary" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Mandar por WhatsApp</a></div>`);
     m.q('#lc-cp').onclick = async () => { try { await navigator.clipboard.writeText(url); toast('Link copiado: pegalo en WhatsApp.'); } catch (e) { const t = m.q('#lc-url'); t.focus(); t.select(); toast('Copialo con Ctrl+C'); } };
   };
