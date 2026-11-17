@@ -1438,7 +1438,7 @@ function nombreMueble(M) { return (M.cod || 'Mueble') + (M.desc ? ' · ' + M.des
 const OPENSEC = {};
 function secOpen(id, def) { return OPENSEC[id] != null ? OPENSEC[id] || !!def : !!def; }
 function calcM(M) { return Calc.calc(M, PC()); }
-function calcVar(M, v) { return Calc.calcVariante(M, PC(), { cambios: Object.entries(v.map || {}).filter(([, a]) => a).map(([key, art]) => ({ key, art })) }); }
+function calcVar(M, v) { const R = Calc.calcVariante(M, PC(), { cambios: Object.entries(v.map || {}).filter(([, a]) => a).map(([key, art]) => ({ key, art })) }); R.precioCalc = R.precio; if (N(v.precio) > 0) { R.precio = N(v.precio); R.aMano = true; } return R; }
 function baseVenta(M, R) { return M.venta && M.venta.base !== '' && M.venta.base != null ? N(M.venta.base) : R.precio; }
 
 function renderPres() {
@@ -1709,10 +1709,11 @@ function secTerceros(M, R) {
 function secVariantes(M, R) {
   const gs = M.grupos.filter(g => Calc.espDeNombre(g.art) >= 10 || !g.art);
   const vs = (M.variantes || []).map((v, k) => { const RV = calcVar(M, v);
-    return `<div class="gcard"><div class="row" style="justify-content:space-between"><div class="field" style="flex:1;min-width:200px"><label class="lbl" for="${kid(`variantes.${k}.nombre`)}">Nombre de la variante</label>${inp(`variantes.${k}.nombre`, v.nombre, { ph: 'Ej: ENCHAPADO KIRI', label: 'Nombre de la variante' })}</div><div class="stat" style="text-align:right"><span>Precio completo</span><b>${money(RV.precio)}</b></div><button class="x" data-act="del-v" data-k="${k}" aria-label="Quitar variante">✕</button></div>
-      <div class="grid2">${gs.map(g => `<div class="field"><label class="lbl">${esc(g.ocl || g.art || 'Placa')} → </label>${sel(`variantes.${k}.map.${g.key}`, (v.map || {})[g.key] || '', placaOpts(), { empty: 'Igual (' + (g.art || '—') + ')', label: 'Placa alternativa' })}</div>`).join('')}</div></div>`; }).join('');
+    return `<div class="gcard"><div class="row" style="justify-content:space-between"><div class="field" style="flex:1;min-width:200px"><label class="lbl" for="${kid(`variantes.${k}.nombre`)}">Nombre de la variante</label>${inp(`variantes.${k}.nombre`, v.nombre, { ph: 'Ej: ENCHAPADO KIRI', label: 'Nombre de la variante' })}</div><div class="field" style="flex:0 1 170px"><label class="lbl" for="${kid(`variantes.${k}.precio`)}">Precio a mano</label>${inp(`variantes.${k}.precio`, v.precio || '', { num: 1, ph: Object.values(v.map || {}).some(Boolean) ? fmt(RV.precioCalc) : 'Opcional', label: 'Precio a mano de la variante' })}</div><div class="stat" style="text-align:right"><span>${RV.aMano ? 'Precio a mano' : 'Precio calculado'}</span><b>${money(RV.precio)}</b>${RV.aMano && Object.values(v.map || {}).some(Boolean) ? `<span class="note">calculado ${money(RV.precioCalc)}</span>` : ''}</div><button class="x" data-act="del-v" data-k="${k}" aria-label="Quitar variante">✕</button></div>
+      <div class="grid2">${gs.map(g => `<div class="field"><label class="lbl">Placa de ${esc(g.ocl || g.art || 'Placa')} en esta variante</label>${sel(`variantes.${k}.map.${g.key}`, (v.map || {})[g.key] || '', placaOpts(), { empty: 'Igual (' + (g.art || '—') + ')', label: 'Placa alternativa' })}</div>`).join('')}</div>
+      ${varValida(v) ? '' : `<div class="alert" style="margin-top:6px">Así no sale en el presupuesto: elegí la placa nueva arriba (por ejemplo <b>ENCHAPADO KIRI MDF 18</b>) para que la calcule, o poné el precio a mano.</div>`}</div>`; }).join('');
   return `<details class="panel sec" id="sec-var" ${secOpen('sec-var', vs) ? 'open' : ''}><summary><h3>Frente alternativo</h3><span class="note">${(M.variantes || []).length || 'Sin'} variante${(M.variantes || []).length === 1 ? '' : 's'}</span></summary>
-    <p class="note" style="margin:0">Recalcula el mueble completo cambiando la placa de los materiales que elijas (por ejemplo, frentes en enchapado). En la Planilla va como otra fila de frente, con precio completo.</p>${vs}
+    <p class="note" style="margin:0">Elegí qué placa cambia (por ejemplo, la de los frentes a enchapado) y recalcula el mueble completo. Si querés otro valor, ponelo en <b>Precio a mano</b>. En la Planilla y en el FINAL sale como otra fila de frente: precio completo, o diferencia (+ $) si tildás esa opción.</p>${vs}
     <div class="row"><button class="btn sm" data-act="add-v">+ Agregar variante</button></div></details>`;
 }
 function humano(art, q) {
@@ -4132,7 +4133,7 @@ function tituloDef() { return `PRESUPUESTO Nº ${P.num || 's/n'}${P.version ? ' 
 function subDef() { const arq = String(P.arq || '').trim(); const a = arq ? (/^arq/i.test(arq) ? arq : 'Arq. ' + arq) : ''; return [a, P.cliente].filter(Boolean).join(' · ') + (a || P.cliente ? ' · ' : '') + 'Validez: 15 días'; }
 function bonifDe(total, fo, conOp) { if (!fo || !fo.bonif) return 0; if (fo.bonModo === 'monto') return Math.round(N(conOp && fo.bonMontoOp !== '' && fo.bonMontoOp != null ? fo.bonMontoOp : fo.bonMonto)); return Math.round(total * N(fo.bonPct) / 100); }
 function bonLabel(fo) { return fo.bonModo === 'monto' ? 'Bonificación especial' : `Bonificación ${fmt(fo.bonPct, 1).replace(',0', '')}%`; }
-function varValida(v) { return Object.values((v && v.map) || {}).some(Boolean); }
+function varValida(v) { return Object.values((v && v.map) || {}).some(Boolean) || N(v && v.precio) > 0; }
 function finalModulos(sids) {
   const S = resumen(sids || undefined), multi = (sids ? sids.length : P.sectores.length) > 1, out = [];
   let conOp = 0; const criterio = [];
