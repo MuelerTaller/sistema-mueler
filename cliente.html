@@ -94,12 +94,78 @@ function pintarTot() {
   $('tots').innerHTML = (T.bn ? `<span>Subtotal</span><span>${money(T.t)}</span><span class="bn">${esc(B.label || 'Bonificación')}</span><span class="bn">− ${money(T.bn)}</span>` : '') +
     `<span class="big">Total</span><span>${money(T.fin)}</span>` + (D.pct ? `<span class="as">Adelanto ${N(D.pct)}% <b>${money(T.ad)}</b> · Saldo ${100 - N(D.pct)}% <b>${money(T.sal)}</b></span>` : '');
 }
+/* La elección viaja en el link (#…&s=) para abrir la página tal cual la dejó el cliente */
+const KEYS = () => D.sec.flatMap((s, si) => s.m.map((m, mi) => si + '.' + mi));
+function selStr() { return KEYS().map(k => SEL[k].f + Object.keys(SEL[k].o).filter(i => SEL[k].o[i]).map(i => 'o' + i).join('')).join('_'); }
+function selLeer() { const m = location.hash.match(/(?:^|&)s=([^&]+)/); if (!m) return false; const ps = m[1].split('_'); KEYS().forEach((k, i) => { const p = ps[i]; if (!p) return; const mm = p.match(/^(\d+)((?:o\d+)*)$/); if (!mm) return; const [si, mi] = k.split('.').map(Number); const M = D.sec[si].m[mi]; SEL[k].f = Math.min(+mm[1], M.fr.length - 1); (mm[2].match(/\d+/g) || []).forEach(o => { if (+o < M.op.length) SEL[k].o[+o] = true; }); }); return true; }
+function linkEleccion() { return location.href.split('#')[0] + '#' + location.hash.replace(/^#/, '').replace(/&s=[^&]*/, '') + '&s=' + selStr(); }
 function textoWA() {
-  const T = totales(); const L = [`Hola! Elegí estas opciones del ${D.tit}:`];
-  T.el.forEach(x => { L.push(`• ${[x.m.c, x.m.d].filter(Boolean).join(' ')}: ${x.f.n}${x.ops.length ? ' + ' + x.ops.map(o => o.n).join(' + ') : ''}`); });
-  if (T.bn) L.push(`${D.bon.label || 'Bonificación'}: −${money(T.bn)}`);
-  L.push(`Total: ${money(T.fin)}`); if (D.pct) L.push(`Adelanto ${N(D.pct)}%: ${money(T.ad)} · Saldo: ${money(T.sal)}`);
+  const T = totales(); const L = [`Hola! Esta es mi elección del *${D.tit}*`, ''];
+  D.sec.forEach((s, si) => { if (s.n) L.push(`— ${s.n} —`); s.m.forEach((m, mi) => { const k = si + '.' + mi, S = SEL[k];
+    L.push(`*${[m.c, m.d].filter(Boolean).join(' · ')}*`);
+    if (m.fr.length > 1) m.fr.forEach((f, fi) => L.push(`${fi === S.f ? '✅' : '⬜'} ${f.n}${fi ? `  (+ ${money(f.v - m.fr[0].v)})` : ''}`)); else L.push(`✅ ${m.fr[0].n}`);
+    m.op.forEach((o, oi) => L.push(`${S.o[oi] ? '✅' : '⬜'} ${o.n}  (+ ${money(o.v)})`));
+    L.push(''); }); });
+  if (T.bn) L.push(`${D.bon.label || 'Bonificación'}: − ${money(T.bn)}`);
+  L.push(`*Total: ${money(T.fin)}*`); if (D.pct) L.push(`Adelanto ${N(D.pct)}%: ${money(T.ad)} · Saldo ${100 - N(D.pct)}%: ${money(T.sal)}`);
+  L.push('', 'Ver mi elección: ' + linkEleccion());
   return L.join('\n');
+}
+/* Imagen de la elección (PNG) para mandar por WhatsApp */
+function imgLogo() { return new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = LOGO; }); }
+async function imagenEleccion() {
+  try { await document.fonts.ready; } catch (e) { }
+  const logo = await imgLogo(); const T = totales();
+  const W = 1080, PAD = 56, F = '"Archivo","Helvetica Neue",Arial,sans-serif', MF = '"IBM Plex Mono",Menlo,monospace';
+  const cv = document.createElement('canvas'); const x = cv.getContext('2d');
+  const wrap = (t, font, maxw) => { x.font = font; const ws = String(t).split(' '); const ls = []; let l = ''; ws.forEach(w => { const p = l ? l + ' ' + w : w; if (x.measureText(p).width > maxw && l) { ls.push(l); l = w; } else l = p; }); if (l) ls.push(l); return ls; };
+  const draw = dry => {
+    let y = PAD; const txt = (t, xx, yy, font, col, al) => { if (dry) return; x.font = font; x.fillStyle = col; x.textAlign = al || 'left'; x.fillText(t, xx, yy); };
+    if (logo) { const h = 84, w = logo.width * h / logo.height; if (!dry) x.drawImage(logo, PAD, y, w, h); y += h + 28; }
+    wrap(D.tit, '800 40px ' + F, W - 2 * PAD).forEach(l => { y += 44; txt(l, PAD, y, '800 40px ' + F, '#1b211e'); });
+    if (D.sub) { y += 38; txt(D.sub, PAD, y, '500 26px ' + F, '#646c67'); }
+    y += 26; txt('Elección del cliente · ' + new Date().toLocaleDateString('es-AR'), PAD, y + 10, '700 22px ' + F, '#b07a00'); y += 30;
+    D.sec.forEach((s, si) => {
+      if (s.n) { y += 44; txt(s.n, PAD, y, '700 22px ' + F, '#646c67'); y += 4; }
+      s.m.forEach((m, mi) => { const S = SEL[si + '.' + mi]; const top = y + 18; let yy = top + 26;
+        const rows = []; if (m.fr.length > 1) m.fr.forEach((f, fi) => rows.push({ t: 'r', on: fi === S.f, n: f.n, p: money(f.v) })); else rows.push({ t: 'r', on: true, n: m.fr[0].n || 'Frentes', p: money(m.fr[0].v) });
+        m.op.forEach((o, oi) => rows.push({ t: 'c', on: !!S.o[oi], n: o.n, p: '+ ' + money(o.v) }));
+        const head = wrap([m.c, m.d].filter(Boolean).join('  ·  '), '800 30px ' + F, W - 2 * PAD - 48);
+        const rl = rows.map(r => wrap(r.n, (r.on ? '700 ' : '500 ') + '27px ' + F, W - 2 * PAD - 48 - 64 - 250));
+        const h = 26 + head.length * 38 + 14 + rl.reduce((a, l) => a + Math.max(1, l.length) * 34 + 22, 0) + 6;
+        if (!dry) { x.fillStyle = '#ffffff'; x.strokeStyle = '#dcdfd8'; x.lineWidth = 2; x.beginPath(); x.roundRect(PAD, top, W - 2 * PAD, h, 18); x.fill(); x.stroke(); }
+        head.forEach(l => { yy += 34; txt(l, PAD + 24, yy, '800 30px ' + F, '#1b211e'); yy += 4; }); yy += 14;
+        rows.forEach((r, ri) => { const lines = rl[ri]; const rh = Math.max(1, lines.length) * 34 + 22; const cy = yy + 22;
+          if (!dry) { if (r.on) { x.fillStyle = '#fbf1d6'; x.beginPath(); x.roundRect(PAD + 14, yy - 2, W - 2 * PAD - 28, rh - 4, 10); x.fill(); }
+            x.lineWidth = 3; x.strokeStyle = r.on ? '#1b211e' : '#a9afaa'; x.fillStyle = '#1b211e';
+            if (r.t === 'r') { x.beginPath(); x.arc(PAD + 46, cy, 14, 0, 7); x.stroke(); if (r.on) { x.beginPath(); x.arc(PAD + 46, cy, 7.5, 0, 7); x.fill(); } }
+            else { x.beginPath(); x.roundRect(PAD + 32, cy - 14, 28, 28, 5); if (r.on) { x.fill(); x.strokeStyle = '#fff'; x.lineWidth = 4; x.beginPath(); x.moveTo(PAD + 38, cy); x.lineTo(PAD + 44, cy + 7); x.lineTo(PAD + 55, cy - 7); x.stroke(); } else x.stroke(); } }
+          lines.forEach((l, li) => txt(l, PAD + 80, cy + 10 + li * 34, (r.on ? '700 ' : '500 ') + '27px ' + F, r.on ? '#1b211e' : '#8a918c'));
+          txt(r.p, W - PAD - 24, cy + 10, '600 26px ' + MF, r.on ? '#1b211e' : '#a9afaa', 'right'); yy += rh; });
+        y = top + h; });
+    });
+    y += 30; const bh = 44 + (T.bn ? 2 * 40 : 0) + 64 + (D.pct ? 44 : 0) + 20;
+    if (!dry) { x.fillStyle = '#1b211e'; x.beginPath(); x.roundRect(PAD, y, W - 2 * PAD, bh, 18); x.fill(); }
+    let ty = y + 30;
+    if (T.bn) { ty += 30; txt('Subtotal', PAD + 28, ty, '500 27px ' + F, '#d9ddd8'); txt(money(T.t), W - PAD - 28, ty, '600 27px ' + MF, '#ffffff', 'right'); ty += 40; txt(D.bon.label || 'Bonificación', PAD + 28, ty, '500 27px ' + F, '#9fd6b2'); txt('− ' + money(T.bn), W - PAD - 28, ty, '600 27px ' + MF, '#9fd6b2', 'right'); ty += 10; }
+    ty += 52; txt('Total', PAD + 28, ty, '800 40px ' + F, '#ffffff'); txt(money(T.fin), W - PAD - 28, ty, '700 42px ' + MF, '#e8a400', 'right');
+    if (D.pct) { ty += 46; txt(`Adelanto ${N(D.pct)}%  ${money(T.ad)}   ·   Saldo ${100 - N(D.pct)}%  ${money(T.sal)}`, PAD + 28, ty, '500 25px ' + F, '#d9ddd8'); }
+    y += bh + 40; txt(D.pie || 'Mueler Taller', W / 2, y, '500 22px ' + F, '#646c67', 'center'); y += 40;
+    return y;
+  };
+  const H = draw(true); const sc = 1; cv.width = W * sc; cv.height = Math.ceil(H) * sc; x.scale(sc, sc);
+  x.fillStyle = '#f3f3ef'; x.fillRect(0, 0, W, H); draw(false);
+  return await new Promise(r => cv.toBlob(r, 'image/png'));
+}
+async function enviarImagen() {
+  const bt = $('b-img'); bt.disabled = true; const t0 = bt.textContent; bt.textContent = 'Armando…';
+  try {
+    const blob = await imagenEleccion(); const nom = (D.tit || 'Presupuesto').replace(/[^\wÁÉÍÓÚÑáéíóúñ ]+/g, '').trim().replace(/\s+/g, '_') + '_eleccion.png';
+    const file = new File([blob], nom, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text: `Mi elección del ${D.tit} · Total ${money(totales().fin)}` }); }
+    else { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nom; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000); toast('Se bajó la imagen: mandala por WhatsApp a Mueler'); }
+  } catch (e) { if (!(e && e.name === 'AbortError')) toast('No se pudo armar la imagen'); }
+  bt.disabled = false; bt.textContent = t0;
 }
 function render() {
   const app = $('app');
@@ -117,16 +183,16 @@ function render() {
     <div class="cond"><b>Condiciones comerciales</b><ul>${(D.cond || []).map(c => `<li>${esc(c)}</li>`).join('')}</ul>Flete e instalación incluidos.</div>
     <div class="pie">${esc(D.pie || 'Mueler Taller')}</div>
   </main>
-  <div class="bar"><div class="wrap"><div class="tots" id="tots"></div><div class="btns"><a class="btn wa" id="b-wa" href="#" target="_blank" rel="noopener">Confirmar por WhatsApp</a><button class="btn sec" id="b-cp" type="button">Copiar</button></div></div></div>`;
-  D.sec.forEach((s, si) => s.m.forEach((m, mi) => { SEL[si + '.' + mi] = { f: 0, o: {} }; }));
+  <div class="bar"><div class="wrap"><div class="tots" id="tots"></div><div class="btns"><a class="btn wa" id="b-wa" href="#" target="_blank" rel="noopener">Confirmar por WhatsApp</a><button class="btn sec" id="b-img" type="button">Enviar imagen</button></div></div></div>`;
+  if (selLeer()) { app.querySelectorAll('input[data-k]').forEach(i => { const S = SEL[i.dataset.k]; if (i.dataset.f != null) i.checked = +i.dataset.f === S.f; if (i.dataset.o != null) i.checked = !!S.o[+i.dataset.o]; }); const it = app.querySelector('.intro'); if (it) it.innerHTML = '<b>Elección del cliente.</b> Así quedó marcado; se puede cambiar.'; }
   app.addEventListener('change', e => { const x = e.target; const k = x.dataset.k; if (!k) return;
     if (x.dataset.f != null) SEL[k].f = +x.dataset.f; if (x.dataset.o != null) SEL[k].o[+x.dataset.o] = x.checked; pintarTot(); });
   $('b-wa').addEventListener('click', e => { e.currentTarget.href = 'https://wa.me/' + (D.wa || '') + '?text=' + encodeURIComponent(textoWA()); });
-  $('b-cp').addEventListener('click', async () => { try { await navigator.clipboard.writeText(textoWA()); toast('Copiado'); } catch (er) { toast('No se pudo copiar'); } });
+  $('b-img').addEventListener('click', enviarImagen);
   document.title = D.tit + ' · Mueler Taller';
   pintarTot();
 }
-leer().then(d => { D = d; render(); }).catch(() => { $('app').innerHTML = `<div class="err"><img class="logo" src="${LOGO}" alt="Mueler Taller" style="margin:0 auto 12px"><b>No se pudo abrir el presupuesto.</b><p class="sub">El link está incompleto. Pedile a Mueler Taller que te lo reenvíe.</p></div>`; });
+leer().then(d => { D = d; D.sec.forEach((s, si) => s.m.forEach((m, mi) => { SEL[si + '.' + mi] = { f: 0, o: {} }; })); render(); }).catch(() => { $('app').innerHTML = `<div class="err"><img class="logo" src="${LOGO}" alt="Mueler Taller" style="margin:0 auto 12px"><b>No se pudo abrir el presupuesto.</b><p class="sub">El link está incompleto. Pedile a Mueler Taller que te lo reenvíe.</p></div>`; });
 </script>
 </body>
 </html>
