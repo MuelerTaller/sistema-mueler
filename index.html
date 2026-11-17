@@ -3014,6 +3014,8 @@ const fCsvP = document.createElement('input'); fCsvP.type = 'file'; fCsvP.accept
 fCsvP.addEventListener('change', () => { const f = fCsvP.files[0]; if (f) cargarCSV(f); fCsvP.value = ''; });
 COMBO_SRC.catprod = () => CAT.map(p => ({ v: p.n, d: p.k }));
 COMBO_SRC.catart = () => CAT.flatMap(p => p.a.filter(a => !a.comp).map(a => ({ v: `${a.c} · ${p.n} · ${a.m}${a.col ? ' · ' + a.col : ''}`, d: '' })));
+// Para agregar a un pedido: también los combos (cajón ollero, Space Tower…); al pedir se abren en sus piezas
+COMBO_SRC.catartp = () => CAT.flatMap(p => p.a.map(a => ({ v: `${a.c} · ${p.n} · ${a.m}${a.col ? ' · ' + a.col : ''}`, d: a.comp ? `combo · ${a.comp.length} piezas` : '' }))).sort((x, y) => (y.d ? 1 : 0) - (x.d ? 1 : 0));
 /* arrastrar y soltar el CSV */
 ['dragenter', 'dragover'].forEach(ev => $('view-proy').addEventListener(ev, e => { const z = e.target.closest && e.target.closest('[data-drop="csv"]'); if (!z) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; z.classList.add('over'); }));
 $('view-proy').addEventListener('dragleave', e => { const z = e.target.closest && e.target.closest('[data-drop="csv"]'); if (z && !z.contains(e.relatedTarget)) z.classList.remove('over'); });
@@ -3253,7 +3255,7 @@ function stockCtl(it, k, T, ed) {
 const ceil5 = x => Math.ceil(N(x) / 5) * 5;
 function editorItemHTML(it, T) {
   const directos = (PED.origen || []).filter(o => o.cod === it.cod).length;
-  if (!directos) return `<tr class="editrow"><td colspan="6"><div class="hint">Este artículo sale de un combo (cajón ollero). Para cambiarlo, cambiá el combo en la ficha del módulo. <button class="btn sm" data-pe="edit-cancel">Cerrar</button></div></td></tr>`;
+  if (!directos) return `<tr class="editrow"><td colspan="6"><div class="hint">${(PED.origen || []).some(o => !o.manual && explotar(o.cod, 1, T).some(y => y.cod === it.cod) && o.cod !== it.cod) ? 'Este artículo sale de un combo (cajón ollero, Space Tower…). Para cambiarlo, cambiá el combo en la ficha del módulo.' : 'Es parte de un combo agregado a mano. Para cambiarlo, quitá el combo abajo en “De dónde sale cada cosa” (×) y agregá el correcto.'} <button class="btn sm" data-pe="edit-cancel">Cerrar</button></div></td></tr>`;
   let campos;
   if (T === 'placas') {
     campos = `<div class="field" style="flex:3 1 300px"><label class="lbl">Placa</label><input type="text" id="pe-ed-placa" data-combo="mats" data-val="${esc(PEDIT.art)}" value="${esc(PEDIT.art)}" placeholder="Escribí para buscar la placa" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="combo-pop" aria-autocomplete="list" aria-label="Placa"></div>`;
@@ -3374,7 +3376,7 @@ function renderPedDet() {
       ${T === 'placas' ? `<div class="field" style="flex:3 1 300px"><label class="lbl">Placa</label><input type="text" id="pe-placa" data-combo="mats" data-val="" value="" placeholder="Escribí para buscar la placa" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="combo-pop" aria-autocomplete="list" aria-label="Placa"></div>` : T === 'cantos' ? `<div class="field" style="flex:2 1 220px"><label class="lbl">Color / material</label><input type="text" id="pe-color" data-combo="mats" data-val="" value="" placeholder="Buscá la melamina · ej: Egger Blanco W954" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="combo-pop" aria-autocomplete="list" aria-label="Melamina del canto"></div>
         <div class="field" style="flex:1 1 120px"><label class="lbl">Medida</label><select id="pe-medida">${MEDIDAS.map(x => `<option>${esc(x)}</option>`).join('')}</select></div>
         <datalist id="dl-mel2">${MELAMINAS().map(x => `<option value="${esc(x)}">`).join('')}</datalist>`
-        : `<div class="field" style="flex:3 1 300px"><label class="lbl">Artículo</label><input type="text" data-combo="catart" id="pe-art" placeholder="Buscá por código o nombre" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="combo-pop"></div>`}
+        : `<div class="field" style="flex:3 1 300px"><label class="lbl">Artículo</label><input type="text" data-combo="catartp" id="pe-art" placeholder="Buscá por código o nombre · ej: ollero, space tower" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="combo-pop"></div>`}
       <div class="field" style="flex:0 1 100px"><label class="lbl">${T === 'cantos' ? 'Metros' : T === 'placas' ? 'Placas' : 'Cantidad'}</label><input type="text" class="n" id="pe-cant" value="1" inputmode="decimal"></div>
       <div class="field" style="flex:1 1 150px"><label class="lbl">Para</label><select id="pe-para">${paraOpts.map(x => `<option>${esc(x)}</option>`).join('')}</select></div>
       <div class="field" style="flex:2 1 180px"><label class="lbl">Comentario</label><input type="text" id="pe-com" placeholder="${T === 'cantos' ? 'Ej: regrueso de mesada' : 'Ej: se rompió una bisagra'}"></div>
@@ -3662,7 +3664,7 @@ $('view-ped').addEventListener('click', async e => {
     else if (T === 'cantos') { const c = $('pe-color').value.trim(); if (!isDef(c)) { toast('Elegí la melamina del canto de la lista.'); return; } cod = `${c}|${$('pe-medida').value}`; }
     else { const v = $('pe-art').value; cod = v.split(' · ')[0]; if (!CATA[cod]) { toast('Elegí un artículo del catálogo.'); return; } }
     if (!(cant > 0)) { toast('Poné la cantidad.'); return; }
-    PED.origen.push({ manual: true, para, cod, cant, com, mid: uid() }); PED.items = consolidar(PED.origen, PED.items, T); savePED(true); renderPedDet(); toast('Agregado al pedido.');
+    PED.origen.push({ manual: true, para, cod, cant, com, mid: uid() }); PED.items = consolidar(PED.origen, PED.items, T); savePED(true); renderPedDet(); { const cx = T === 'herrajes' && CATA[cod] && CATA[cod].a.comp; toast(cx ? `Combo agregado: se pide en sus ${cx.length} piezas (${cx.map(c => typeof c === 'string' ? c : c.c).join(', ')}).` : 'Agregado al pedido.'); }
   }
   if (a === 'stock-usar') { const it = PED.items[+b.dataset.k]; const disp = saldoStock(T, it.cod, PED.id); const q = Math.min(disp, N(it.req)); if (!(q > 0)) return;
     try { await borrarMovs(x => x.ref === PED.id && x.cod === it.cod && x.motivo === 'salida'); await movStock({ tipo: T, cod: it.cod, nombre: it.nombre, cant: -q, motivo: 'salida', ref: PED.id, refNum: numPed(PED), nota: 'Para ' + [...new Set((PED.origen || []).filter(o => explotar(o.cod, 1, T).some(y => y.cod === it.cod)).map(o => o.manual ? (o.para || 'Taller') : `${o.prNum} ${o.modCod}`))].join(' · ') });
