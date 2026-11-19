@@ -3605,13 +3605,25 @@ const fsafePl = s => String(s || '').replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+
 function needExcelJS() { if (!window.ExcelJS) { toast('No se pudo cargar el generador de Excel. Recargá la página.'); return false; } return true; }
 async function xbufBlob(wb) { const b = await wb.xlsx.writeBuffer(); return new Blob([b], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); }
 function hojaNom(wb, s) { let b = String(s || 'Placa').replace(/[\\/?*[\]:]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 28) || 'Placa', n = b, i = 2; while (wb.getWorksheet(n)) n = b.slice(0, 25) + ' ' + i++; return n; }
+/* Nombre corto de la placa para la hoja de clasificar: "Melamina Egger Mdf 18mm R. Kendal Nat. H3170 ST12" → "Kendal 18mm" */
+function placaCorta(n) {
+  const s = String(n || '').trim(); if (!s) return '';
+  const esp = (s.match(/(\d+(?:[.,]\d+)?)\s*mm/i) || s.match(/\b(?:mdf|mdp|aglo)\s+(\d+(?:[.,]\d+)?)\b/i) || s.match(/\s(\d+(?:[.,]\d+)?)$/) || [])[1];
+  const pre = /fibroplus/i.test(s) ? 'Fibroplus ' : /enchapad/i.test(s) ? 'Ench. ' : /fibrof[aá]cil/i.test(s) ? 'Fibrofácil ' : '';
+  const STOP = /^(melamina|mel\.?|eg\.?|egger|faplac|trupan|esj|rauvisio|mdf|mdp|aglo|fibroplus|enchapado|fibrofacil|fibrofácil|placa|de|del|rh|st\d+)$/i;
+  let ws = s.replace(/(\d+(?:[.,]\d+)?)\s*mm/ig, ' ').replace(/\s\d+(?:[.,]\d+)?(?=\s|$)/g, ' ').replace(/\b\d{2,4}\s*-\s*/g, ' ').split(/\s+/).filter(Boolean)
+    .filter(w => !STOP.test(w) && !/\.$/.test(w) && !/\d/.test(w) && w !== '-');
+  ws = ws.slice(0, 3).map(w => w.length <= 2 ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+  const nom = ws.join(' ') || s.slice(0, 20);
+  return (pre + nom + (esp ? ' ' + String(esp).replace(',', '.') + 'mm' : '')).trim();
+}
 async function bajarImprimirPl(p, soloK) {
   if (!needExcelJS()) return; const lista = (p.items || []).map((it, k) => ({ it, k })).filter(x => N(x.it.pedir) > 0 && (soloK == null || x.k === soloK)); const xs = await piezasPedido(p, lista);
   const wb = new ExcelJS.Workbook(); wb.creator = 'Mueler Taller';
   const ws = wb.addWorksheet(hojaNom(wb, 'Pedido ' + numPed(p)));
-  [6.5, 10, 9.7, 30, 14, 3.6, 3.6, 3.6, 3.6].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+  [6.5, 10, 9.7, 32, 23, 3.6, 3.6, 3.6, 3.6].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
   const F = { name: 'Aptos Narrow', size: 11 }, FB = Object.assign({}, F, { bold: true }); const thin = { style: 'thin' }, box = { top: thin, bottom: thin, left: thin, right: thin }; const center = { horizontal: 'center', vertical: 'middle' };
-  const HEAD = ['Cant', 'Longitud', 'Ancho', 'Designación', 'Módulo', 'L1', 'L2', 'A1', 'A2'];
+  const HEAD = ['Cant', 'Longitud', 'Ancho', 'Designación', 'Material', 'L1', 'L2', 'A1', 'A2'];
   let r = 1;
   xs.forEach((x, k) => {
     if (k) r += 2;
@@ -3619,8 +3631,10 @@ async function bajarImprimirPl(p, soloK) {
     t.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8E8E8' } }; r++;
     const h = ws.getRow(r); HEAD.forEach((v, i) => { const c = h.getCell(i + 1); c.value = v; c.font = FB; c.alignment = i <= 2 || i >= 5 ? center : { vertical: 'middle' }; if (i >= 5) c.border = box; }); r++;
     if (!x.piezas.length) { ws.getRow(r).getCell(4).value = 'Placas enteras, sin despiece'; ws.getRow(r).getCell(4).font = F; r++; }
+    const matC = placaCorta(x.it.cod);
     x.piezas.forEach(pz => { const row = ws.getRow(r); const ed = [pz.cantos.sup, pz.cantos.inf, pz.cantos.izq, pz.cantos.der].map(e => (e | 0) || null);
-      [N(pz.cant), N(pz.largo), N(pz.ancho), pz.des0 || pz.desc, pz.mod || '', ...ed].forEach((v, i) => { const c = row.getCell(i + 1); if (v != null && v !== '') c.value = v; c.font = F; c.alignment = i <= 2 || i >= 5 ? center : { vertical: 'middle' }; if (i >= 5) c.border = box; }); r++; });
+      const des = [String(pz.mod || '').replace(/\s+/, '.'), String(pz.des0 || pz.desc || '').replace(/\.\s+/, ' ')].filter(Boolean).join(' ');
+      [N(pz.cant), N(pz.largo), N(pz.ancho), des, matC, ...ed].forEach((v, i) => { const c = row.getCell(i + 1); if (v != null && v !== '') c.value = v; c.font = F; c.alignment = i <= 2 || i >= 5 ? center : i === 3 ? { vertical: 'middle', shrinkToFit: true } : { vertical: 'middle' }; if (i >= 5) c.border = box; }); r++; });
   });
   ws.pageSetup = { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: 0.4, right: 0.4, top: 0.6, bottom: 0.5, header: 0.25, footer: 0.25 } };
   const tit = `Pedido de placas ${numPed(p)} · ${modulosDe(p).map(x => x.n + ' ' + x.ms.join(', ')).join(' · ')}`;
