@@ -3644,7 +3644,7 @@ async function hojaClasificar(sel, tit, fecha, archivo) {
       const des = [pm[0], String(pz.des0 || pz.desc || '').trim().replace(/\.\s*/, '.').replace(/\s+/g, ' ')].filter(Boolean).join('.');
       [N(pz.cant), N(pz.largo), N(pz.ancho), des, pm[1] || '', matC, ...ed].forEach((v, i) => { const c = row.getCell(i + 1); if (v != null && v !== '') c.value = v; c.font = F; c.alignment = cen(i) ? center : i === 3 ? { vertical: 'middle', shrinkToFit: true } : { vertical: 'middle' }; if (i >= 6) c.border = box; }); r++; });
   });
-  ws.pageSetup = { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: 0.4, right: 0.4, top: 0.6, bottom: 0.5, header: 0.25, footer: 0.25 } };
+  ws.pageSetup = { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: 0.7, right: 0.7, top: 0.75, bottom: 0.75, header: 0.3, footer: 0.3 } };
   ws.headerFooter = { oddHeader: '&L&"Aptos Narrow,Bold"' + tit.replace(/&/g, '&&') + '&R' + (fecha || today()), oddFooter: '&CPágina &P de &N' };
   await offer(fsafePl(archivo) + '.xlsx', await xbufBlob(wb));
   return true;
