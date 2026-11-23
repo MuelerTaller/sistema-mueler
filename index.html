@@ -821,27 +821,23 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
     return calc(M2, CFG);
   }
   // ---- Iluminación LED (base Demasled / Mayorled, precios con IVA) ----
-  const LED_DEF = { margen: 10, instCirc: 0, desp: 10, wm: 11, kFuente: 1.2, maxMInterr: 9, maxMTramo: 5,
-    tira: { c: 'TCOB-01WW-24V', n: 'Tira LED COB 24V blanco cálido 3000K · rollo 5 m', p: 22206, rollo: 5 },
-    perfiles: [{ c: 'PER-60-2M', n: 'Perfil aluminio Flat 13×7 opal · barra 2 m', p: 4835, L: 2 }, { c: 'PER-60-2.5M', n: 'Perfil aluminio Flat 13×7 opal · barra 2,5 m', p: 6044, L: 2.5 }],
-    tapa: { c: 'PERACC-60GR', n: 'Kit 2 tapas + 2 clips perfil PER-60', p: 609 },
-    interr: { c: 'SEN-08BL', n: 'Interruptor invisible táctil/proximidad dimerizable 24V', p: 12001 },
+  /* Kit estándar Mueler LED (skill electricista-led-mueler, precios c/IVA 22/11/2026). ver: al subirla, la config guardada vieja se reemplaza (se conservan margen e instalación) */
+  const LED_DEF = { ver: 2, margen: 10, instCirc: 0, desp: 20, wm: 11, kFuente: 1.2, maxMInterr: 9, maxMTramo: 5, corteMm: 3, cableBase: 2, cableAmp075: 3,
+    tira: { c: 'TCOB-01WW-24V', n: 'Tira LED COB 24V blanco cálido 3000K · rollo 5 m', p: 20279, rollo: 5 },
+    perfiles: [{ c: 'PER-60-2.5M', n: 'Perfil aluminio Flat 13×7 opal · barra 2,5 m (trae tapas y clips)', p: 8760, L: 2.5 }],
+    interr: { c: 'SEN-08BL', n: 'Interruptor táctil oculto Ø52 mm 24V (máx. 120 W)', p: 10208 },
+    cable075: { c: 'CAB-2X075', n: 'Cable bipolar 2×0,75 mm²', p: 1200 },
+    cable15: { c: 'CAB-2X15', n: 'Cable bipolar 2×1,5 mm²', p: 1200 },
     fuentes: [
-      { c: 'FAP-35-24V', n: 'Fuente Demasled FAP 24V 36 W interior', w: 36, p: 14505 },
-      { c: 'MAY-24V-60W', n: 'Fuente Mayorled slim 24V 60 W', w: 60, p: 10621 },
-      { c: 'FAP-72-24V', n: 'Fuente Demasled FAP ultra slim 24V 72 W', w: 72, p: 21490 },
-      { c: 'MAY-24V-100W', n: 'Fuente Mayorled slim 24V 100 W', w: 100, p: 14859 },
-      { c: 'FAP-100-24V-S', n: 'Fuente Demasled FAP 24V 108 W', w: 108, p: 23280 },
-      { c: 'MAY-HJG-24V-150W', n: 'Fuente Mayorled slim 24V 150 W', w: 150, p: 20640 },
-      { c: 'FAP-200-24V-S', n: 'Fuente Demasled FAP 24V 204 W', w: 204, p: 35816 },
-      { c: 'MAY-24V-300W', n: 'Fuente Mayorled slim 24V 300 W', w: 300, p: 23292 },
-      { c: 'MAY-24V-400W', n: 'Fuente Mayorled slim 24V 400 W', w: 400, p: 28300 },
-      { c: 'FAX-36-24V', n: 'Fuente Demasled FAX estanca IP67 24V 36 W', w: 36, p: 19699, ip67: true },
-      { c: 'FAX-75-24V', n: 'Fuente Demasled FAX estanca IP67 24V 75 W', w: 75, p: 28653, ip67: true },
+      { c: 'SLIM-60-24V', n: 'Fuente Demasled switching slim 24V 60 W', w: 60, p: 18445 },
+      { c: 'FAP-100-24V-S', n: 'Fuente Demasled FAP-100 24V 108 W', w: 108, p: 23280 },
+      { c: 'FAP-200-24V-S', n: 'Fuente Demasled FAP-200 24V 204 W', w: 204, p: 35816 },
+      { c: 'FAP-300-24V-S', n: 'Fuente Demasled FAP-300 24V 300 W', w: 300, p: 46561 },
+      { c: 'MAY-EXT-24V-60W', n: 'Fuente Mayorled exterior estanca IP67 24V 60 W', w: 60, p: 19520, ip67: true },
       { c: 'FAX-100-24V', n: 'Fuente Demasled FAX estanca IP67 24V 100 W', w: 100, p: 40114, ip67: true },
       { c: 'FAX-150-24V', n: 'Fuente Demasled FAX estanca IP67 24V 151 W', w: 151, p: 50321, ip67: true },
       { c: 'FAX-200-24V', n: 'Fuente Demasled FAX estanca IP67 24V 199 W', w: 199, p: 56231, ip67: true }] };
-  function ledBase(CFG) { const c = CFG && CFG.led; if (!c) return LED_DEF; return Object.assign({}, LED_DEF, c); }
+  function ledBase(CFG) { const c = CFG && CFG.led; if (!c) return LED_DEF; if ((N(c.ver) || 0) < LED_DEF.ver) return Object.assign({}, LED_DEF, { margen: c.margen != null ? c.margen : LED_DEF.margen, instCirc: c.instCirc != null ? c.instCirc : LED_DEF.instCirc }); return Object.assign({}, LED_DEF, c); }
   function fuenteAuto(L, need, humedo) { const ok = L.fuentes.filter(f => N(f.w) >= need && (!humedo || f.ip67)); return ok.sort((a, b) => N(a.p) - N(b.p) || N(a.w) - N(b.w))[0] || null; }
   // Empaqueta piezas (m) en barras de largo L (FFD); las piezas más largas que la barra usan barras enteras + resto
   function barras(piezas, L) { const bins = []; const ps = []; piezas.forEach(p => { let r = p; while (r > L + 1e-9) { bins.push(0); r -= L; } if (r > 1e-9) ps.push(r); }); ps.sort((a, b) => b - a).forEach(p => { const b = bins.findIndex(x => x > 0 && L - x >= p - 1e-9); if (b >= 0) bins[b] += p; else bins.push(p); }); return bins.length; }
@@ -857,17 +853,19 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
       if (m && !fu) out.avisos.push(`${c.nombre || 'Circuito ' + (i + 1)}: ninguna fuente de la lista alcanza ${Math.ceil(need)} W; dividir el circuito.`);
       if (m && sel && N(sel.w) < need) out.avisos.push(`${c.nombre || 'Circuito ' + (i + 1)}: la fuente elegida (${sel.w} W) no alcanza; hacen falta ${Math.ceil(need)} W.`);
       const interr = c.interr !== false; if (m && interr) { nInt++; if (m > N(L.maxMInterr)) out.avisos.push(`${c.nombre || 'Circuito ' + (i + 1)}: ${fmtN(m)} m en un solo interruptor (máx. ${L.maxMInterr} m); dividir en dos circuitos.`); }
-      out.metros += m; out.circuitos.push({ id: c.id, nombre: c.nombre || 'Circuito ' + (i + 1), metros: m, w, need, fuente: fu, auto, interr, tramos: ts.length });
+      const nT = ts.reduce((s2, t) => s2 + N(t.cant), 0), amp = w / 24, cabM = m ? N(L.cableBase) + Math.max(0, nT - 1) : 0, sec = amp > N(L.cableAmp075) ? '1,5' : '0,75';
+      out.metros += m; out.circuitos.push({ id: c.id, nombre: c.nombre || 'Circuito ' + (i + 1), metros: m, w, need, fuente: fu, auto, interr, tramos: ts.length, cable: cabM, seccion: sec, amp });
     });
     if (!out.metros) return out;
     const tm = out.metros * (1 + N(L.desp) / 100), pm = N(L.tira.p) / (N(L.tira.rollo) || 5);
     out.items.push({ c: L.tira.c, n: L.tira.n, cant: Math.round(tm * 100) / 100, u: 'm', p: pm, total: tm * pm, rollos: Math.ceil(out.metros / (N(L.tira.rollo) || 5) - 1e-9) });
-    const opc = L.perfiles.map(pf => { const nb = barras(piezas, N(pf.L)); return { pf, nb, tot: nb * N(pf.p) }; }).sort((a, b) => a.tot - b.tot)[0];
+    const kc = N(L.corteMm) / 1000; const opc = L.perfiles.map(pf => { const nb = barras(piezas.map(x => x + kc), N(pf.L) + kc); return { pf, nb, tot: nb * N(pf.p) }; }).sort((a, b) => a.tot - b.tot)[0];
     if (opc) out.items.push({ c: opc.pf.c, n: opc.pf.n, cant: opc.nb, u: 'u.', p: N(opc.pf.p), total: opc.tot });
-    out.items.push({ c: L.tapa.c, n: L.tapa.n, cant: piezas.length, u: 'u.', p: N(L.tapa.p), total: piezas.length * N(L.tapa.p) });
+    // tapas y clips vienen con el perfil: no se presupuestan
     const fs = {}; out.circuitos.forEach(c => { if (c.fuente) { const k = c.fuente.c; fs[k] = fs[k] || { c: k, n: c.fuente.n, cant: 0, u: 'u.', p: N(c.fuente.p) }; fs[k].cant++; } });
     Object.values(fs).forEach(x => { x.total = x.cant * x.p; out.items.push(x); });
     if (nInt) out.items.push({ c: L.interr.c, n: L.interr.n, cant: nInt, u: 'u.', p: N(L.interr.p), total: nInt * N(L.interr.p) });
+    ['0,75', '1,5'].forEach(sc => { const cm = out.circuitos.filter(c => c.seccion === sc).reduce((s2, c) => s2 + c.cable, 0); const cb = sc === '1,5' ? L.cable15 : L.cable075; if (cm && cb) out.items.push({ c: cb.c, n: cb.n + ' (aprox.)', cant: cm, u: 'm', p: N(cb.p), total: cm * N(cb.p) }); });
     out.costo = out.items.reduce((s, x) => s + x.total, 0); out.margen = N(L.margen);
     out.inst = N(L.instCirc) * out.circuitos.filter(c => c.metros).length;
     out.venta = out.costo * (1 + out.margen / 100) + out.inst;
@@ -1676,7 +1674,7 @@ function secLed(M, R) {
         <button class="x" data-act="led-del-c" data-i="${i}" aria-label="Quitar circuito">✕</button></div>
       <div class="tbox"><table class="t"><thead><tr><th>Dónde va</th><th class="n">Tiras</th><th class="n">Largo c/u (cm)</th><th class="n">Metros</th><th></th></tr></thead><tbody>${filas}</tbody></table></div>
       <div class="row"><button class="btn sm" data-act="led-add-t" data-i="${i}">+ Tramo</button>
-        <span class="note">${rc.metros ? `${fmt(rc.metros, 2)} m · ${fmt(rc.w, 0)} W → fuente de ${Math.ceil(rc.need)} W o más` : 'Cargá los tramos de tira de este encendido.'}</span>
+        <span class="note">${rc.metros ? `${fmt(rc.metros, 2)} m · ${fmt(rc.w, 0)} W → fuente de ${Math.ceil(rc.need)} W o más${rc.cable ? ` · ${fmt(rc.amp, 1)} A · cable ${fmt(rc.cable, 0)} m de 2×${rc.seccion}` : ''}` : 'Cargá los tramos de tira de este encendido.'}</span>
         <div style="min-width:260px">${sel(`led.circuitos.${i}.fuente`, c.fuente || '', fopts(c), { empty: rc.auto ? `Automática: ${rc.auto.n} · ${money(rc.auto.p)}` : 'Automática', label: 'Fuente' })}</div></div></div>`; }).join('');
   const mats = RL.items.length ? `<div class="tbox"><table class="t"><thead><tr><th>Material</th><th>Código</th><th class="n">Cant.</th><th class="n">Precio</th><th class="n">Subtotal</th></tr></thead><tbody>${RL.items.map(x => `<tr><td>${esc(x.n)}${x.rollos ? ` <span class="note">(${fmt(x.cant, 2)} m con ${fmt(L.desp)}% de desperdicio · se compran ${x.rollos} rollo${x.rollos > 1 ? 's' : ''})</span>` : ''}</td><td class="mono">${esc(x.c)}</td><td class="n">${x.u === 'm' ? fmt(x.cant, 2) + ' m' : x.cant}</td><td class="n">${money(x.p)}</td><td class="n">${money(x.total)}</td></tr>`).join('')}</tbody></table></div>
     <span class="note">Costo ${money(RL.costo)} + ${fmt(RL.margen)}%${RL.inst ? ` + instalación ${money(RL.inst)}` : ''} = <b>${money(RL.venta)}</b>. Se suma aparte al mueble, sin recargos del taller. Fuente: metros × ${fmt(L.wm)} W × ${fmt(L.kFuente, 1)}.</span>` : '';
@@ -2398,8 +2396,8 @@ function renderPrecios() {
     `<div class="grid3"><div class="field"><label class="lbl" for="c-comision">Comisión por facturación %</label>${cin('comision', C.comision, { num: 1 })}</div>
      <div class="field"><label class="lbl" for="c-redondeo">Redondeo del precio</label>${sel('redondeo', +C.redondeo, [{ v: 0, t: 'Sin redondeo' }, { v: 1000, t: 'Hacia arriba a $ 1.000' }, { v: 10000, t: 'Hacia arriba a $ 10.000' }, { v: 50000, t: 'Hacia arriba a $ 50.000' }, { v: 100000, t: 'Hacia arriba a $ 100.000' }], { d: 'c', pre: 'c', label: 'Redondeo' })}</div>
      <label class="row" style="gap:6px;align-self:end"><input type="checkbox" id="c-recargoGuias" data-c="recargoGuias" ${C.recargoGuias ? 'checked' : ''}> Aplicar recargo también a las opciones de guías ocultas</label></div>`;
-  if (CTAB === 'led') { if (!C.led) C.led = clone(Calc.LED_DEF); const Ld = C.led;
-    body = `<p class="note" style="margin:0">Base de iluminación LED (Demasled / Mayorled), precios con IVA. Se usa en la sección "Iluminación LED" de cada mueble. Revisar precios antes de presupuestos grandes.</p>
+  if (CTAB === 'led') { if (!C.led || (Calc.N(C.led.ver) || 0) < Calc.LED_DEF.ver) C.led = Object.assign(clone(Calc.LED_DEF), C.led ? { margen: C.led.margen, instCirc: C.led.instCirc } : {}); const Ld = C.led;
+    body = `<p class="note" style="margin:0">Kit estándar Mueler LED 24V (Demasled), precios con IVA. Tapas y clips vienen con el perfil (no se cobran). Cable: 2 m por circuito + 1 m por cada tramo extra; 2×1,5 si pasa los 3 A. Se usa en la sección "Iluminación LED" de cada mueble. Revisar precios antes de presupuestos grandes.</p>
     <div class="grid4"><div class="field"><label class="lbl" for="c-led-margen">Margen sobre materiales %</label>${cin('led.margen', Ld.margen, { num: 1 })}</div>
       <div class="field"><label class="lbl" for="c-led-instCirc">Instalación por circuito $</label>${cin('led.instCirc', Ld.instCirc, { num: 1 })}</div>
       <div class="field"><label class="lbl" for="c-led-desp">Desperdicio de tira %</label>${cin('led.desp', Ld.desp, { num: 1 })}</div>
@@ -2407,9 +2405,9 @@ function renderPrecios() {
       <div class="field"><label class="lbl" for="c-led-kFuente">Margen de fuente (×)</label>${cin('led.kFuente', Ld.kFuente, { num: 1 })}</div>
       <div class="field"><label class="lbl" for="c-led-maxMInterr">Máx. metros por interruptor</label>${cin('led.maxMInterr', Ld.maxMInterr, { num: 1 })}</div>
       <div class="field"><label class="lbl" for="c-led-maxMTramo">Tramo continuo máx. (m)</label>${cin('led.maxMTramo', Ld.maxMTramo, { num: 1 })}</div></div>
-    <h3>Tira, tapas e interruptor</h3><div class="grid3">
+    <h3>Tira, interruptor y cable</h3><div class="grid3">
       <div class="field"><span class="lbl">Tira (rollo)</span>${cin('led.tira.n', Ld.tira.n, { label: 'Tira' })}<div class="row">${cin('led.tira.c', Ld.tira.c, { label: 'Código', style: 'width:140px' })}${cin('led.tira.p', Ld.tira.p, { num: 1, label: 'Precio del rollo', style: 'width:110px' })}${cin('led.tira.rollo', Ld.tira.rollo, { num: 1, label: 'Metros del rollo', style: 'width:60px' })}</div></div>
-      <div class="field"><span class="lbl">Kit tapas y clips (1 por tramo)</span>${cin('led.tapa.n', Ld.tapa.n, { label: 'Tapas' })}<div class="row">${cin('led.tapa.c', Ld.tapa.c, { label: 'Código', style: 'width:140px' })}${cin('led.tapa.p', Ld.tapa.p, { num: 1, label: 'Precio', style: 'width:110px' })}</div></div>
+      <div class="field"><span class="lbl">Cable 2×0,75 (hasta 3 A) · $/m</span>${cin('led.cable075.p', Ld.cable075.p, { num: 1, label: 'Precio por metro cable 2x0,75' })}<span class="lbl">Cable 2×1,5 · $/m</span>${cin('led.cable15.p', Ld.cable15.p, { num: 1, label: 'Precio por metro cable 2x1,5' })}</div>
       <div class="field"><span class="lbl">Interruptor (1 por circuito)</span>${cin('led.interr.n', Ld.interr.n, { label: 'Interruptor' })}<div class="row">${cin('led.interr.c', Ld.interr.c, { label: 'Código', style: 'width:140px' })}${cin('led.interr.p', Ld.interr.p, { num: 1, label: 'Precio', style: 'width:110px' })}</div></div></div>
     <h3>Perfiles (se elige la barra que menos cuesta)</h3>` + tabla('led.perfiles', [{ k: 'n', t: 'Perfil', w: 300 }, { k: 'c', t: 'Código', w: 120 }, { k: 'L', t: 'Barra (m)', num: 1, nw: 70 }, { k: 'p', t: 'Precio barra', num: 1 }], Ld.perfiles) +
     `<h3>Fuentes 24V (se elige la más barata que alcanza)</h3>` + tabla('led.fuentes', [{ k: 'n', t: 'Fuente', w: 300 }, { k: 'c', t: 'Código', w: 130 }, { k: 'w', t: 'Watts', num: 1, nw: 70 }, { k: 'p', t: 'Precio', num: 1 }, { k: 'ip67', t: 'Estanca IP67', chk: 1 }], Ld.fuentes, { note: 'Las estancas se usan solo en circuitos marcados como zona húmeda.' }); }
