@@ -1755,7 +1755,9 @@ function ledFichaHTML(m, b) {
   const pfs = (Calc.ledBase(CFG).perfiles || []);
   const plan = (L.plan || []).length ? `<div class="recuento"><span class="lbl">Corte de perfiles</span>${L.plan.map((x, k) => `<div class="row" style="gap:10px"><span class="mono">Barra ${k + 1} · ${fmt(x.L, 1).replace(',0', '')} m</span><span>${x.piezas.map(v => fmt(v / 10, 1).replace(',0', '') + ' cm').join(' + ')}</span><span class="note">sobra ${fmt(x.sobra / 10, 0)} cm</span></div>`).join('')}<span class="note">Corte de ${fmt(Calc.ledBase(CFG).corteMm)} mm por pieza. Los tramos más largos que la barra se arman con dos barras.</span></div>` : '';
   const tot = L.circuitos.reduce((s, c) => s + N(c.metros), 0);
-  return `<details class="panel fsec" open><summary><h3>5 · Iluminación LED</h3><span class="sum">${fmt(tot, 2)} m · ${L.circuitos.length} circuito${L.circuitos.length > 1 ? 's' : ''}</span></summary>
+  const le = estadoT(m, 'led'); const pedidos = [...new Set((m.ledL || []).filter(h => h.ped && pedDe(h.ped)).map(h => numPed(pedDe(h.ped))))];
+  return `<details class="panel fsec" open><summary><h3>5 · Iluminación LED</h3><div class="row"><span class="sum">${fmt(tot, 2)} m · ${L.circuitos.length} circuito${L.circuitos.length > 1 ? 's' : ''}</span>${chip(le)}</div></summary>
+    ${pedidos.length ? `<div class="hint">Ya está sumado al pedido ${pedidos.join(', ')}. Si cambiás tramos, lo nuevo queda para sumar aparte; lo pedido no se toca.</div>` : ''}
     ${csvLeds ? `<div class="hint">El CSV definitivo trae ${F.R.leds.reduce((s, l) => s + N(l.cant), 0)} tramos de LED. ${L.desdeCSV ? 'Los tramos de abajo salen del CSV.' : 'Los tramos de abajo vienen del presupuesto.'} <button class="btn sm" data-pa="led-csv">${L.desdeCSV ? 'Volver a tomar del CSV' : 'Tomar los tramos del CSV'}</button></div>` : ''}
     ${(L.avisos || []).length ? `<div class="alert"><ul>${L.avisos.map(a => `<li>${esc(a)}</li>`).join('')}</ul></div>` : ''}
     ${cards}
@@ -1763,7 +1765,7 @@ function ledFichaHTML(m, b) {
       <label class="row" style="gap:6px"><span class="lbl">Perfiles</span><select data-pl="led.barra" aria-label="Barras de perfil"><option value="auto" ${!L.barra || L.barra === 'auto' ? 'selected' : ''}>Automático (mezcla 2 m y 2,5 m, lo más barato)</option>${pfs.map(pf => `<option value="${esc(pf.c)}" ${L.barra === pf.c ? 'selected' : ''}>Solo barras de ${fmt(N(pf.L), 1).replace(',0', '')} m</option>`).join('')}</select></label></div>
     <div class="tbox"><table class="t hert"><thead><tr><th>Material LED</th><th>Código</th><th class="n">Cantidad</th></tr></thead><tbody>${(L.items || []).map(x => `<tr><td>${esc(x.n)}</td><td class="mono">${esc(x.c)}</td><td class="n">${x.rollos ? `${x.rollos} rollo${x.rollos > 1 ? 's' : ''} <span class="note">(${fmt(x.cant, 2)} m)</span>` : (x.u === 'm' ? fmt(x.cant, 0) + ' m' : x.cant)}</td></tr>`).join('')}</tbody></table></div>
     ${plan}
-    <span class="note">Se recalcula con la base LED de Configuración. Tira COB 24V: la fuente tiene que ser de 24V. Se pide a Demasled (fuera del pedido de All Sur).</span></details>`;
+    <span class="note">Se recalcula con la base LED de Configuración. Tira COB 24V: la fuente tiene que ser de 24V. Cuando el diseño está <b>Listo</b>, estos materiales pasan a Compras › LED (pedido L-n a Demasled).</span></details>`;
 }
 function secMec(M, R) {
   const items = PC().mecanizados;
@@ -2149,7 +2151,7 @@ function moverSector(id, dest) {
   toast(`${M.cod} pasó a ${nom}${mov.length > 1 ? ` con ${mov.length - 1} opción${mov.length > 2 ? 'es' : ''}` : ''}.${choca ? ` Ya había un ${antes} ahí: quedó como ${M.cod}.` : ''}`);
   if (/^Sector \d+$/.test(nom)) setTimeout(() => { const n = $('s-nombre'); if (n) { n.focus(); n.select(); } }, 50);
 }
-function siguienteCod() { const ns = Object.values(MS).filter(M => M.sector === SECT).map(M => { const m = String(M.cod || '').match(/^M\s*0*(\d+)/i); return m ? +m[1] : 0; }); return 'M' + String((ns.length ? Math.max(...ns) : 0) + 1).padStart(2, '0'); }
+function siguienteCod() { const ns = Object.values(MS).filter(M => !M.opcionDe).map(M => { const m = String(M.cod || '').match(/^M\s*0*(\d+)/i); return m ? +m[1] : 0; }); return 'M' + String((ns.length ? Math.max(...ns) : 0) + 1).padStart(2, '0'); }
 
 /* ---------------- Importar CSV ---------------- */
 let CSV_MODE = { mode: 'add' };
@@ -2164,6 +2166,7 @@ async function importarCSVs(files, mode) {
     const nuevo = Builder.desdeOCL(R, PC(), text);
     if (mode.mode === 'replace' && MS[mode.mid]) { MS[mode.mid] = reemplazar(MS[mode.mid], nuevo); touch(mode.mid); ok++; toast('CSV reemplazado: placas y cortes recalculados'); continue; }
     nuevo.sector = SECT;
+    { const fc = String(f.name || '').match(/^\s*M\s*0*(\d+[A-Z]?)/i); if (fc) nuevo.cod = 'M' + fc[1].toUpperCase().padStart(2, '0'); } // el código del archivo manda (M06-RACK TV.csv → M06)
     const igual = Object.values(MS).find(M => nuevo.cod && M.sector === SECT && M.cod === nuevo.cod);
     if (igual) {
       const r = await preguntar(`Ya existe ${esc(nuevo.cod)}`, `El sector ${esc(sectorDe(SECT).nombre || '')} ya tiene un mueble ${esc(nuevo.cod)}. ¿Querés reemplazar su CSV (se mantienen tus ajustes de herrajes, textos y precios de venta) o agregarlo como mueble nuevo?`, ['Cancelar', 'Agregar como nuevo', `Reemplazar CSV de ${nuevo.cod}`]);
@@ -2701,22 +2704,39 @@ function lineaDesde(art, cant, com, linea) {
   return { hid: uid(), prod: p.c, marca: m, cod: artsDe(p, m)[0].c, art: '', cant, com };
 }
 const CATH = []; CAT.forEach(p => { marcasDe(p).forEach(m => { const pr = precioMarca(p, m); CATH.push({ n: nomCat(p, m), p: pr, cat: 'ALL SUR · ' + p.k, allsur: true, acc: p.k === 'Accesorios', kitRef: (() => { const a = artsDe(p, m).find(x => x.kit); const r = a && CATA[a.kit]; return r ? N(r.a.p) : null; })(), guia: /Guías ocultas/.test(p.k) }); }); });
-function lineaTxt(h) { const p = CATP[h.prod]; if (!p) return h.art || '—'; const a = CATA[h.cod]; return `${p.n} · ${h.marca}${a && a.a.col ? ' · ' + a.a.col : ''}`; }
+function lineaTxt(h) { const p = CATP[h.prod]; if (!p) return h.art || h.n || '—'; const a = CATA[h.cod]; return `${p.n} · ${h.marca}${a && a.a.col ? ' · ' + a.a.col : ''}`; }
 /* ---- Líneas de pedido (herrajes y cantos) ---- */
-const TIPOS = { herrajes: { t: 'Herrajes', pre: 'H', prov: 'All Sur', u: 'u.' }, cantos: { t: 'Cantos', pre: 'C', prov: 'Del Carril', u: 'm' }, placas: { t: 'Madera', pre: 'P', prov: 'Dilegno', u: 'placas' } };
+const TIPOS = { herrajes: { t: 'Herrajes', pre: 'H', prov: 'All Sur', u: 'u.' }, led: { t: 'LED', pre: 'L', prov: 'Demasled', u: 'u.' }, cantos: { t: 'Cantos', pre: 'C', prov: 'Del Carril', u: 'm' }, placas: { t: 'Madera', pre: 'P', prov: 'Dilegno', u: 'placas' } };
 const PROV_TALLER = 'Taller (stock)';
+const PROVS_LED = ['Demasled', 'Mayorled'];
+const tLow = T => T === 'led' ? 'LED' : TIPOS[T].t.toLowerCase();
+const SIMPLE = T => T === 'herrajes' || T === 'led'; // un solo proveedor por pedido: En armado → Pedido → Recibido
+// Artículos LED (de la base LED de Configuración), para pedidos y stock
+function ledArts() { const L = Calc.ledBase(CFG); return [Object.assign({}, L.tira, { u: 'm', p: N(L.tira.p) / (N(L.tira.rollo) || 5), rollo: N(L.tira.rollo) || 5 }), ...(L.perfiles || []).map(x => Object.assign({}, x, { u: 'u.' })), ...(L.fuentes || []).map(x => Object.assign({}, x, { u: 'u.' })), Object.assign({}, L.interr, { u: 'u.' }), Object.assign({}, L.cable075, { u: 'm' }), Object.assign({}, L.cable15, { u: 'm' })].filter(x => x && x.c); }
+const ledArt = cod => ledArts().find(x => x.c === cod);
+function ledPedir(it) { const a = ledArt(it.cod); const q = N(it.req); if (a && a.rollo) return Math.ceil(q / a.rollo - 1e-9) * a.rollo; if (a && a.u === 'm') return Math.ceil(q - 1e-9); return Math.ceil(q - 1e-9); }
+const ledRollos = it => { const a = ledArt(it.cod); return a && a.rollo && N(it.pedir) ? ` <span class="note">= ${fmt(N(it.pedir) / a.rollo, 1).replace(',0', '')} rollo${N(it.pedir) / a.rollo > 1 ? 's' : ''}</span>` : ''; };
+// Líneas LED del módulo (salen de los materiales LED de la ficha). Lo ya sumado a un pedido no se toca.
+function ledLineas(m) {
+  const its = (m.led && m.led.items) || []; const prev = m.ledL || [];
+  if (!its.length && !prev.length) return prev;
+  const out = its.map(x => { const hid = m.id + '·' + x.c; const pv = prev.find(h => h.hid === hid); if (pv && pv.ped && pedDe(pv.ped)) return pv; return { hid, cod: x.c, n: x.n, u: x.u, cant: x.u === 'm' ? Math.round(N(x.cant) * 100) / 100 : N(x.cant), com: pv ? pv.com || '' : '' }; });
+  prev.filter(h => h.ped && pedDe(h.ped) && !out.some(o => o.hid === h.hid)).forEach(h => out.push(h));
+  m.ledL = out; return out;
+}
 const PROVS_PLACA = ['Dilegno', 'Alnora', 'Trumar', 'Dac Maderas', PROV_TALLER];
 const esTaller = pv => pv === PROV_TALLER;
 const PROVS_CANTO = ['Del Carril', 'Dilegno', 'Alnora', 'Dac Maderas'];
 const MEDIDAS = ['0,45x22', '0,45x45', '0,45x50', '2x22', '2x45', 'Enchapado 22', 'Enchapado 45'];
 const tipoDe = p => p.tipo || 'herrajes';
 const numPed = p => `${TIPOS[tipoDe(p)].pre}-${p.num}`;
-const lineasDe = (m, T) => (T === 'cantos' ? m.cantos : T === 'placas' ? m.placasL : m.herrajes) || [];
-const lineaOK = (h, T) => T === 'placas' ? !!(h.art && isDef(h.art) && N(h.cant) > 0) : T === 'cantos' ? !!(isDef(String(h.color || '').trim()) && h.medida && N(h.m) > 0) : !!(h.prod && h.cod && N(h.cant) > 0);
+const lineasDe = (m, T) => (T === 'led' ? ledLineas(m) : T === 'cantos' ? m.cantos : T === 'placas' ? m.placasL : m.herrajes) || [];
+const lineaOK = (h, T) => T === 'led' ? !!(h.cod && N(h.cant) > 0) : T === 'placas' ? !!(h.art && isDef(h.art) && N(h.cant) > 0) : T === 'cantos' ? !!(isDef(String(h.color || '').trim()) && h.medida && N(h.m) > 0) : !!(h.prod && h.cod && N(h.cant) > 0);
 const lineaCod = (h, T) => T === 'placas' ? h.art : T === 'cantos' ? `${String(h.color || '').trim()}|${h.medida}` : h.cod;
 const lineaCant = (h, T) => T === 'cantos' ? N(h.m) : N(h.cant);
 function explotar(cod, cant, T) { if (T === 'cantos') return [{ cod, cant }]; const x = CATA[cod]; if (x && x.a.comp) return x.a.comp.map(c => typeof c === 'string' ? { cod: c, cant } : { cod: c.c, cant: cant * (+c.q || 1) }); return [{ cod, cant }]; }
 function itemInfo(cod, T) {
+  if (T === 'led') { const a = ledArt(cod); return { nombre: a ? a.n : cod, prod: '', marca: '', col: '', precio: a ? N(a.p) : 0, u: a ? a.u : 'u.' }; }
   if (T === 'placas') { const pl = (CFG.placas || []).find(x => x.n === cod); return { nombre: cod, prod: '', marca: '', col: '', precio: pl ? N(pl.p) : 0 }; }
   if (T === 'cantos') { const [c, md] = String(cod).split('|'); return { nombre: `Canto ${c} ${md}`, prod: '', marca: '', col: '', precio: 0 }; }
   const x = CATA[cod]; return x ? { nombre: x.a.n, prod: x.p.n, marca: x.a.m, col: x.a.col || '', precio: +x.a.p || 0 } : { nombre: cod, prod: '', marca: '', col: '', precio: 0 };
@@ -2742,7 +2762,7 @@ function estadoT(m, T) {
   const all = lineasDe(m, T), ls = all.filter(h => lineaOK(h, T));
   { const fz = fueraDe(m, T); if (fz && !all.some(h => h.ped && pedDe(h.ped))) return Object.assign({}, FUERA_T[fz]); }
   if (T === 'placas' && !m.csv) return { t: 'Sin CSV', c: 'e0' };
-  if (!ls.length) return { t: all.length ? (T === 'herrajes' ? 'Falta catálogo' : T === 'placas' ? 'Definir placa' : 'Falta definir') : (T === 'cantos' ? 'Sin cantos' : T === 'placas' ? 'Sin placas' : 'Sin herrajes'), c: all.length ? 'e2' : 'e0' };
+  if (!ls.length) return { t: all.length ? (T === 'herrajes' ? 'Falta catálogo' : T === 'placas' ? 'Definir placa' : 'Falta definir') : (T === 'cantos' ? 'Sin cantos' : T === 'placas' ? 'Sin placas' : T === 'led' ? 'Sin LED' : 'Sin herrajes'), c: all.length ? 'e2' : 'e0' };
   const est = ls.map(h => lineaEst(h, T)); const pend = est.filter(x => !x).length;
   if (pend === ls.length) return m.estDiseno === 'Listo' ? { t: 'Para pedir', c: 'e2' } : { t: 'Sin pedir', c: 'e0' };
   const ord = ['En armado', 'Pedido', 'Faltante', 'Cortar en taller', 'En taller', 'Cortada']; const peor = est.filter(Boolean).sort((a, b) => ord.findIndex(o => a.t.startsWith(o)) - ord.findIndex(o => b.t.startsWith(o)))[0];
@@ -2848,7 +2868,7 @@ function renderProy() { if (PR) renderProyDet(); else renderProyLista(); }
 function resumenProy(p) {
   const ms = p.modulos || []; const c = k => ms.filter(m => m[k] === EST[k].l[EST[k].l.length - 1]).length;
   const en = T => ms.filter(m => ['En taller', 'De stock'].includes(estadoT(m, T).t)).length;
-  const para = ms.filter(m => ['herrajes', 'cantos', 'placas'].some(T => estadoT(m, T).t === 'Para pedir')).length;
+  const para = ms.filter(m => ['herrajes', 'cantos', 'placas', 'led'].some(T => estadoT(m, T).t === 'Para pedir')).length;
   return { n: ms.length, dis: c('estDiseno'), mad: en('placas'), her: en('herrajes'), can: en('cantos'), para, arm: c('estArmado'), ins: c('estInstal') };
 }
 function renderProyLista() {
@@ -2883,8 +2903,8 @@ const pin = (path, val, o = {}) => `<input type="text" data-pf="${esc(path)}" va
 const psel = (path, val, opts, o = {}) => { const has = opts.some(x => (x.v ?? x) === val); return `<select data-pf="${esc(path)}" class="${o.cls || ''}" aria-label="${esc(o.label || path)}" ${o.dis ? 'disabled' : ''}>${val && !has ? `<option selected>${esc(val)}</option>` : ''}${opts.map(x => { const v = x.v ?? x, t = x.t ?? x; return `<option value="${esc(v)}" ${v === val ? 'selected' : ''}>${esc(t)}</option>`; }).join('')}</select>`; };
 function renderProyDet() {
   const v = $('view-proy'); const p = PR; const ms = p.modulos || [];
-  const secs = [...new Set(ms.map(m => m.sector))];
-  const para = ms.filter(m => ['herrajes', 'cantos', 'placas'].some(T => estadoT(m, T).t === 'Para pedir')).length;
+  const secs = [...new Set(ms.map(m => m.sector))]; const hayLed = ms.some(m => ((m.led || {}).circuitos || []).length);
+  const para = ms.filter(m => ['herrajes', 'cantos', 'placas', 'led'].some(T => estadoT(m, T).t === 'Para pedir')).length;
   const selE = (m, i, k) => `<td>${psel(`modulos.${i}.${k}`, m[k], EST[k].l, { cls: 'est ' + estCls(k, m[k]), label: EST[k].t + ' ' + (m.cod || '') })}</td>`;
   v.innerHTML = `<div class="row stickhead" style="justify-content:space-between"><div class="row"><button class="btn" data-pa="volver">← Proyectos</button><h2 id="pr-tit">Proyecto ${esc(p.num)} · ${esc(p.obra || '')}</h2></div>
       ${para ? `<button class="btn primary" data-pa="ir-compras">${para} módulo${para === 1 ? '' : 's'} listo${para === 1 ? '' : 's'} para pedir →</button>` : ''}</div>
@@ -2898,11 +2918,11 @@ function renderProyDet() {
     </div>
     <div class="panel"><header><h2>Tablero de módulos</h2><div class="row"><span class="note">Tocá un módulo para abrir su ficha.</span><button class="btn sm" data-pa="mod-csv">+ Módulos desde CSV</button><button class="btn sm" data-pa="mod-mano">+ Módulo a mano</button>${(p.modulos || []).length ? '<button class="btn sm" data-pa="fuera">Ya pedido por fuera…</button>' : ''}</div></header>
     ${!(p.modulos || []).length ? '<div class="empty"><b>Este proyecto todavía no tiene módulos.</b><span>Cargá los CSV de OpenCutList (uno por módulo: M01, M02…) o agregalos a mano.</span></div>' : ''}
-    <div class="tbox"><table class="t prt"><thead><tr><th>Módulo</th><th>Materiales</th><th>Diseño</th><th>Madera</th><th>Cantos</th><th>Herrajes</th><th>Armado</th><th>Instalación</th></tr></thead><tbody>
-    ${secs.map(s => `${secs.length > 1 || s ? `<tr class="secrow"><td colspan="8">${esc(s || 'Sin sector')}</td></tr>` : ''}${ms.map((m, i) => m.sector !== s ? '' : `<tr class="click ${PSEL === m.id ? 'sel' : ''}" data-pa="mod" data-id="${esc(m.id)}">
+    <div class="tbox"><table class="t prt"><thead><tr><th>Módulo</th><th>Materiales</th><th>Diseño</th><th>Madera</th><th>Cantos</th><th>Herrajes</th>${hayLed ? '<th>LED</th>' : ''}<th>Armado</th><th>Instalación</th></tr></thead><tbody>
+    ${secs.map(s => `${secs.length > 1 || s ? `<tr class="secrow"><td colspan="${hayLed ? 9 : 8}">${esc(s || 'Sin sector')}</td></tr>` : ''}${ms.map((m, i) => m.sector !== s ? '' : `<tr class="click ${PSEL === m.id ? 'sel' : ''}" data-pa="mod" data-id="${esc(m.id)}">
       <td><b>${esc(m.cod || '—')}</b> ${esc(m.desc || '')}${m.opcion ? ` <span class="tag op">Opción</span>` : ''}${m.csv ? ' <span class="tag">CSV</span>' : ''}</td>
       <td><div class="mat"><span>${esc(m.frenteDef || m.frenteTipo || '—')}${m.frenteDef && !isDef(m.frenteDef) ? ' <span class="chip e2">definir</span>' : ''}</span><span class="note">${esc([m.estrDef || m.estrTipo, m.canto, m.agarre].filter(Boolean).join(' · '))}</span></div></td>
-      ${selE(m, i, 'estDiseno')}<td>${chip(estadoT(m, 'placas'))}</td><td>${chip(estadoT(m, 'cantos'))}</td><td>${chip(estadoT(m, 'herrajes'))}</td>${selE(m, i, 'estArmado')}${selE(m, i, 'estInstal')}</tr>`).join('')}`).join('')}
+      ${selE(m, i, 'estDiseno')}<td>${chip(estadoT(m, 'placas'))}</td><td>${chip(estadoT(m, 'cantos'))}</td><td>${chip(estadoT(m, 'herrajes'))}</td>${hayLed ? `<td>${chip(estadoT(m, 'led'))}</td>` : ''}${selE(m, i, 'estArmado')}${selE(m, i, 'estInstal')}</tr>`).join('')}`).join('')}
     </tbody></table></div></div>
     <div id="pr-ficha"></div>
     <div class="panel"><header><h2>Notas del proyecto</h2></header><textarea data-pf="notas" rows="2" aria-label="Notas del proyecto">${esc(p.notas || '')}</textarea></div>
@@ -3117,6 +3137,7 @@ fCsvP.addEventListener('change', () => { const f = fCsvP.files[0]; if (f) cargar
 COMBO_SRC.catprod = () => CAT.map(p => ({ v: p.n, d: p.k }));
 COMBO_SRC.catart = () => CAT.flatMap(p => p.a.filter(a => !a.comp).map(a => ({ v: `${a.c} · ${p.n} · ${a.m}${a.col ? ' · ' + a.col : ''}`, d: '' })));
 // Para agregar a un pedido: también los combos (cajón ollero, Space Tower…); al pedir se abren en sus piezas
+COMBO_SRC.ledart = () => ledArts().map(a => ({ v: `${a.c} · ${a.n}`, d: money(a.p) + (a.u === 'm' ? ' / m' : '') }));
 COMBO_SRC.catartp = () => CAT.flatMap(p => p.a.map(a => ({ v: `${a.c} · ${p.n} · ${a.m}${a.col ? ' · ' + a.col : ''}`, d: a.comp ? `combo · ${a.comp.length} piezas` : '' }))).sort((x, y) => (y.d ? 1 : 0) - (x.d ? 1 : 0));
 /* arrastrar y soltar el CSV */
 ['dragenter', 'dragover'].forEach(ev => $('view-proy').addEventListener(ev, e => { const z = e.target.closest && e.target.closest('[data-drop="csv"]'); if (!z) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; z.classList.add('over'); }));
@@ -3191,12 +3212,13 @@ function porPedir(T) {
   return out;
 }
 function pendientesDef(T) { let n = 0; PROYS.forEach(p => (p.modulos || []).forEach(m => { if (normEst('estDiseno', m.estDiseno) !== 'Listo' && !fueraDe(m, T) && lineasDe(m, T).some(h => lineaOK(h, T) && !h.ped)) n++; })); return n; }
-function updTabs() { const el = $('tab-ped'); if (!el) return; const n = porPedir('herrajes').length + porPedir('cantos').length + porPedir('placas').length; el.innerHTML = 'Compras' + (n ? ` <span class="dot" title="${n} para sumar a un pedido"></span>` : ''); }
+function updTabs() { const el = $('tab-ped'); if (!el) return; const n = porPedir('herrajes').length + porPedir('cantos').length + porPedir('placas').length + porPedir('led').length; el.innerHTML = 'Compras' + (n ? ` <span class="dot" title="${n} para sumar a un pedido"></span>` : ''); }
 function consolidar(origen, prev, T) {
   prev = prev || []; const map = new Map();
   origen.forEach(o => explotar(o.cod, o.cant, T).forEach(x => { const it = map.get(x.cod) || Object.assign({ cod: x.cod, req: 0 }, itemInfo(x.cod, T)); it.req += x.cant; map.set(x.cod, it); }));
   if (T === 'placas' || T === 'herrajes') map.forEach(it => { it.req = Math.ceil(it.req - 1e-6); });
-  return [...map.values()].map(it => { const pv = prev.find(x => x.cod === it.cod); if (T === 'placas' && pv && pv.opt) it.opt = pv.opt; if (pv && pv.pedirEd && T !== 'placas') { it.pedir = pv.pedir; it.pedirEd = true; } else it.pedir = Math.max(0, it.req - (T === 'placas' && pv ? N(pv.deStock) : 0)); ['recib', 'precioF', 'deStock', 'prov', 'nroProv', 'provOtro', 'est', 'fPedido', 'presu', 'fConf', 'factNum', 'fRecib', 'modo', 'sinCantos', 'factAdj'].forEach(k => { if (pv && pv[k] != null) it[k] = pv[k]; }); return it; });
+  if (T === 'led') map.forEach(it => { it.req = it.u === 'm' ? Math.round(it.req * 100) / 100 : Math.ceil(it.req - 1e-6); });
+  return [...map.values()].map(it => { const pv = prev.find(x => x.cod === it.cod); if (T === 'placas' && pv && pv.opt) it.opt = pv.opt; if (pv && pv.pedirEd && T !== 'placas') { it.pedir = pv.pedir; it.pedirEd = true; } else it.pedir = T === 'led' ? (pv && N(pv.deStock) >= it.req ? 0 : ledPedir(it)) : Math.max(0, it.req - (T === 'placas' && pv ? N(pv.deStock) : 0)); ['recib', 'precioF', 'deStock', 'prov', 'nroProv', 'provOtro', 'est', 'fPedido', 'presu', 'fConf', 'factNum', 'fRecib', 'modo', 'sinCantos', 'factAdj'].forEach(k => { if (pv && pv[k] != null) it[k] = pv[k]; }); return it; });
 }
 async function conProyecto(prId, fn) {
   const base = PR && PR.id === prId ? PR : PROYS.find(p => p.id === prId); if (!base) return;
@@ -3232,10 +3254,10 @@ function renderCompras() {
     : `<tr><td>${esc(lineaTxt(h))} <span class="note mono">${esc(h.cod)}</span></td><td class="n" style="width:90px"><input type="text" class="n q" data-ed="${esc(x.p.id)}|${esc(x.m.id)}|${esc(h.hid)}|cant" value="${esc(h.cant)}" aria-label="Cantidad"></td><td class="note">${esc(h.com || '')}</td></tr>`;
   v.innerHTML = `<div class="row stickhead" style="justify-content:space-between"><div class="row"><h2>Compras</h2>
       <div class="seg" role="tablist">${Object.entries(TIPOS).map(([k, x]) => `<button data-pe="tipo" data-v="${k}" aria-pressed="${T === k}">${x.t}${cnt(k) ? ` · ${cnt(k)}` : ''}</button>`).join('')}</div></div>
-      <span class="note">${T === 'herrajes' ? 'Proveedor: All Sur' : T === 'placas' ? 'El proveedor se elige por placa dentro del pedido' : 'El proveedor se elige por canto dentro del pedido'}</span></div>
+      <span class="note">${T === 'herrajes' ? 'Proveedor: All Sur' : T === 'led' ? 'Proveedor: Demasled · tira, perfiles, fuentes, interruptores y cable' : T === 'placas' ? 'El proveedor se elige por placa dentro del pedido' : 'El proveedor se elige por canto dentro del pedido'}</span></div>
     ${T === 'placas' ? `<div class="seg segbig" role="tablist"><button data-pe="mvista" data-v="pedir" aria-pressed="${MVISTA === 'pedir'}">Por pedir${pp.length + carts.reduce((s2, c) => s2 + (c.items || []).length, 0) ? ` · ${pp.length + carts.reduce((s2, c) => s2 + (c.items || []).length, 0)}` : ''}</button><button data-pe="mvista" data-v="seg" aria-pressed="${MVISTA === 'seg'}">Pedida y en taller</button><button data-pe="mvista" data-v="cortar" aria-pressed="${MVISTA === 'cortar'}">Cortar en taller${paraCortar().length ? ' · ' + paraCortar().length : ''}</button></div>` : ''}
     ${T !== 'placas' || MVISTA === 'pedir' ? `
-    ${carts.length > 1 ? `<div class="alert">Hay ${carts.length} pedidos de ${TIPOS[T].t.toLowerCase()} en armado (${carts.map(numPed).join(', ')}). <button class="btn sm primary" data-pe="unir">Unirlos en ${numPed(carts[0])}</button> <span class="note">Los dos se ven abajo; al unirlos queda uno solo con todo.</span></div>` : ''}
+    ${carts.length > 1 ? `<div class="alert">Hay ${carts.length} pedidos de ${tLow(T)} en armado (${carts.map(numPed).join(', ')}). <button class="btn sm primary" data-pe="unir">Unirlos en ${numPed(carts[0])}</button> <span class="note">Los dos se ven abajo; al unirlos queda uno solo con todo.</span></div>` : ''}
     <div class="panel cartp"><header><h2>Pedido en armado</h2>${cart ? chip(ESTPED.borrador) : ''}</header>
       ${cart ? carts.map((cart, ci) => `<button class="cartcard" data-pe="abrir" data-id="${esc(cart.id)}"${ci ? ' style="margin-top:8px"' : ''}><span class="num">${esc(numPed(cart))}</span>
         <span style="display:grid;gap:2px;min-width:0"><span class="t">${(cart.items || []).length} artículo${(cart.items || []).length === 1 ? '' : 's'} · ${fmt((cart.items || []).reduce((s, it) => s + N(it.pedir), 0))} ${u}</span>
@@ -3249,7 +3271,7 @@ function renderCompras() {
       ${pp.length ? `<div class="pplist2">${Object.values(grp).map(g => `<div class="ppgrp"><div class="lbl">Proyecto ${esc(g.p.num)} · ${esc(g.p.obra || '')}</div>${g.ms.map(x => `<details class="ppmod"><summary><span><b>${esc(x.m.cod)}</b> ${esc(x.m.desc || '')}</span><span class="note">${x.ls.length} línea${x.ls.length === 1 ? '' : 's'}${T === 'cantos' ? ' · ' + fmt(x.ls.reduce((s, h) => s + N(h.m), 0)) + ' m' : ''}</span><span class="row" style="gap:6px;flex-wrap:nowrap"><button class="btn sm ghost" data-pe="fuera1" data-id="${esc(g.p.id)}|${esc(x.m.id)}" title="Ya lo pediste antes de usar el sistema: no se suma a ningún pedido">Ya pedido por fuera</button><button class="btn sm" data-pe="sumar" data-id="${esc(g.p.id)}|${esc(x.m.id)}">Sumar al pedido</button></span></summary>
           <div class="tbox"><table class="t"><tbody>${x.ls.map(h => lineaEd(x, h)).join('')}</tbody></table></div>
           <div class="row"><button class="btn sm ghost" data-pe="ficha" data-id="${esc(g.p.id)}|${esc(x.m.id)}">Abrir la ficha para agregar o cambiar →</button></div></details>`).join('')}</div>`).join('')}</div>`
-        : `<p class="note" style="margin:0">Nada para sumar. ${pendientesDef(T) ? `Hay ${pendientesDef(T)} módulo${pendientesDef(T) === 1 ? '' : 's'} con ${TIPOS[T].t.toLowerCase()} cargados pero el diseño todavía no está en Listo.` : 'Cuando un módulo pase a diseño Listo, aparece acá.'}</p>`}</div>
+        : `<p class="note" style="margin:0">Nada para sumar. ${pendientesDef(T) ? `Hay ${pendientesDef(T)} módulo${pendientesDef(T) === 1 ? '' : 's'} con ${tLow(T)} cargados pero el diseño todavía no está en Listo.` : 'Cuando un módulo pase a diseño Listo, aparece acá.'}</p>`}</div>
     ` : ''}
     ${T === 'placas' && MVISTA === 'seg' ? maderaSegHTML() : ''}
     ${T === 'placas' && MVISTA === 'cortar' ? cortarHTML() : ''}
@@ -3257,8 +3279,8 @@ function renderCompras() {
     ${stockPanel(T)}
     <div class="panel"><header><h2>Pedidos hechos</h2></header>
       ${hist.length ? `<div class="list">${hist.map(p => { const pr = [...new Set((p.origen || []).filter(o => !o.manual).map(o => o.prNum))]; const it = (p.items || []).length; return `<button class="pcard pedcard" data-pe="abrir" data-id="${esc(p.id)}"><span class="num">${esc(numPed(p))}</span>
-        <span style="display:grid;gap:2px;min-width:0"><span class="t">${T !== 'herrajes' ? provsPedTxt(p) : esc(p.prov || TIPOS[T].prov) + (p.nroProv ? ' · Nº ' + esc(p.nroProv) : '')} · pedido ${esc(p.fEnviado || '—')} · ${it} artículo${it === 1 ? '' : 's'}</span><span class="s">${modulosDe(p).map(x => esc(x.n) + ' ' + x.ms.map(esc).join(', ')).join(' · ') || 'Taller'}${p.estado === 'recibido' ? ' · recibido ' + esc(p.fRecibido || '') : ''}</span></span>
-        ${chip(T !== 'herrajes' ? estPl(p) : p.estado === 'recibido' && (p.items || []).some(x => x.recib != null && N(x.recib) < N(x.pedir)) ? { t: 'Recibido con faltantes', c: 'e2' } : ESTPED[p.estado])}</button>`; }).join('')}</div>` : '<p class="note" style="margin:0">Todavía no se envió ningún pedido.</p>'}</div>` : ''}`;
+        <span style="display:grid;gap:2px;min-width:0"><span class="t">${!SIMPLE(T) ? provsPedTxt(p) : esc(p.prov || TIPOS[T].prov) + (p.nroProv ? ' · Nº ' + esc(p.nroProv) : '')} · pedido ${esc(p.fEnviado || '—')} · ${it} artículo${it === 1 ? '' : 's'}</span><span class="s">${modulosDe(p).map(x => esc(x.n) + ' ' + x.ms.map(esc).join(', ')).join(' · ') || 'Taller'}${p.estado === 'recibido' ? ' · recibido ' + esc(p.fRecibido || '') : ''}</span></span>
+        ${chip(!SIMPLE(T) ? estPl(p) : p.estado === 'recibido' && (p.items || []).some(x => x.recib != null && N(x.recib) < N(x.pedir)) ? { t: 'Recibido con faltantes', c: 'e2' } : ESTPED[p.estado])}</button>`; }).join('')}</div>` : '<p class="note" style="margin:0">Todavía no se envió ningún pedido.</p>'}</div>` : ''}`;
 }
 /* ---- Madera: seguimiento de lo pedido y lo que ya está en el taller (aparte de lo que falta pedir) ---- */
 let MVISTA = LS.get('mueler_mvista', 'seg'); let FACT_K = null;
@@ -3351,11 +3373,11 @@ function optiPedido(p, cod) {
 }
 function modulosDe(p) { const g = {}; (p.origen || []).filter(o => !o.manual).forEach(o => { (g[o.prNum] = g[o.prNum] || { obra: o.obra, ms: new Set() }).ms.add(o.modCod); }); return Object.entries(g).map(([n, x]) => ({ n, obra: x.obra, ms: [...x.ms] })); }
 function datosPedHTML(p, T, st) {
-  const provs = T === 'placas' ? PROVS_PLACA : T === 'cantos' ? PROVS_CANTO : ['All Sur']; const lock = st === 'recibido';
+  const provs = T === 'placas' ? PROVS_PLACA : T === 'cantos' ? PROVS_CANTO : T === 'led' ? PROVS_LED : ['All Sur']; const lock = st === 'recibido';
   const prov = p.prov || TIPOS[T].prov; const otro = !provs.includes(prov);
   const mods = modulosDe(p); const man = (p.origen || []).filter(o => o.manual).length;
-  return `<div class="panel datosped"><header><h2>Datos del pedido</h2>${T !== 'herrajes' ? `<span class="note">El proveedor y su Nº de pedido se cargan en cada ${T === 'placas' ? 'placa' : 'canto'}, abajo.</span>` : ''}</header><div class="dpgrid">
-    ${T !== 'herrajes' ? '' : `<div class="field"><label class="lbl">Proveedor</label><select data-pq="prov" ${lock ? 'disabled' : ''}>${provs.map(x => `<option ${x === prov ? 'selected' : ''}>${esc(x)}</option>`).join('')}<option value="__otro" ${otro ? 'selected' : ''}>Otro…</option></select>${otro ? `<input type="text" data-pq="prov" value="${esc(prov)}" placeholder="Nombre del proveedor" style="margin-top:6px" ${lock ? 'disabled' : ''}>` : ''}</div>
+  return `<div class="panel datosped"><header><h2>Datos del pedido</h2>${!SIMPLE(T) ? `<span class="note">El proveedor y su Nº de pedido se cargan en cada ${T === 'placas' ? 'placa' : 'canto'}, abajo.</span>` : ''}</header><div class="dpgrid">
+    ${!SIMPLE(T) ? '' : `<div class="field"><label class="lbl">Proveedor</label><select data-pq="prov" ${lock ? 'disabled' : ''}>${provs.map(x => `<option ${x === prov ? 'selected' : ''}>${esc(x)}</option>`).join('')}<option value="__otro" ${otro ? 'selected' : ''}>Otro…</option></select>${otro ? `<input type="text" data-pq="prov" value="${esc(prov)}" placeholder="Nombre del proveedor" style="margin-top:6px" ${lock ? 'disabled' : ''}>` : ''}</div>
     <div class="field"><label class="lbl">Nº de pedido de ${esc(otro ? 'el proveedor' : prov)}</label><input type="text" data-pq="nroProv" value="${esc(p.nroProv || '')}" placeholder="Opcional" ${lock ? 'disabled' : ''}></div>`}
     <div class="field"><label class="lbl">Fecha de pedido</label><input type="text" data-pq="fEnviado" value="${esc(p.fEnviado || '')}" placeholder="${st === 'borrador' ? 'Se completa al enviar' : today()}" ${st === 'borrador' || lock ? 'disabled' : ''}></div>
     <div class="field"><label class="lbl">${st === 'recibido' ? 'Recibido' : 'Creado'}</label><input type="text" value="${esc(st === 'recibido' ? (p.fRecibido || '') : (p.fCreado || ''))}" disabled></div>
@@ -3365,6 +3387,7 @@ function stockCtl(it, k, T, ed) {
   const ds = N(it.deStock); const disp = saldoStock(T, it.cod, PED.id);
   if (ds > 0) return `<div class="stk on"><span class="chip e4">${fmt(ds)} ${TIPOS[T].u} salen de stock</span>${ed ? ` <button class="btn sm ghost" data-pe="stock-dev" data-k="${k}">Deshacer</button>` : ''}</div>`;
   if (ed && disp > 0) return `<div class="stk"><span class="chip e2">Hay ${fmt(disp)} ${TIPOS[T].u} en stock</span> <button class="btn sm" data-pe="stock-usar" data-k="${k}">Sacar de stock</button></div>`;
+  if (ed && T === 'led') return `<div class="stk"><button class="btn sm ghost" data-pe="stock-sin" data-k="${k}" title="Lo tenés en el taller aunque no esté cargado en el stock">Lo saco de stock</button></div>`;
   return '';
 }
 const ceil5 = x => Math.ceil(N(x) / 5) * 5;
@@ -3418,15 +3441,15 @@ function savePED(now) {
 async function flushPED() { if (PED && PEDSAVE) { clearTimeout(PEDSAVE); PEDSAVE = null; try { await guardarPed(PED); } catch (e) { } } }
 const MOTIVO = { recepcion: 'Entró', salida: 'Salió', ajuste: 'Ajuste' };
 function stockPanel(T) {
-  const ls = stockDe(T).filter(r => r.saldo !== 0 || r.movs.length).sort((a, b) => b.saldo - a.saldo); const u = TIPOS[T].u;
+  const ls = stockDe(T).filter(r => r.saldo !== 0 || r.movs.length).sort((a, b) => b.saldo - a.saldo); const u = TIPOS[T].u; const uDe = r => T === 'led' ? itemInfo(r.cod, T).u : u;
   const nom = r => T === 'placas' ? `${esc(r.cod)}` : T === 'cantos' ? `${esc(r.cod.split('|')[0])} <span class="note">${esc(r.cod.split('|')[1] || '')}</span>` : `${esc(r.nombre)} <span class="note mono">${esc(r.cod)}</span>`;
   return `<div class="panel"><header><h2>Stock en taller</h2><span class="note">Lo que sobra de cada pedido entra solo. Al armar un pedido, si hay stock te avisa.</span></header>
-    ${ls.length ? `<div class="stklist">${ls.map(r => `<details class="ppmod"><summary><span>${nom(r)}</span><span class="note">${r.movs.length} movimiento${r.movs.length === 1 ? '' : 's'}</span><b class="mono">${fmt(r.saldo)} ${u}</b></summary>
+    ${ls.length ? `<div class="stklist">${ls.map(r => `<details class="ppmod"><summary><span>${nom(r)}</span><span class="note">${r.movs.length} movimiento${r.movs.length === 1 ? '' : 's'}</span><b class="mono">${fmt(r.saldo, T === 'led' && uDe(r) === 'm' ? 1 : 0)} ${uDe(r)}</b></summary>
       <div class="tbox"><table class="t"><tbody>${r.movs.map(x => `<tr><td>${esc(x.fecha || '')}</td><td>${MOTIVO[x.motivo] || x.motivo}${x.refNum ? ' · ' + esc(x.refNum) : ''}</td><td class="note">${esc(x.nota || '')}</td><td class="n mono">${N(x.cant) > 0 ? '+' : ''}${fmt(x.cant)}</td></tr>`).join('')}</tbody></table></div></details>`).join('')}</div>`
       : '<p class="note" style="margin:0">Todavía no hay stock registrado.</p>'}
     <details class="ajuste"><summary>Cargar o corregir stock a mano</summary><div class="addrow">
       ${T === 'placas' ? `<div class="field" style="flex:3 1 300px"><label class="lbl">Placa</label><input type="text" id="aj-placa" data-combo="mats" data-val="" value="" placeholder="Escribí para buscar la placa" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="combo-pop" aria-autocomplete="list" aria-label="Placa"></div>` : T === 'cantos' ? `<div class="field" style="flex:2 1 220px"><label class="lbl">Color / material</label><input type="text" id="aj-color" data-combo="mats" data-val="" value="" placeholder="Buscá la melamina · ej: Egger Blanco W954" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="combo-pop" aria-autocomplete="list" aria-label="Melamina del canto"></div><div class="field" style="flex:1 1 120px"><label class="lbl">Medida</label><select id="aj-medida">${MEDIDAS.map(x => `<option>${esc(x)}</option>`).join('')}</select></div><datalist id="dl-mel4">${MELAMINAS().map(x => `<option value="${esc(x)}">`).join('')}</datalist>`
-        : `<div class="field" style="flex:3 1 300px"><label class="lbl">Artículo</label><input type="text" data-combo="catart" id="aj-art" placeholder="Buscá por código o nombre" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="combo-pop"></div>`}
+        : `<div class="field" style="flex:3 1 300px"><label class="lbl">Artículo</label><input type="text" data-combo="${T === 'led' ? 'ledart' : 'catart'}" id="aj-art" placeholder="Buscá por código o nombre" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="combo-pop"></div>`}
       <div class="field" style="flex:0 1 110px"><label class="lbl">${T === 'cantos' ? 'Metros' : 'Cantidad'} (+/−)</label><input type="text" class="n" id="aj-cant" placeholder="Ej: 20 o -5" inputmode="decimal"></div>
       <div class="field" style="flex:2 1 200px"><label class="lbl">Motivo</label><input type="text" id="aj-nota" placeholder="Ej: conteo del taller"></div>
       <button class="btn" data-pe="ajuste-ok">Guardar</button></div></details></div>`;
@@ -3462,52 +3485,52 @@ function renderPedDet() {
   const v = $('view-ped'); const p = PED; const T = tipoDe(p); const st = p.estado; const ed = st === 'borrador'; const u = TIPOS[T].u;
   const pasos = ['borrador', 'enviado', 'recibido']; const ip = pasos.indexOf(st);
   const dest = cod => [...new Set((p.origen || []).filter(o => explotar(o.cod, 1, T).some(y => y.cod === cod)).map(o => o.manual ? (o.para || 'Taller') : `${o.prNum} ${o.modCod}${T === 'placas' ? ' (' + fmt(o.cant, 2) + ')' : ''}`))].join(' · ');
-  const tot = (p.items || []).reduce((s, it) => s + N(it.recib ?? it.pedir) * (it.precioF ? N(it.precioF) : N(it.precio) * 0.75), 0);
+  const tot = (p.items || []).reduce((s, it) => s + N(it.recib ?? it.pedir) * (it.precioF ? N(it.precioF) : N(it.precio) * (T === 'herrajes' ? 0.75 : 1)), 0);
   const falt = (p.items || []).filter(it => st !== 'borrador' && it.recib != null && N(it.recib) < N(it.pedir));
   const paraOpts = ['Taller', ...PROYS.map(x => `Proyecto ${x.num}`)];
-  v.innerHTML = `<div class="row stickhead" style="justify-content:space-between"><div class="row"><button class="btn" data-pe="volver">← Compras</button><h2>Pedido de ${TIPOS[T].t.toLowerCase()} ${esc(numPed(p))}</h2></div>${chip(T !== 'herrajes' ? estPl(p) : ESTPED[st])}</div>
-    ${T !== 'herrajes' ? stepsPl(p) : `<ol class="steps">${[['En armado', 'Se van sumando módulos y faltantes'], ['Pedido', 'Enviado al proveedor'], ['Recibido', 'Controlado con la factura o remito']].map(([t, s], k) => `<li class="${k < ip || st === 'recibido' ? 'done' : k === ip ? 'cur' : ''}"><b>${t}</b><span>${s}</span></li>`).join('')}</ol>`}
+  v.innerHTML = `<div class="row stickhead" style="justify-content:space-between"><div class="row"><button class="btn" data-pe="volver">← Compras</button><h2>Pedido de ${tLow(T)} ${esc(numPed(p))}</h2></div>${chip(!SIMPLE(T) ? estPl(p) : ESTPED[st])}</div>
+    ${!SIMPLE(T) ? stepsPl(p) : `<ol class="steps">${[['En armado', 'Se van sumando módulos y faltantes'], ['Pedido', 'Enviado al proveedor'], ['Recibido', 'Controlado con la factura o remito']].map(([t, s], k) => `<li class="${k < ip || st === 'recibido' ? 'done' : k === ip ? 'cur' : ''}"><b>${t}</b><span>${s}</span></li>`).join('')}</ol>`}
     ${datosPedHTML(p, T, st)}
     <div class="panel"><header><div class="row"><h2>${T === 'placas' ? 'Madera' : 'Artículos'}</h2></div><div class="row">
       ${T === 'placas' ? ((p.items || []).length ? '<button class="btn" data-pe="pl-imp">Imprimir todo el lote (A4)</button>' : '') : T === 'cantos' ? '' : '<button class="btn" data-pe="xlsx">Descargar Excel</button><button class="btn" data-pe="txt">Copiar texto</button>'}
-      ${ed && T === 'herrajes' ? `<button class="btn primary" data-pe="enviar" ${(p.items || []).length && !(T === 'cantos' && (p.items || []).some(it => N(it.pedir) > 0 && !isDef(String(it.cod).split('|')[0]))) ? '' : 'disabled'} title="${T === 'cantos' && (p.items || []).some(it => !isDef(String(it.cod).split('|')[0])) ? 'Hay cantos con melamina genérica: cambialos antes de enviar' : ''}">Enviar pedido</button>` : ''}</div></header>
-      <datalist id="dl-prov">${(T === 'placas' ? PROVS_PLACA : T === 'cantos' ? PROVS_CANTO : ['All Sur']).map(x => `<option value="${esc(x)}">`).join('')}</datalist>
-      ${(ed && T === 'herrajes') || (T === 'cantos' && (p.items || []).some(it => itEst(it, p) === 'armado')) ? `<p class="note" style="margin:0">“A pedir” arranca igual a lo necesario. Si pedís de más para stock, cambialo acá.</p>` : ''}
+      ${ed && SIMPLE(T) ? `<button class="btn primary" data-pe="enviar" ${(p.items || []).length && !(T === 'cantos' && (p.items || []).some(it => N(it.pedir) > 0 && !isDef(String(it.cod).split('|')[0]))) ? '' : 'disabled'} title="${T === 'cantos' && (p.items || []).some(it => !isDef(String(it.cod).split('|')[0])) ? 'Hay cantos con melamina genérica: cambialos antes de enviar' : ''}">Enviar pedido</button>` : ''}</div></header>
+      <datalist id="dl-prov">${(T === 'placas' ? PROVS_PLACA : T === 'cantos' ? PROVS_CANTO : T === 'led' ? PROVS_LED : ['All Sur']).map(x => `<option value="${esc(x)}">`).join('')}</datalist>
+      ${(ed && SIMPLE(T)) || (T === 'cantos' && (p.items || []).some(it => itEst(it, p) === 'armado')) ? `<p class="note" style="margin:0">“A pedir” arranca igual a lo necesario. Si pedís de más para stock, cambialo acá.</p>` : ''}
       ${T === 'cantos' ? `<p class="note" style="margin:0">Cada canto se pide por separado y a su proveedor: <b>Por pedir → Pedido → En taller</b>.${st === 'borrador' ? ' Al pedir el primero, los módulos nuevos van a un pedido nuevo.' : ''}</p>` : ''}
       ${T === 'placas' ? `<p class="note" style="margin:0">Cada placa se pide por separado: <b>Por pedir → Pedido → Confirmado → En taller</b>.${st === 'borrador' ? ' Al pedir la primera, los módulos nuevos van a un pedido nuevo.' : ''}</p>` : ''}
-      ${st === 'enviado' && T === 'herrajes' ? '<div class="hint">Cuando llegue, cargá lo recibido y el precio de la factura o el remito, y confirmá la recepción.</div>' : ''}
+      ${st === 'enviado' && SIMPLE(T) ? '<div class="hint">Cuando llegue, cargá lo recibido y el precio de la factura o el remito, y confirmá la recepción.</div>' : ''}
       ${T === 'placas' ? lineasPlacasHTML(p) : T === 'cantos' ? lineasCantosHTML(p, dest) : ''}
-      ${T === 'herrajes' && (p.items || []).length ? `<div class="tbox"><table class="t pedt"><thead><tr><th>${T === 'placas' ? 'Placa' : T === 'cantos' ? 'Canto' : 'Código'}</th><th>${T === 'placas' ? 'Optimización' : T === 'cantos' ? 'Medida' : 'Artículo'}</th><th class="n">Necesario</th><th class="n">A pedir (${u})</th>${st !== 'borrador' ? `<th class="n">Recibido</th><th class="n">Precio factura${T === 'cantos' ? ' por m' : ''}</th>` : ''}<th>Para</th>${ed ? '<th></th>' : ''}</tr></thead><tbody>
+      ${SIMPLE(T) && (p.items || []).length ? `<div class="tbox"><table class="t pedt"><thead><tr><th>${T === 'placas' ? 'Placa' : T === 'cantos' ? 'Canto' : 'Código'}</th><th>${T === 'placas' ? 'Optimización' : T === 'cantos' ? 'Medida' : 'Artículo'}</th><th class="n">Necesario</th><th class="n">A pedir${T === 'led' ? '' : ` (${u})`}</th>${st !== 'borrador' ? `<th class="n">Recibido</th><th class="n">Precio factura${T === 'cantos' ? ' por m' : ''}</th>` : ''}<th>Para</th>${ed ? '<th></th>' : ''}</tr></thead><tbody>
       ${(p.items || []).map((it, k) => { const [cc, md] = String(it.cod).split('|'); return `<tr class="${it.recib != null && st !== 'borrador' && N(it.recib) < N(it.pedir) ? 'warn' : ''}">
         ${T === 'placas' ? `<td><b>${esc(it.cod)}</b></td><td>${optTxt(it)}</td>` : T === 'cantos' ? `<td>${esc(cc)}${isDef(cc) ? '' : `<div class="note falta-t">Genérico: tocá Cambiar y elegí la melamina.</div>`}</td><td>${esc(md)}</td>` : `<td class="mono">${esc(it.cod)}</td><td>${esc(it.nombre)}<div class="note">${esc([it.marca, it.col].filter(Boolean).join(' · '))}</div></td>`}
-        <td class="n">${fmt(it.req)}</td>
-        <td class="n">${ed ? `<input type="text" class="n q" data-pi="${k}.pedir" value="${esc(it.pedir)}" aria-label="A pedir">${T === 'cantos' ? `<div class="rnd">${[...new Set([Math.ceil(N(it.req) / 50) * 50, 100, 150])].filter(v => v >= N(it.req)).sort((a, b) => a - b).map(v => `<button class="btn sm ${N(it.pedir) === v ? 'primary' : ''}" data-pe="rnd" data-k="${k}" data-v="${v}" title="Pedir ${v} m">${v === 150 ? '150 · rollo' : v}</button>`).join('')}</div>` : ''}` : fmt(it.pedir)}</td>
+        <td class="n">${fmt(it.req, T === 'led' && it.u === 'm' ? 1 : 0)}${T === 'led' ? ' ' + esc(it.u || '') : ''}</td>
+        <td class="n">${ed ? `<input type="text" class="n q" data-pi="${k}.pedir" value="${esc(it.pedir)}" aria-label="A pedir">${T === 'led' ? ledRollos(it) : ''}${T === 'cantos' ? `<div class="rnd">${[...new Set([Math.ceil(N(it.req) / 50) * 50, 100, 150])].filter(v => v >= N(it.req)).sort((a, b) => a - b).map(v => `<button class="btn sm ${N(it.pedir) === v ? 'primary' : ''}" data-pe="rnd" data-k="${k}" data-v="${v}" title="Pedir ${v} m">${v === 150 ? '150 · rollo' : v}</button>`).join('')}</div>` : ''}` : fmt(it.pedir)}</td>
         ${st === 'enviado' ? `<td class="n"><input type="text" class="n q" data-pi="${k}.recib" value="${esc(it.recib ?? it.pedir)}" aria-label="Recibido"></td><td class="n"><input type="text" class="n" data-pi="${k}.precioF" value="${esc(it.precioF ?? '')}" placeholder="${it.precio ? esc(fmt(it.precio * 0.75)) : ''}" aria-label="Precio de factura"></td>` : ''}
         ${st === 'recibido' ? `<td class="n">${fmt(it.recib ?? it.pedir)}</td><td class="n">${it.precioF ? money(it.precioF) : '—'}</td>` : ''}
-        <td class="note">${esc(dest(it.cod))}${N(it.pedir) > N(it.req) - N(it.deStock) ? ` <span class="chip e1">+${fmt(N(it.pedir) - (N(it.req) - N(it.deStock)))} para stock</span>` : ''}${stockCtl(it, k, T, ed)}</td>${ed ? `<td><button class="btn sm ${PEDIT && PEDIT.cod === it.cod ? 'primary' : ''}" data-pe="edit-it" data-cod="${esc(it.cod)}">Cambiar</button></td>` : ''}</tr>${ed && PEDIT && PEDIT.cod === it.cod ? editorItemHTML(it, T) : ''}`; }).join('')}
-      </tbody></table></div>` : T !== 'herrajes' ? '' : '<p class="note" style="margin:0">Todavía no hay nada en este pedido.</p>'}
-      ${st !== 'borrador' && T === 'herrajes' ? `<span class="note">Valor de lista: ${money((p.items || []).reduce((s, it) => s + N(it.pedir) * N(it.precio), 0))}${st === 'recibido' ? ` · costo de lo recibido: ${money(tot)}${(p.items || []).some(it => !it.precioF) ? ' (donde no cargaste precio de factura, se toma lista − 25%)' : ''}` : ''}</span>` : ''}</div>
+        <td class="note">${esc(dest(it.cod))}${N(it.pedir) > N(it.req) - N(it.deStock) ? ` <span class="chip e1">+${fmt(N(it.pedir) - (N(it.req) - N(it.deStock)), it.u === 'm' ? 1 : 0)}${it.u === 'm' && !String(it.cod).includes('|') ? ' m' : ''} para stock</span>` : ''}${stockCtl(it, k, T, ed)}</td>${ed ? `<td><button class="btn sm ${PEDIT && PEDIT.cod === it.cod ? 'primary' : ''}" data-pe="edit-it" data-cod="${esc(it.cod)}">Cambiar</button></td>` : ''}</tr>${ed && PEDIT && PEDIT.cod === it.cod ? editorItemHTML(it, T) : ''}`; }).join('')}
+      </tbody></table></div>` : !SIMPLE(T) ? '' : '<p class="note" style="margin:0">Todavía no hay nada en este pedido.</p>'}
+      ${st !== 'borrador' && SIMPLE(T) ? `<span class="note">${T === 'led' ? 'Valor según la base LED' : 'Valor de lista'}: ${money((p.items || []).reduce((s, it) => s + N(it.pedir) * N(it.precio), 0))}${st === 'recibido' ? ` · costo de lo recibido: ${money(tot)}${(p.items || []).some(it => !it.precioF) ? ` (donde no cargaste precio de factura, se toma ${T === 'led' ? 'el precio de la base LED' : 'lista − 25%'})` : ''}` : ''}</span>` : ''}</div>
     ${ed ? `<div class="panel addp"><header><h3>${T === 'placas' ? 'Agregar una placa aparte' : 'Agregar al pedido'}</h3><span class="note">${T === 'placas' ? 'Va aparte de la optimización: para un faltante, un repuesto o stock. Elegí para qué es.' : 'Faltantes del taller o stock. Elegí para qué es.'}</span></header><div class="addrow">
       ${T === 'placas' ? `<div class="field" style="flex:3 1 300px"><label class="lbl">Placa</label><input type="text" id="pe-placa" data-combo="mats" data-val="" value="" placeholder="Escribí para buscar la placa" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="combo-pop" aria-autocomplete="list" aria-label="Placa"></div>` : T === 'cantos' ? `<div class="field" style="flex:2 1 220px"><label class="lbl">Color / material</label><input type="text" id="pe-color" data-combo="mats" data-val="" value="" placeholder="Buscá la melamina · ej: Egger Blanco W954" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="combo-pop" aria-autocomplete="list" aria-label="Melamina del canto"></div>
         <div class="field" style="flex:1 1 120px"><label class="lbl">Medida</label><select id="pe-medida">${MEDIDAS.map(x => `<option>${esc(x)}</option>`).join('')}</select></div>
         <datalist id="dl-mel2">${MELAMINAS().map(x => `<option value="${esc(x)}">`).join('')}</datalist>`
-        : `<div class="field" style="flex:3 1 300px"><label class="lbl">Artículo</label><input type="text" data-combo="catartp" id="pe-art" placeholder="Buscá por código o nombre · ej: ollero, space tower" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="combo-pop"></div>`}
+        : `<div class="field" style="flex:3 1 300px"><label class="lbl">Artículo</label><input type="text" data-combo="${T === 'led' ? 'ledart' : 'catartp'}" id="pe-art" placeholder="Buscá por código o nombre · ej: ollero, space tower" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="combo-pop"></div>`}
       <div class="field" style="flex:0 1 100px"><label class="lbl">${T === 'cantos' ? 'Metros' : T === 'placas' ? 'Placas' : 'Cantidad'}</label><input type="text" class="n" id="pe-cant" value="1" inputmode="decimal"></div>
       <div class="field" style="flex:1 1 150px"><label class="lbl">Para</label><select id="pe-para">${paraOpts.map(x => `<option>${esc(x)}</option>`).join('')}</select></div>
       <div class="field" style="flex:2 1 180px"><label class="lbl">Comentario</label><input type="text" id="pe-com" placeholder="${T === 'cantos' ? 'Ej: regrueso de mesada' : 'Ej: se rompió una bisagra'}"></div>
       <button class="btn" data-pe="add">Agregar</button></div></div>` : ''}
-    <div class="panel"><header><h2>De dónde sale cada cosa</h2></header>${(p.origen || []).length ? `<div class="tbox"><table class="t"><thead><tr><th>Para</th><th>Módulo</th><th>${T === 'placas' ? 'Placa' : T === 'cantos' ? 'Canto' : 'Herraje'}</th><th class="n">Cant.</th><th>Comentario</th>${ed ? '<th></th>' : ''}</tr></thead><tbody>
-      ${(p.origen || []).map((o, k) => `<tr><td>${o.manual ? esc(o.para || 'Taller') : esc(o.prNum) + ' · ' + esc(o.obra)}</td><td>${o.manual ? '<span class="note">a mano</span>' : esc(o.modCod)}</td><td>${esc(itemInfo(o.cod, T).nombre)} ${T === 'herrajes' ? `<span class="note mono">${esc(o.cod)}</span>` : ''}</td><td class="n">${fmt(o.cant)}</td><td class="note">${esc(o.com || '')}</td>
+    <div class="panel"><header><h2>De dónde sale cada cosa</h2></header>${(p.origen || []).length ? `<div class="tbox"><table class="t"><thead><tr><th>Para</th><th>Módulo</th><th>${T === 'placas' ? 'Placa' : T === 'cantos' ? 'Canto' : T === 'led' ? 'Artículo' : 'Herraje'}</th><th class="n">Cant.</th><th>Comentario</th>${ed ? '<th></th>' : ''}</tr></thead><tbody>
+      ${(p.origen || []).map((o, k) => `<tr><td>${o.manual ? esc(o.para || 'Taller') : esc(o.prNum) + ' · ' + esc(o.obra)}</td><td>${o.manual ? '<span class="note">a mano</span>' : esc(o.modCod)}</td><td>${esc(itemInfo(o.cod, T).nombre)} ${SIMPLE(T) ? `<span class="note mono">${esc(o.cod)}</span>` : ''}</td><td class="n">${fmt(o.cant)}</td><td class="note">${esc(o.com || '')}</td>
         ${ed ? `<td>${o.manual ? `<button class="x" data-pe="del-man" data-k="${k}" aria-label="Quitar">×</button>` : (p.origen.findIndex(x => !x.manual && x.modId === o.modId) === k ? `<button class="btn sm" data-pe="quitar-mod" data-id="${esc(o.modId)}">Sacar ${esc(o.modCod)}</button>` : '')}</td>` : ''}</tr>`).join('')}
     </tbody></table></div>` : '<p class="note" style="margin:0">—</p>'}</div>
-    ${st !== 'borrador' && T === 'herrajes' ? `<div class="panel"><header><h2>Factura o remito</h2></header><div class="grid3">
+    ${st !== 'borrador' && SIMPLE(T) ? `<div class="panel"><header><h2>Factura o remito</h2></header><div class="grid3">
       <div class="field"><label class="lbl">Nº factura / remito</label><input type="text" data-pq="factura.num" value="${esc(p.factura.num || '')}" ${st === 'recibido' ? 'disabled' : ''}></div>
       <div class="field"><label class="lbl">Fecha</label><input type="text" data-pq="factura.fecha" value="${esc(p.factura.fecha || '')}" placeholder="${esc(today())}" ${st === 'recibido' ? 'disabled' : ''}></div>
       <div class="field"><label class="lbl">Archivo</label><div class="row">${(p.factura.adj || []).map(a => `<span class="tag">${esc(a.nombre)}</span>`).join('')}${st === 'enviado' ? '<button class="btn sm" data-pe="adj">Adjuntar foto o PDF</button>' : ''}</div></div></div>
       ${st === 'enviado' ? '<div class="row" style="justify-content:flex-end"><button class="btn primary" data-pe="recibir">Confirmar recepción</button></div>' : ''}
       ${falt.length ? `<div class="alert">Llegaron menos unidades de ${falt.length} artículo${falt.length === 1 ? '' : 's'}: ${falt.map(it => esc(T === 'cantos' ? it.nombre : it.cod) + ' (faltan ' + fmt(N(it.pedir) - N(it.recib)) + ')').join(' · ')}. ${st === 'recibido' ? '<button class="btn sm" data-pe="faltantes">Pasar lo que faltó al pedido en armado</button>' : ''}</div>` : ''}</div>` : ''}
     <div class="panel"><header><h2>Notas</h2></header><textarea data-pq="notas" rows="2" aria-label="Notas del pedido">${esc(p.notas || '')}</textarea></div>
-    <div class="row" style="justify-content:flex-end">${ed ? '<button class="btn sm danger" data-pe="del">Borrar pedido</button>' : T !== 'herrajes' ? '' : st === 'enviado' ? '<button class="btn sm" data-pe="volver-borr">Volver a En armado</button>' : '<button class="btn sm" data-pe="reabrir">Corregir recepción</button>'}</div>`;
+    <div class="row" style="justify-content:flex-end">${ed ? '<button class="btn sm danger" data-pe="del">Borrar pedido</button>' : !SIMPLE(T) ? '' : st === 'enviado' ? '<button class="btn sm" data-pe="volver-borr">Volver a En armado</button>' : '<button class="btn sm" data-pe="reabrir">Corregir recepción</button>'}</div>`;
   if (T === 'placas') { const tb = v.querySelector('.pedt'); if (tb) tb.closest('.panel').insertAdjacentHTML('afterend', placasViewer(p)); if (OPTSIG[p.id] !== firmaPl(p)) optimizarPlacas(p); }
 }
 function pedidoAOA(p, prov) {
@@ -3620,7 +3643,7 @@ function lineaCantoHTML(p, it, k, dest) {
     : `${e !== 'recibido' ? `<button class="btn sm primary" data-pe="cn-recib" data-k="${k}">Llegó</button>` : ''}<button class="btn sm ghost" data-pe="cn-undo" data-k="${k}" title="Volver a ${e === 'recibido' ? 'Pedido' : 'Por pedir'}">↶ Deshacer</button>`;
   return `<tr class="${corto ? 'warn' : ''}"><td>${esc(cc)}${isDef(cc) ? '' : `<div class="note falta-t">Genérico: tocá Cambiar y elegí la melamina.</div>`}</td><td>${esc(md)}</td><td class="n">${fmt(it.req)}</td>
     <td class="n">${pedirCel}</td><td>${provCel}${nro}</td><td>${chip(chipE)}${fecha ? `<div class="note">${esc(fecha)}</div>` : ''}</td>
-    <td class="note">${esc(dest(it.cod))}${N(it.pedir) > N(it.req) - N(it.deStock) ? ` <span class="chip e1">+${fmt(N(it.pedir) - (N(it.req) - N(it.deStock)))} para stock</span>` : ''}${stockCtl(it, k, 'cantos', arm)}</td>
+    <td class="note">${esc(dest(it.cod))}${N(it.pedir) > N(it.req) - N(it.deStock) ? ` <span class="chip e1">+${fmt(N(it.pedir) - (N(it.req) - N(it.deStock)), it.u === 'm' ? 1 : 0)}${it.u === 'm' && !String(it.cod).includes('|') ? ' m' : ''} para stock</span>` : ''}${stockCtl(it, k, 'cantos', arm)}</td>
     <td><div class="row" style="flex-wrap:nowrap">${acc}</div></td></tr>${arm && PEDIT && PEDIT.cod === it.cod ? editorItemHTML(it, 'cantos') : ''}`;
 }
 function lineaPlacaHTML(p, it, k, lote) {
@@ -3813,6 +3836,7 @@ $('view-ped').addEventListener('click', async e => {
     let cod;
     if (T === 'placas') { cod = $('pe-placa').value; if (!cod) { toast('Elegí la placa.'); return; } }
     else if (T === 'cantos') { const c = $('pe-color').value.trim(); if (!isDef(c)) { toast('Elegí la melamina del canto de la lista.'); return; } cod = `${c}|${$('pe-medida').value}`; }
+    else if (T === 'led') { cod = ($('pe-art').value || '').split(' · ')[0]; if (!ledArt(cod)) { toast('Elegí un artículo LED de la lista.'); return; } }
     else { const v = $('pe-art').value; cod = v.split(' · ')[0]; if (!CATA[cod]) { toast('Elegí un artículo del catálogo.'); return; } }
     if (!(cant > 0)) { toast('Poné la cantidad.'); return; }
     PED.origen.push({ manual: true, para, cod, cant, com, mid: uid() }); PED.items = consolidar(PED.origen, PED.items, T); savePED(true); renderPedDet(); { const cx = T === 'herrajes' && CATA[cod] && CATA[cod].a.comp; toast(cx ? `Combo agregado: se pide en sus ${cx.length} piezas (${cx.map(c => typeof c === 'string' ? c : c.c).join(', ')}).` : 'Agregado al pedido.'); }
@@ -3820,9 +3844,10 @@ $('view-ped').addEventListener('click', async e => {
   if (a === 'stock-usar') { const it = PED.items[+b.dataset.k]; const disp = saldoStock(T, it.cod, PED.id); const q = Math.min(disp, N(it.req)); if (!(q > 0)) return;
     try { await borrarMovs(x => x.ref === PED.id && x.cod === it.cod && x.motivo === 'salida'); await movStock({ tipo: T, cod: it.cod, nombre: it.nombre, cant: -q, motivo: 'salida', ref: PED.id, refNum: numPed(PED), nota: 'Para ' + [...new Set((PED.origen || []).filter(o => explotar(o.cod, 1, T).some(y => y.cod === it.cod)).map(o => o.manual ? (o.para || 'Taller') : `${o.prNum} ${o.modCod}`))].join(' · ') });
       it.deStock = q; it.pedir = Math.max(0, N(it.req) - q); it.pedirEd = true; savePED(true); renderPedDet(); toast(q >= N(it.req) ? `Sale todo de stock: no se pide.` : `${fmt(q)} salen de stock; se piden ${fmt(it.pedir)}.`); } catch (er) { toast('No se pudo registrar la salida de stock.'); } return; }
-  if (a === 'stock-dev') { const it = PED.items[+b.dataset.k]; try { await borrarMovs(x => x.ref === PED.id && x.cod === it.cod && x.motivo === 'salida'); it.deStock = 0; it.pedir = N(it.req); it.pedirEd = false; savePED(true); renderPedDet(); toast('Vuelve al stock.'); } catch (er) { toast('No se pudo deshacer.'); } return; }
+  if (a === 'stock-sin') { const it = PED.items[+b.dataset.k]; it.deStock = N(it.req); it.pedir = 0; it.pedirEd = true; savePED(true); renderPedDet(); toast('Sale de stock: no se pide.'); return; }
+  if (a === 'stock-dev') { const it = PED.items[+b.dataset.k]; try { await borrarMovs(x => x.ref === PED.id && x.cod === it.cod && x.motivo === 'salida'); it.deStock = 0; it.pedir = T === 'led' ? ledPedir(it) : N(it.req); it.pedirEd = false; savePED(true); renderPedDet(); toast('Vuelve al stock.'); } catch (er) { toast('No se pudo deshacer.'); } return; }
   if (a === 'ajuste-ok') { const cod = T === 'placas' ? $('aj-placa').value : T === 'cantos' ? (($('aj-color').value || '').trim() + '|' + $('aj-medida').value) : ($('aj-art').value || '').split(' · ')[0]; const q = N($('aj-cant').value);
-    if (T === 'placas' ? !cod : T === 'cantos' ? !isDef($('aj-color').value.trim()) : !CATA[cod]) { toast(T === 'cantos' ? 'Escribí el color del canto.' : 'Elegí un artículo del catálogo.'); return; }
+    if (T === 'placas' ? !cod : T === 'cantos' ? !isDef($('aj-color').value.trim()) : T === 'led' ? !ledArt(cod) : !CATA[cod]) { toast(T === 'cantos' ? 'Escribí el color del canto.' : 'Elegí un artículo del catálogo.'); return; }
     if (!q) { toast('Poné la cantidad (negativa para descontar).'); return; }
     try { await movStock({ tipo: T, cod, nombre: itemInfo(cod, T).nombre, cant: q, motivo: 'ajuste', ref: '', refNum: '', nota: ($('aj-nota').value || '').trim() || 'Ajuste manual' }); renderPed(); toast('Stock actualizado.'); } catch (er) { toast('No se pudo guardar.'); } return; }
   if (a === 'pl-ver') { OPTPOPEN[b.dataset.cod] = !OPTPOPEN[b.dataset.cod]; renderPedDet(); return; }
@@ -4061,7 +4086,7 @@ async function limpiarPruebas(ids, est, todo) {
       if (!resto.length) { const ms = MOVS.filter(x => x.ref === p.id); for (const x of ms) await StoreS.del(x.id); nMov += ms.length; await StorePed.del(p.id); nPed++; }
       else { const doc = clone(p); doc.origen = resto; doc.items = consolidar(resto, doc.items, T); const cods = doc.items.map(i => i.cod);
         const ms = MOVS.filter(x => x.ref === p.id && !cods.includes(x.cod)); for (const x of ms) await StoreS.del(x.id); nMov += ms.length;
-        if (T !== 'herrajes' && doc.estado !== 'borrador') syncEstadoPl(doc); await guardarPed(doc); nPedEd++; }
+        if (!SIMPLE(T) && doc.estado !== 'borrador') syncEstadoPl(doc); await guardarPed(doc); nPedEd++; }
     }
     if (todo) { const ms = MOVS.slice(); for (const x of ms) await StoreS.del(x.id); nMov += ms.length; }
     toast('Borrando proyectos…');
@@ -4195,11 +4220,11 @@ $('view-usuarios').addEventListener('click', async e => {
 $('view-usuarios').addEventListener('change', async e => { const t = e.target; if (t.dataset.us !== 'rol') return; const u = USERS.find(x => x.id === t.dataset.id); if (!u) return; u.rol = t.value; try { await guardarUsuarios(); } catch (er) { toast('No se pudo guardar.'); } if (USR && USR.id === u.id) setUser(u); else renderUsuarios(); });
 
 /* ---------------- Inicio: pendientes del taller ---------------- */
-function materialesOK(m) { return ['placas', 'cantos', 'herrajes'].every(T => { const e = estadoT(m, T); return e.t === 'En taller' || e.t === 'Cortada' || e.t === 'De stock' || /^Sin (cantos|herrajes|placas)$/.test(e.t); }); }
+function materialesOK(m) { return ['placas', 'cantos', 'herrajes', 'led'].every(T => { const e = estadoT(m, T); return e.t === 'En taller' || e.t === 'Cortada' || e.t === 'De stock' || /^Sin (cantos|herrajes|placas|LED)$/.test(e.t); }); }
 function faltaMod(m) { const out = []; if (!m.csv) out.push('Falta el CSV'); [['placas', 'Madera'], ['cantos', 'Cantos'], ['herrajes', 'Herrajes']].forEach(([T, n]) => { const e = estadoT(m, T); if (e.c === 'e2' && /definir|catálogo|Definir/.test(e.t)) out.push(`${n}: ${e.t.toLowerCase()}`); }); return out; }
 function renderInicio() {
   const v = $('view-inicio');
-  const sumar = [['placas', 'Madera'], ['cantos', 'Cantos'], ['herrajes', 'Herrajes']].map(([T, n]) => ({ T, n, ls: porPedir(T) })).filter(x => x.ls.length);
+  const sumar = [['placas', 'Madera'], ['cantos', 'Cantos'], ['herrajes', 'Herrajes'], ['led', 'LED']].map(([T, n]) => ({ T, n, ls: porPedir(T) })).filter(x => x.ls.length);
   const mad = PEDS.filter(p => tipoDe(p) === 'placas' && p.estado !== 'recibido').flatMap(p => (p.items || []).filter(it => N(it.pedir) > 0).map(it => ({ p, it, e: itEst(it, p) })));
   const madPedir = mad.filter(x => x.e === 'armado'), madConf = mad.filter(x => x.e === 'pedido'), madLlega = mad.filter(x => x.e === 'confirmado');
   const otros = PEDS.filter(p => tipoDe(p) !== 'placas');
@@ -4219,7 +4244,7 @@ function renderInicio() {
     ${sumar.length || madPedir.length || armando.length ? `<div class="panel" id="sec-pedir"><header><h2>Para pedir</h2></header>
       ${cap(sumar, x => fila(`<b>${x.n}</b> · ${x.ls.length} módulo${x.ls.length === 1 ? '' : 's'} con diseño Listo sin sumar a un pedido <span class="note">${x.ls.map(y => esc(y.p.num + ' ' + y.m.cod)).join(', ')}</span>`, '', `data-in="compras" data-t="${x.T}"`, 'Ir a Compras'))}
       ${cap(madPedir, x => fila(`<b>${esc(x.it.cod)}</b> <span class="note">· ${fmt(x.it.pedir)} placa${N(x.it.pedir) === 1 ? '' : 's'} · ${esc(provIt(x.it, x.p))} · pedido ${esc(numPed(x.p))}</span>`, chip(EST_PL.armado), `data-in="ped" data-id="${esc(x.p.id)}"`, 'Abrir pedido'))}
-      ${cap(armando, p => fila(`Pedido de ${TIPOS[tipoDe(p)].t.toLowerCase()} <b>${esc(numPed(p))}</b> <span class="note">· ${(p.items || []).length} artículo${(p.items || []).length === 1 ? '' : 's'} sin enviar · creado ${esc(p.fCreado || '')}</span>`, '', `data-in="ped" data-id="${esc(p.id)}"`, 'Revisar y enviar'))}</div>` : ''}
+      ${cap(armando, p => fila(`Pedido de ${tLow(tipoDe(p))} <b>${esc(numPed(p))}</b> <span class="note">· ${(p.items || []).length} artículo${(p.items || []).length === 1 ? '' : 's'} sin enviar · creado ${esc(p.fCreado || '')}</span>`, '', `data-in="ped" data-id="${esc(p.id)}"`, 'Revisar y enviar'))}</div>` : ''}
     ${madConf.length ? `<div class="panel" id="sec-conf"><header><h2>Esperando presupuesto del proveedor</h2></header>
       ${cap(madConf, x => fila(`<b>${esc(x.it.cod)}</b> <span class="note">· ${esc(provIt(x.it, x.p))}${x.it.nroProv ? ' · Nº ' + esc(x.it.nroProv) : ''} · pedida ${esc(x.it.fPedido || '')}</span>`, !x.it.nroProv && /dilegno/i.test(provIt(x.it, x.p)) ? '<span class="chip e2">Falta el Nº de plano</span>' : '', `data-in="ped" data-id="${esc(x.p.id)}"`, 'Abrir'))}</div>` : ''}
     ${madLlega.length || llegar.length ? `<div class="panel" id="sec-llega"><header><h2>Por llegar</h2><span class="note">Cuando llegue, confirmá la recepción para que figure En taller.</span></header>
@@ -4272,7 +4297,7 @@ fModCsv.addEventListener('change', () => { const fs = fModCsv.files; if (fs && f
 /* ---------------- Al pasar un módulo a Listo, se suma solo al pedido en armado ---------------- */
 async function autoSumar(prId, modId) {
   const nums = [];
-  for (const T of ['placas', 'cantos', 'herrajes']) { const g = porPedir(T).filter(x => x.p.id === prId && x.m.id === modId); if (g.length) { const n = await sumarAlPedido(T, g, true); if (n) nums.push(n); } }
+  for (const T of ['placas', 'cantos', 'herrajes', 'led']) { const g = porPedir(T).filter(x => x.p.id === prId && x.m.id === modId); if (g.length) { const n = await sumarAlPedido(T, g, true); if (n) nums.push(n); } }
   if (nums.length) toast(`Diseño Listo: se sumó a ${nums.join(', ')}. Si no correspondía, sacalo desde el pedido.`);
 }
 (async () => {
