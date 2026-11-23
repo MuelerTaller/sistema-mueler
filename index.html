@@ -2872,6 +2872,7 @@ function resumenProy(p) {
   return { n: ms.length, dis: c('estDiseno'), mad: en('placas'), her: en('herrajes'), can: en('cantos'), para, arm: c('estArmado'), ins: c('estInstal') };
 }
 function renderProyLista() {
+  if (!PROYS_OK) { clearTimeout(renderProyLista.t); renderProyLista.t = setTimeout(() => { if (VIEW === 'proy' && !PR) renderProyLista(); }, 700); }
   const v = $('view-proy'); const q = PQ.toLowerCase();
   const list = PROYS.filter(p => !q || [p.num, p.obra, p.cliente, p.arq, p.presNum].join(' ').toLowerCase().includes(q));
   const bar = (t, a, n) => `<span class="av"><span class="lbl">${t}</span><span class="bar"><i style="width:${n ? Math.round(a / n * 100) : 0}%"></i></span><span class="avn">${a}/${n}</span></span>`;
@@ -4224,7 +4225,7 @@ function materialesOK(m) { return ['placas', 'cantos', 'herrajes', 'led'].every(
 function faltaMod(m) { const out = []; if (!m.csv) out.push('Falta el CSV'); [['placas', 'Madera'], ['cantos', 'Cantos'], ['herrajes', 'Herrajes']].forEach(([T, n]) => { const e = estadoT(m, T); if (e.c === 'e2' && /definir|catálogo|Definir/.test(e.t)) out.push(`${n}: ${e.t.toLowerCase()}`); }); return out; }
 function renderInicio() {
   const v = $('view-inicio');
-  if (!PROYS_OK || !PEDS_OK) { v.innerHTML = `<div class="row stickhead"><h2>Inicio</h2></div><div class="empty"><b>Cargando proyectos y pedidos…</b></div>`; return; }
+  if (!PROYS_OK || !PEDS_OK) { v.innerHTML = `<div class="row stickhead"><h2>Inicio</h2></div><div class="empty"><b>Cargando proyectos y pedidos…</b></div>`; clearTimeout(renderInicio.t); renderInicio.t = setTimeout(() => { if (VIEW === 'inicio') renderInicio(); }, 700); return; }
   const sumar = [['placas', 'Madera'], ['cantos', 'Cantos'], ['herrajes', 'Herrajes'], ['led', 'LED']].map(([T, n]) => ({ T, n, ls: porPedir(T) })).filter(x => x.ls.length);
   const mad = PEDS.filter(p => tipoDe(p) === 'placas' && p.estado !== 'recibido').flatMap(p => (p.items || []).filter(it => N(it.pedir) > 0).map(it => ({ p, it, e: itEst(it, p) })));
   const madPedir = mad.filter(x => x.e === 'armado'), madConf = mad.filter(x => x.e === 'pedido'), madLlega = mad.filter(x => x.e === 'confirmado');
