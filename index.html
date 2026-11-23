@@ -202,6 +202,7 @@ button.chip{cursor:pointer}
 .pcard .avn{font:500 11.5px var(--f-mono);color:var(--muted)}
 .mat{display:grid;gap:1px;min-width:180px} .mat span:first-child{font-weight:600}
 .ficha{display:grid;gap:12px;scroll-margin-top:120px;border-left:3px solid var(--accent);padding-left:12px}
+.ficha>.fhead{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--barh,56px) + var(--sth,58px));z-index:14;background:var(--bg);padding:8px 0;margin-block:-8px 0;box-shadow:-16px 0 0 var(--bg);border-bottom:1px solid var(--line)}
 .fhead{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:flex-end}
 .csvdrop{border:2px dashed var(--line);border-radius:var(--r);padding:22px;display:grid;gap:4px;justify-items:center;cursor:pointer;text-align:center}
 .csvdrop:hover{border-color:var(--accent);background:var(--accent-soft)}
@@ -647,7 +648,7 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
         const d2 = get(C.desc);
         if (!mat && d2) { const mc = String(d2).trim().match(/^M\s*0*(\d+(?:\.\d+)?)$/i); if (!R.modulo && mc) R.modulo = 'M' + mc[1].padStart(2, '0'); continue; }
         if (/^cajon/i.test(des)) R.cajones += cant;
-        else if (/^led\b/i.test(des)) { const dims = [mm(get(C.lf)) || mm(get(C.lc)), mm(get(C.af)) || mm(get(C.ac)), mm(get(C.ef)) || mm(get(C.ec))]; R.leds = R.leds || []; R.leds.push({ cant, largo: Math.max(...dims) }); }
+        else if (/^led\b/i.test(des)) { const dims = [mm(get(C.lf)) || mm(get(C.lc)), mm(get(C.af)) || mm(get(C.ac)), mm(get(C.ef)) || mm(get(C.ec))]; R.leds = R.leds || []; R.leds.push({ cant, largo: Math.max(...dims), inst: C.inst >= 0 ? get(C.inst) : '' }); }
         else if (/puerta/i.test(des)) { const dims = [mm(get(C.lf)) || mm(get(C.lc)), mm(get(C.af)) || mm(get(C.ac)), mm(get(C.ef)) || mm(get(C.ec))]; const alto = Math.max(...dims); for (let k = 0; k < cant; k++) R.puertas.push({ alto, ancho: Math.min(...dims.filter(x => x > 40)) || 0 }); }
         else if (des) R.otros.push({ desc: cleanName(des), cant, material: mat });
       }
@@ -822,9 +823,9 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
   }
   // ---- Iluminación LED (base Demasled / Mayorled, precios con IVA) ----
   /* Kit estándar Mueler LED (skill electricista-led-mueler, precios c/IVA 22/11/2026). ver: al subirla, la config guardada vieja se reemplaza (se conserva la instalación por circuito) */
-  const LED_DEF = { ver: 4, margen: 135, instCirc: 0, desp: 20, wm: 11, kFuente: 1.2, maxMInterr: 9, maxMTramo: 5, corteMm: 3, cableBase: 2, cableAmp075: 3,
+  const LED_DEF = { ver: 5, margen: 135, instCirc: 0, desp: 20, wm: 11, kFuente: 1.2, maxMInterr: 9, maxMTramo: 5, corteMm: 3, cableBase: 2, cableAmp075: 3,
     tira: { c: 'TCOB-01WW-24V', n: 'Tira LED COB 24V blanco cálido 3000K · rollo 5 m', p: 20279, rollo: 5 },
-    perfiles: [{ c: 'PER-60-2.5M', n: 'Perfil aluminio Flat 13×7 opal · barra 2,5 m (trae tapas y clips)', p: 8760, L: 2.5 }],
+    perfiles: [{ c: 'PER-60-2.5M', n: 'Perfil aluminio Flat 13×7 opal · barra 2,5 m (trae tapas y clips)', p: 8760, L: 2.5 }, { c: 'PER-60-2M', n: 'Perfil aluminio Flat 13×7 opal · barra 2 m (trae tapas y clips)', p: 7008, L: 2 }],
     interr: { c: 'SEN-08BL', n: 'Interruptor táctil oculto Ø52 mm 24V (máx. 120 W)', p: 10208 },
     cable075: { c: 'CAB-2X075', n: 'Cable bipolar 2×0,75 mm²', p: 1200 },
     cable15: { c: 'CAB-2X15', n: 'Cable bipolar 2×1,5 mm²', p: 1200 },
@@ -837,9 +838,21 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
       { c: 'FAX-100-24V', n: 'Fuente Demasled FAX estanca IP67 24V 100 W', w: 100, p: 40114, ip67: true },
       { c: 'FAX-150-24V', n: 'Fuente Demasled FAX estanca IP67 24V 151 W', w: 151, p: 50321, ip67: true },
       { c: 'FAX-200-24V', n: 'Fuente Demasled FAX estanca IP67 24V 199 W', w: 199, p: 56231, ip67: true }] };
-  function ledBase(CFG) { const c = CFG && CFG.led; if (!c) return LED_DEF; if ((N(c.ver) || 0) < LED_DEF.ver) return Object.assign({}, LED_DEF, { instCirc: c.instCirc != null ? c.instCirc : LED_DEF.instCirc }); return Object.assign({}, LED_DEF, c); }
+  function ledBase(CFG) { const c = CFG && CFG.led; if (!c) return LED_DEF; if ((N(c.ver) || 0) < LED_DEF.ver) return Object.assign({}, LED_DEF, { instCirc: c.instCirc != null ? c.instCirc : LED_DEF.instCirc }, N(c.ver) >= 4 && c.margen != null ? { margen: c.margen } : {}); return Object.assign({}, LED_DEF, c); }
   function fuenteAuto(L, need, humedo) { const ok = L.fuentes.filter(f => N(f.w) >= need && (!humedo || f.ip67)); return ok.sort((a, b) => N(a.p) - N(b.p) || N(a.w) - N(b.w))[0] || null; }
   // Empaqueta piezas (m) en barras de largo L (FFD); las piezas más largas que la barra usan barras enteras + resto
+  // Optimizador de perfiles LED: corta los tramos (m) en barras de 2 m / 2,5 m. modo: 'auto' (menor costo, mezcla si conviene) o el código de un perfil
+  function planPerfiles(piezas, perfiles, kerf, modo) {
+    const pfs = (perfiles || []).filter(pf => N(pf.L) > 0); if (!pfs.length || !piezas.length) return null;
+    const ffd = (ps, L) => { const bins = []; ps.slice().sort((a, b) => b - a).forEach(p => { let r = p; while (r > L + 1e-9) { bins.push({ piezas: [L], usado: L, parte: true }); r -= L; } const bb = bins.filter(b => !b.parte && L - b.usado >= r + (b.piezas.length ? kerf : 0) - 1e-9).sort((x, y) => x.usado - y.usado).pop(); if (bb) { bb.usado += (bb.piezas.length ? kerf : 0) + r; bb.piezas.push(r); } else bins.push({ piezas: [r], usado: r }); }); return bins; };
+    const plan = (bins, elegir) => bins.map(b => { const pf = elegir(b); return { c: pf.c, n: pf.n, L: N(pf.L), p: N(pf.p), piezas: b.piezas, sobra: Math.max(0, N(pf.L) - b.usado) }; });
+    const costo = pl => pl.reduce((s, b) => s + b.p, 0), sobra = pl => pl.reduce((s, b) => s + b.sobra, 0);
+    const cands = [];
+    const usar = modo && modo !== 'auto' ? pfs.filter(pf => pf.c === modo) : pfs;
+    (usar.length ? usar : pfs).forEach(pf => cands.push(plan(ffd(piezas, N(pf.L)), () => pf)));
+    if ((!modo || modo === 'auto') && pfs.length > 1) { const big = pfs.slice().sort((a, b) => N(b.L) - N(a.L))[0]; cands.push(plan(ffd(piezas, N(big.L)), b => pfs.filter(pf => N(pf.L) >= b.usado - 1e-9).sort((x, y) => N(x.p) - N(y.p))[0] || big)); }
+    return cands.sort((a, b) => costo(a) - costo(b) || sobra(a) - sobra(b))[0];
+  }
   function barras(piezas, L) { const bins = []; const ps = []; piezas.forEach(p => { let r = p; while (r > L + 1e-9) { bins.push(0); r -= L; } if (r > 1e-9) ps.push(r); }); ps.sort((a, b) => b - a).forEach(p => { const b = bins.findIndex(x => x > 0 && L - x >= p - 1e-9); if (b >= 0) bins[b] += p; else bins.push(p); }); return bins.length; }
   function ledCalc(M, CFG) {
     const L = ledBase(CFG), cs = ((M.led || {}).circuitos || []), out = { circuitos: [], items: [], costo: 0, inst: 0, venta: 0, metros: 0, avisos: [] };
@@ -859,8 +872,8 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
     if (!out.metros) return out;
     const tm = out.metros * (1 + N(L.desp) / 100), pm = N(L.tira.p) / (N(L.tira.rollo) || 5);
     out.items.push({ c: L.tira.c, n: L.tira.n, cant: Math.round(tm * 100) / 100, u: 'm', p: pm, total: tm * pm, rollos: Math.ceil(out.metros / (N(L.tira.rollo) || 5) - 1e-9) });
-    const kc = N(L.corteMm) / 1000; const opc = L.perfiles.map(pf => { const nb = barras(piezas.map(x => x + kc), N(pf.L) + kc); return { pf, nb, tot: nb * N(pf.p) }; }).sort((a, b) => a.tot - b.tot)[0];
-    if (opc) out.items.push({ c: opc.pf.c, n: opc.pf.n, cant: opc.nb, u: 'u.', p: N(opc.pf.p), total: opc.tot });
+    const kc = N(L.corteMm) / 1000; out.plan = planPerfiles(piezas, L.perfiles, kc, (M.led || {}).barra || 'auto') || [];
+    const pg = {}; out.plan.forEach(b => { pg[b.c] = pg[b.c] || { c: b.c, n: b.n, cant: 0, u: 'u.', p: b.p }; pg[b.c].cant++; }); Object.values(pg).forEach(x => { x.total = x.cant * x.p; out.items.push(x); });
     // tapas y clips vienen con el perfil: no se presupuestan
     const fs = {}; out.circuitos.forEach(c => { if (c.fuente) { const k = c.fuente.c; fs[k] = fs[k] || { c: k, n: c.fuente.n, cant: 0, u: 'u.', p: N(c.fuente.p) }; fs[k].cant++; } });
     Object.values(fs).forEach(x => { x.total = x.cant * x.p; out.items.push(x); });
@@ -876,12 +889,14 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
     const t = tabla || [[900, 2], [1500, 3], [2000, 4], [99999, 5]];
     return (puertas || []).reduce((s, p) => { const r = t.find(x => p.alto <= x[0]) || t[t.length - 1]; return s + r[1]; }, 0);
   }
-  const api = { calc, calcVariante, ledCalc, ledBase, LED_DEF, familiaCanto, espDeNombre, cantosAuto, cantosFinal, cortesTotal, bisagrasSugeridas, N };
+  const api = { calc, calcVariante, ledCalc, ledBase, planPerfiles, LED_DEF, familiaCanto, espDeNombre, cantosAuto, cantosFinal, cortesTotal, bisagrasSugeridas, N };
   root.Calc = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
 </script>
 <script>
+// Descripción sugerida desde el nombre del CSV: "M04-VESTIDOR 03-11.csv" → "VESTIDOR"
+function descDeArchivo(n) { return String(n || '').replace(/\.(csv|txt)$/i, '').replace(/^\s*M\s*\d+[A-Z]?\s*[-_.·]?\s*/i, '').replace(/\s+\d{1,2}[-/.]\d{1,2}([-/.]\d{2,4})?\s*$/, '').replace(/\s*-\s*/g, ' ').replace(/\s+/g, ' ').trim().toUpperCase(); }
 /* Arma un mueble (M) a partir del CSV de OpenCutList: grupos por material, optimización, cantos y herrajes */
 (function (root) {
   const OPT = root.CutOptimizer || (typeof require !== 'undefined' ? require('./engine.js') : null);
@@ -982,7 +997,7 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
     Object.entries(R.accesorios || {}).forEach(([k, v]) => avisos.push(`Accesorio "${k}" × ${v}: no tiene precio asociado, cargalo en Herrajes si corresponde.`));
     const txt = sugerirTextos(R, grupos);
     return {
-      id: uid(), cod: R.modulo || '', desc: '', origen: 'csv',
+      id: uid(), cod: R.modulo || '', desc: descDeArchivo(R.archivo), origen: 'csv',
       src: { archivo: R.archivo, fecha: Date.now(), csv: csvText || '' },
       ocl: { cajones: R.cajones, puertas: R.puertas, bisagras: R.bisagras, pares: R.paresCorrederas, accesorios: R.accesorios, filas: R.filas },
       grupos, cantosOv: {}, cantosExtra: [], cortesOv: null, herrajes, mecanizados: {}, fleteMat: 1, terceros: [], variantes: [],
@@ -1698,15 +1713,57 @@ function ledProyecto(M, R) {
       fuenteSug: rc.fuente ? { c: rc.fuente.c, n: rc.fuente.n, w: rc.fuente.w } : null, voltaje: '24V', fuenteDef: '' }; }).filter(c => c.metros),
     items: RL.items.map(x => ({ c: x.c, n: x.n, cant: x.cant, u: x.u, rollos: x.rollos || 0 })), notas: '' };
 }
+/* LED en la ficha del proyecto: editable, se recalcula con la base LED actual (Configuración) y toma los tramos del CSV definitivo */
+function ledRecalcMod(m) {
+  const L = m.led; if (!L) return;
+  const RL = Calc.ledCalc({ led: { barra: L.barra || 'auto', circuitos: (L.circuitos || []).map(c => ({ id: c.id || (c.id = uid()), nombre: c.nombre, interr: c.interr !== false, humedo: !!c.humedo, fuente: '', tramos: (c.tramos || []).map(t => ({ cant: N(t.cant), largo: N(t.largo) })) })) } }, CFG);
+  (L.circuitos || []).forEach(c => { const rc = RL.circuitos.find(x => x.id === c.id) || {}; Object.assign(c, { metros: rc.metros || 0, w: rc.w || 0, need: rc.need || 0, cable: rc.cable || 0, seccion: rc.seccion || '', fuenteSug: rc.fuente ? { c: rc.fuente.c, n: rc.fuente.n, w: rc.fuente.w } : null }); });
+  L.items = RL.items.map(x => ({ c: x.c, n: x.n, cant: x.cant, u: x.u, rollos: x.rollos || 0 }));
+  L.plan = (RL.plan || []).map(b => ({ c: b.c, L: b.L, piezas: b.piezas.map(x => Math.round(x * 1000)), sobra: Math.round(b.sobra * 1000) }));
+  L.avisos = RL.avisos || [];
+}
+// Tramos del CSV: se agrupan por circuito si el nombre de la tira lo dice (ej. M04-C2); si no, van al primer circuito
+function ledDesdeCSV(m, R) {
+  const ls = (R && R.leds) || []; if (!ls.length) return false;
+  const grupo = l => { const x = String(l.inst || '').match(/C\s*(\d+)/i); return x ? +x[1] : 1; };
+  const gs = {}; ls.forEach(l => { const g = grupo(l); (gs[g] = gs[g] || []).push(l); });
+  m.led = m.led || { circuitos: [], notas: '' }; const cs = m.led.circuitos = m.led.circuitos || [];
+  Object.keys(gs).map(Number).sort((a, b) => a - b).forEach((g, k) => {
+    let c = cs[g - 1] || cs[k]; if (!c) { c = { id: uid(), nombre: m.cod + '-C' + g, interr: true, humedo: false, voltaje: '24V', fuenteDef: '' }; cs.push(c); }
+    const map = {}; gs[g].forEach(l => { const cm = Math.round(l.largo / 10 * 10) / 10; map[cm] = (map[cm] || 0) + N(l.cant); });
+    c.tramos = Object.entries(map).sort((a, b) => b[0] - a[0]).map(([cm, q]) => ({ donde: 'Del CSV', cant: q, largo: +cm }));
+  });
+  m.led.desdeCSV = Date.now(); ledRecalcMod(m); return true;
+}
 function ledFichaHTML(m, b) {
-  const L = m.led; if (!L || !(L.circuitos || []).length) return '';
-  const filas = L.circuitos.map((c, k) => `<tr><td><b>${esc(c.nombre)}</b>${c.humedo ? ' <span class="note">(zona húmeda)</span>' : ''}</td><td>${c.tramos.map(t => `${esc(t.donde || 'Tramo')}: ${t.cant} × ${fmt(t.largo)} cm`).join('<br>')}</td><td class="n">${fmt(c.metros, 2)} m<br><span class="note">${fmt(c.w, 0)} W → ${Math.ceil(c.need)} W</span></td>
-      <td>${c.fuenteSug ? `<span class="note">Sugerida: ${esc(c.fuenteSug.n)}</span>` : ''}${pin(b + `led.circuitos.${k}.fuenteDef`, c.fuenteDef, { ph: 'Fuente definida (modelo)', label: 'Fuente definida' })}</td>
-      <td style="width:110px">${pin(b + `led.circuitos.${k}.voltaje`, c.voltaje, { ph: '24V', label: 'Voltaje de la fuente' })}</td><td>${c.interr ? 'Interruptor invisible' : 'Sin interruptor'}</td></tr>`).join('');
-  return `<details class="panel fsec" open><summary><h3>5 · Iluminación LED</h3><span class="sum">${fmt(L.circuitos.reduce((s, c) => s + c.metros, 0), 2)} m · ${L.circuitos.length} circuito${L.circuitos.length > 1 ? 's' : ''}</span></summary>
-    <div class="tbox"><table class="t hert"><thead><tr><th>Circuito</th><th>Tramos</th><th class="n">Tira</th><th>Fuente</th><th>Voltaje</th><th>Encendido</th></tr></thead><tbody>${filas}</tbody></table></div>
-    <div class="tbox"><table class="t hert"><thead><tr><th>Material LED</th><th>Código</th><th class="n">Cantidad</th></tr></thead><tbody>${(L.items || []).map(x => `<tr><td>${esc(x.n)}</td><td class="mono">${esc(x.c)}</td><td class="n">${x.rollos ? `${x.rollos} rollo${x.rollos > 1 ? 's' : ''} <span class="note">(${fmt(x.cant, 2)} m)</span>` : x.cant}</td></tr>`).join('')}</tbody></table></div>
-    <span class="note">Sale del presupuesto. Tira COB 24V: la fuente tiene que ser de 24V. Se pide a Demasled / Mayorled (fuera del pedido de All Sur).</span></details>`;
+  const L = m.led, F = FICHAS[m.id], csvLeds = F && F.R && (F.R.leds || []).length;
+  if (!L || !(L.circuitos || []).length) return `<details class="panel fsec"><summary><h3>5 · Iluminación LED</h3><span class="sum">Sin LED</span></summary>
+    <div class="row"><button class="btn sm" data-pa="led-c-add">+ Circuito (encendido)</button>${csvLeds ? `<button class="btn sm" data-pa="led-csv">Tomar los ${F.R.leds.reduce((s, l) => s + N(l.cant), 0)} tramos del CSV</button>` : ''}<span class="note">Si el CSV definitivo trae tiras (LED Perfil 13x7), se cargan solas.</span></div></details>`;
+  if (!L.plan) ledRecalcMod(m);
+  const li = (path, val, o = {}) => `<input type="text" data-pl="${esc(path)}" value="${esc(val == null ? '' : val)}" ${o.num ? 'class="n" inputmode="decimal"' : ''} placeholder="${esc(o.ph || '')}" aria-label="${esc(o.label || path)}" ${o.style ? `style="${o.style}"` : ''}>`;
+  const cards = L.circuitos.map((c, k) => { const p = `led.circuitos.${k}.`;
+    const filas = (c.tramos || []).map((t, j) => `<tr><td>${li(p + `tramos.${j}.donde`, t.donde, { ph: 'Ej: lateral izq.', label: 'Dónde va' })}</td><td class="n" style="width:80px">${li(p + `tramos.${j}.cant`, t.cant, { num: 1, label: 'Tiras' })}</td><td class="n" style="width:100px">${li(p + `tramos.${j}.largo`, t.largo, { num: 1, label: 'Largo en cm' })}</td><td class="n">${fmt(N(t.cant) * N(t.largo) / 100, 2)} m</td><td><button class="x" data-pa="led-t-del" data-k="${k}" data-j="${j}" aria-label="Quitar tramo">×</button></td></tr>`).join('');
+    return `<div class="cotcard"><div class="row" style="justify-content:space-between"><div class="row">${li(p + 'nombre', c.nombre, { ph: 'Circuito ' + (k + 1), label: 'Nombre del circuito', style: 'width:220px' })}
+        <label class="row" style="gap:6px"><input type="checkbox" data-pl="${p}interr" ${c.interr !== false ? 'checked' : ''}> Interruptor invisible</label>
+        <label class="row" style="gap:6px"><input type="checkbox" data-pl="${p}humedo" ${c.humedo ? 'checked' : ''}> Zona húmeda</label></div>
+        <button class="x" data-pa="led-c-del" data-k="${k}" aria-label="Quitar circuito">✕</button></div>
+      <div class="tbox"><table class="t hert"><thead><tr><th>Dónde va</th><th class="n">Tiras</th><th class="n">Largo c/u (cm)</th><th class="n">Metros</th><th></th></tr></thead><tbody>${filas}</tbody></table></div>
+      <div class="row"><button class="btn sm" data-pa="led-t-add" data-k="${k}">+ Tramo</button><span class="note">${c.metros ? `${fmt(c.metros, 2)} m · ${fmt(c.w, 0)} W → fuente de ${Math.ceil(c.need)} W o más · cable ${fmt(c.cable, 0)} m de 2×${esc(c.seccion)}` : 'Cargá los tramos.'}</span></div>
+      <div class="grid3"><div class="field"><span class="lbl">Fuente sugerida</span><span class="note" style="padding:6px 0">${c.fuenteSug ? esc(c.fuenteSug.n) : '—'}</span></div>
+        <div class="field"><label class="lbl">Fuente definida (modelo)</label>${li(p + 'fuenteDef', c.fuenteDef, { ph: c.fuenteSug ? c.fuenteSug.n : 'Modelo de la fuente', label: 'Fuente definida' })}</div>
+        <div class="field"><label class="lbl">Voltaje</label>${li(p + 'voltaje', c.voltaje || '24V', { ph: '24V', label: 'Voltaje' })}</div></div></div>`; }).join('');
+  const pfs = (Calc.ledBase(CFG).perfiles || []);
+  const plan = (L.plan || []).length ? `<div class="recuento"><span class="lbl">Corte de perfiles</span>${L.plan.map((x, k) => `<div class="row" style="gap:10px"><span class="mono">Barra ${k + 1} · ${fmt(x.L, 1).replace(',0', '')} m</span><span>${x.piezas.map(v => fmt(v / 10, 1).replace(',0', '') + ' cm').join(' + ')}</span><span class="note">sobra ${fmt(x.sobra / 10, 0)} cm</span></div>`).join('')}<span class="note">Corte de ${fmt(Calc.ledBase(CFG).corteMm)} mm por pieza. Los tramos más largos que la barra se arman con dos barras.</span></div>` : '';
+  const tot = L.circuitos.reduce((s, c) => s + N(c.metros), 0);
+  return `<details class="panel fsec" open><summary><h3>5 · Iluminación LED</h3><span class="sum">${fmt(tot, 2)} m · ${L.circuitos.length} circuito${L.circuitos.length > 1 ? 's' : ''}</span></summary>
+    ${csvLeds ? `<div class="hint">El CSV definitivo trae ${F.R.leds.reduce((s, l) => s + N(l.cant), 0)} tramos de LED. ${L.desdeCSV ? 'Los tramos de abajo salen del CSV.' : 'Los tramos de abajo vienen del presupuesto.'} <button class="btn sm" data-pa="led-csv">${L.desdeCSV ? 'Volver a tomar del CSV' : 'Tomar los tramos del CSV'}</button></div>` : ''}
+    ${(L.avisos || []).length ? `<div class="alert"><ul>${L.avisos.map(a => `<li>${esc(a)}</li>`).join('')}</ul></div>` : ''}
+    ${cards}
+    <div class="row"><button class="btn sm" data-pa="led-c-add">+ Circuito (encendido)</button>
+      <label class="row" style="gap:6px"><span class="lbl">Perfiles</span><select data-pl="led.barra" aria-label="Barras de perfil"><option value="auto" ${!L.barra || L.barra === 'auto' ? 'selected' : ''}>Automático (mezcla 2 m y 2,5 m, lo más barato)</option>${pfs.map(pf => `<option value="${esc(pf.c)}" ${L.barra === pf.c ? 'selected' : ''}>Solo barras de ${fmt(N(pf.L), 1).replace(',0', '')} m</option>`).join('')}</select></label></div>
+    <div class="tbox"><table class="t hert"><thead><tr><th>Material LED</th><th>Código</th><th class="n">Cantidad</th></tr></thead><tbody>${(L.items || []).map(x => `<tr><td>${esc(x.n)}</td><td class="mono">${esc(x.c)}</td><td class="n">${x.rollos ? `${x.rollos} rollo${x.rollos > 1 ? 's' : ''} <span class="note">(${fmt(x.cant, 2)} m)</span>` : (x.u === 'm' ? fmt(x.cant, 0) + ' m' : x.cant)}</td></tr>`).join('')}</tbody></table></div>
+    ${plan}
+    <span class="note">Se recalcula con la base LED de Configuración. Tira COB 24V: la fuente tiene que ser de 24V. Se pide a Demasled (fuera del pedido de All Sur).</span></details>`;
 }
 function secMec(M, R) {
   const items = PC().mecanizados;
@@ -2196,7 +2253,7 @@ function exportPedido() {
     r.R.placas.forEach(p => { add('placas', p.art, p.cant); if (p.cant) det.push([r.sectorNombre, r.M.cod, 'Placa', p.art, p.cant, 'placas']); });
     r.R.cantos.forEach(c => { add('cantos', c.art, c.m); if (c.m) det.push([r.sectorNombre, r.M.cod, 'Canto', c.art, c.m, 'm']); });
     r.R.herrajes.concat(r.R.kits || [], r.R.accesorios || []).forEach(h => { add('herrajes', h.art, h.cant); det.push([r.sectorNombre, r.M.cod, 'Herraje', h.art, h.cant, 'u.']); });
-    ((r.R.led || {}).items || []).forEach(x => { const q = x.rollos || x.cant, u = x.rollos ? 'rollos' : x.u; add('led', x.n + ' · ' + x.c, q); det.push([r.sectorNombre, r.M.cod, 'LED', x.n + ' · ' + x.c, q, u]); });
+    ((r.R.led || {}).opcion ? [] : ((r.R.led || {}).items || [])).forEach(x => { const q = x.rollos || x.cant, u = x.rollos ? 'rollos' : x.u; add('led', x.n + ' · ' + x.c + ' (' + u + ')', q); det.push([r.sectorNombre, r.M.cod, 'LED', x.n + ' · ' + x.c, q, u]); });
     r.R.terceros.forEach(t => { add('terceros', t.art, t.cant); det.push([r.sectorNombre, r.M.cod, 'Terceros', t.art, t.cant, t.unidad || '']); });
   });
   const res = [[`PEDIDO DE MATERIALES · Presupuesto ${P.num || ''} · ${P.obra || ''}`], ['No incluye opciones ni frentes alternativos: solo lo cotizado como base.'], []];
@@ -2505,7 +2562,7 @@ const EST = {
 const EST_K = Object.keys(EST);
 const estCls = (k, v) => { const l = EST[k].l, i = l.indexOf(v); return i <= 0 ? 'e0' : i === l.length - 1 ? 'e4' : 'e2'; };
 const normEst = (k, v) => EST[k].l.includes(v) ? v : ({ 'En diseño': 'En curso', 'Listo para producir': 'Listo', 'Pedido': 'Pedida', 'En proceso': k === 'estDiseno' ? 'En curso' : 'En proceso', 'Terminado': k === 'estDiseno' ? 'Listo' : k === 'estInstal' ? 'Pendiente' : 'Terminado', 'Instalado': k === 'estInstal' ? 'Instalado' : EST[k].l[EST[k].l.length - 1], 'En taller': k === 'estMadera' ? 'En taller' : EST[k].l[0] }[v] || EST[k].l[0]);
-let PROYS = [], PR = null, PSEL = null, PQ = '', PSAVE = null, PSAVING = false;
+let PROYS = [], PROYS_OK = false, PR = null, PSEL = null, PQ = '', PSAVE = null, PSAVING = false;
 let PEDS = [], PED = null, PEDSAVE = null, LTAB = 'abiertos', CATQ = '';
 let MEL_EXTRA = LS.get('mueler_mel_extra', []);
 const MAT_DB = [
@@ -2763,8 +2820,9 @@ async function aprobarDlg() {
       await StoreP.put(doc); if (!DB) PROYS = Object.values(LOC('mueler_proyectos'));
       const usarCsv = d.q('#ap-csv') && d.q('#ap-csv').checked;
       d.close(); PR = clone(doc); PSEL = null; let nCsv = 0;
-      if (usarCsv) { for (const m of PR.modulos) { const src = MS[m.mid] && MS[m.mid].src; if (src && src.csv) { PSEL = m.id; if (await cargarCSVTexto(src.csv, src.archivo || (m.cod + '.csv'), true)) nCsv++; } } PSEL = null; if (nCsv) savePR(true); }
+      let nSrc = 0; if (usarCsv) { for (const m of PR.modulos) { const src = MS[m.mid] && MS[m.mid].src; if (src && src.csv) { nSrc++; PSEL = m.id; if (await cargarCSVTexto(src.csv, src.archivo || (m.cod + '.csv'), true)) nCsv++; } } PSEL = null; if (nCsv) savePR(true); }
       show('proy'); toast(`Proyecto ${num} creado con ${modulos.length} módulo${modulos.length === 1 ? '' : 's'}${nCsv ? ` · ${nCsv} con el CSV del presupuesto` : ''}.`);
+      if (usarCsv && nSrc > nCsv) setTimeout(() => toast(`No se pudo pasar el CSV de ${nSrc - nCsv} módulo${nSrc - nCsv === 1 ? '' : 's'}. Cargalo en la ficha arrastrando el archivo.`), 3600);
     } catch (err) { b.disabled = false; toast('No se pudo crear el proyecto. Revisá la conexión y volvé a intentar.'); }
   });
 }
@@ -2805,7 +2863,7 @@ function renderProyLista() {
         <span class="s">${esc([p.cliente, p.arq].filter(Boolean).join(' · ') || '—')} · ${p.sinPres ? 'Sin presupuesto' : 'Presupuesto ' + esc(p.presNum || '—')}${p.presVersion ? ' ' + esc(p.presVersion) : ''} · ${r.n} módulo${r.n === 1 ? '' : 's'} · aprobado ${esc(p.fechaAprob || '')}</span>
         <span class="avz">${bar('Diseño', r.dis, r.n)}${bar('Madera', r.mad, r.n)}${bar('Cantos', r.can, r.n)}${bar('Herrajes', r.her, r.n)}${bar('Armado', r.arm, r.n)}${bar('Instalación', r.ins, r.n)}</span></span>
       ${r.para ? `<span class="chip e2">${r.para} para pedir</span>` : '<span></span>'}</button>`; }).join('')}</div>`
-      : `<div class="empty"><b>${PROYS.length ? 'No hay proyectos que coincidan con la búsqueda.' : 'Todavía no hay proyectos.'}</b><span>Abrí un presupuesto, pasalo a estado Aprobado y tocá “Crear proyecto”. El primer número es el 391.</span></div>`}`;
+      : `<div class="empty"><b>${PROYS.length ? 'No hay proyectos que coincidan con la búsqueda.' : PROYS_OK ? 'Todavía no hay proyectos.' : 'Cargando proyectos…'}</b><span>Abrí un presupuesto, pasalo a estado Aprobado y tocá “Crear proyecto”. El primer número es el 391.</span></div>`}`;
   const s = $('pr-q'); s.oninput = e => { PQ = e.target.value; const pos = e.target.selectionStart; renderProyLista(); const n = $('pr-q'); n.focus(); n.setSelectionRange(pos, pos); };
 }
 function migrarPR(p) {
@@ -3011,6 +3069,7 @@ function renderFicha() {
     <div class="fnotas grid2"><div class="field"><label class="lbl">Comentarios</label><textarea data-pf="${b}coment" rows="1" aria-label="Comentarios">${esc(m.coment || '')}</textarea></div>
     <div class="field"><label class="lbl">Notas para el armador</label><textarea data-pf="${b}notas" rows="1" aria-label="Notas para el armador">${esc(m.notas || '')}</textarea></div></div></div>`;
   el.querySelectorAll('details').forEach((d, k) => { if (opens[k] != null) d.open = opens[k]; });
+  const sh = document.querySelector('#view-proy .stickhead'); if (sh) document.documentElement.style.setProperty('--sth', sh.offsetHeight + 'px');
 }
 async function cargarPiezas(m) {
   FICHAS[m.id] = null;
@@ -3035,7 +3094,7 @@ async function cargarCSVTexto(text, nombre, quiet) {
     FICHAS[m.id] = { text, archivo: file.name, R }; if (eraPend) m.estDiseno = 'En curso';
     const M = buildFicha(m);
     m.csv = Object.assign(resumenCSV(m, M, R, file.name), { fecha: Date.now(), cantosOk: true });
-    cantosDesdeCSV(m, R, M);
+    cantosDesdeCSV(m, R, M); ledDesdeCSV(m, R);
     await StoreF.put({ id: m.id, prId: PR.id, modId: m.id, archivo: file.name, fecha: Date.now(), upd: Date.now(), csv: text });
     if (quiet) return true;
     savePR(true); renderProyDet();
@@ -3076,11 +3135,21 @@ $('view-proy').addEventListener('click', async e => {
   if (a === 'ver-ped') { await flushPR(); const p = pedDe(b.dataset.id); if (p) { CTIPO = tipoDe(p); PED = clone(p); show('ped'); } }
   if (a === 'mod') { PSEL = PSEL === b.dataset.id ? null : b.dataset.id; renderProyDet(); if (PSEL) $('pr-ficha').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   if (a === 'cerrar-ficha') { PSEL = null; renderProyDet(); }
+  if (/^led-/.test(a) && m) {
+    if (a === 'led-csv') { let F = FICHAS[m.id]; if (!F || !F.R) { await cargarPiezas(m); F = FICHAS[m.id]; } if (F && F.R && ledDesdeCSV(m, F.R)) toast('Tramos de LED tomados del CSV.'); }
+    if (a === 'led-c-add') { m.led = m.led || { circuitos: [], notas: '' }; m.led.circuitos.push({ id: uid(), nombre: (m.cod || '') + '-C' + (m.led.circuitos.length + 1), interr: true, humedo: false, voltaje: '24V', fuenteDef: '', tramos: [{ donde: '', cant: 1, largo: '' }] }); }
+    if (a === 'led-c-del') { m.led.circuitos.splice(+b.dataset.k, 1); }
+    if (a === 'led-t-add') { m.led.circuitos[+b.dataset.k].tramos.push({ donde: '', cant: 1, largo: '' }); }
+    if (a === 'led-t-del') { m.led.circuitos[+b.dataset.k].tramos.splice(+b.dataset.j, 1); }
+    ledRecalcMod(m); savePR(); renderFicha(); return;
+  }
   if (a === 'nuevo-sp') { nuevoProyManualDlg(); return; }
   if (a === 'mod-mano') { agregarModuloDlg(); return; }
   if (a === 'fuera') { fueraDlg(); return; }
   if (a === 'mod-csv') { fModCsv.click(); return; }
-  if (a === 'dis' && m) { const era = m.estDiseno; m.estDiseno = b.dataset.v; savePR(); renderProyDet(); updTabs(); if (b.dataset.v === 'Listo' && era !== 'Listo') autoSumar(PR.id, m.id); }
+  if (a === 'dis' && m) { const era = m.estDiseno; m.estDiseno = b.dataset.v; savePR(); renderProyDet(); updTabs(); if (b.dataset.v === 'Listo' && era !== 'Listo') { autoSumar(PR.id, m.id);
+      const falta = [['placas', 'la placa'], ['cantos', 'los cantos'], ['herrajes', 'herrajes del catálogo']].filter(([T]) => { const e = estadoT(m, T); return /Definir|Falta/.test(e.t); }).map(x => x[1]);
+      if (falta.length) setTimeout(() => toast(`Ojo: ${m.cod} quedó Listo pero falta definir ${falta.join(', ')}. Eso no pasa a Compras hasta definirlo.`), 3600); } }
   if (a === 'csv') fCsvP.click();
   if (a === 'ver-placas' && m) { const k = m.id + '|' + b.dataset.ocl; OPENF[k] = !OPENF[k]; renderFicha(); }
   if (a === 'opti' && m) optiFicha(m, +b.dataset.k);
@@ -3095,6 +3164,7 @@ $('view-proy').addEventListener('click', async e => {
 $('view-proy').addEventListener('input', e => { const t = e.target; if (!PR || !t.dataset.pf || t.dataset.combo || t.tagName === 'SELECT') return; let v = t.value; if (/\.(cant|m)$/.test(t.dataset.pf)) v = N(v); setPath(PR, t.dataset.pf, v); savePR(); if (t.dataset.pf === 'num' || t.dataset.pf === 'obra') $('pr-tit').textContent = `Proyecto ${PR.num} · ${PR.obra || ''}`; });
 $('view-proy').addEventListener('change', e => {
   const t = e.target; if (!PR) return; const m = PR.modulos.find(x => x.id === PSEL);
+  if (t.dataset.pl && m && m.led) { const path = t.dataset.pl; let v = t.type === 'checkbox' ? t.checked : t.value; if (/\.(cant|largo)$/.test(path)) v = N(v); setPath(m, path, v); ledRecalcMod(m); savePR(); renderFicha(); return; }
   if (t.dataset.fx && m) { if (t.dataset.fx === 'map') { if (t.value) m.csvMap[t.dataset.ocl] = t.value; else delete m.csvMap[t.dataset.ocl]; } else m.csvVeta[t.dataset.ocl] = t.checked; setTimeout(() => recalcFicha(m), 0); return; }
   if (!t.dataset.pf) return; const path = t.dataset.pf;
   if (t.dataset.combo === 'mats') { setPath(PR, path, t.value); savePR(); setTimeout(renderProyDet, 0); return; }
@@ -4212,7 +4282,7 @@ async function autoSumar(prId, modId) {
   Store.listenPres(list => { PRES = list; if (VIEW === 'lista') renderLista(); if (VIEW === 'pres') updDup(); });
   const safe = fn => (...a) => { try { fn(...a); } catch (e) { console.error(e); reportErr(e); } };
   const escribiendo = id => { const a = document.activeElement; return a && a.closest && a.closest('#' + id) && /INPUT|TEXTAREA|SELECT/.test(a.tagName); };
-  StoreP.listen(safe(list => { PROYS = list; updTabs(); if (VIEW === 'inicio') renderInicio(); if (VIEW === 'proy' && !PR) renderProyLista(); if (VIEW === 'lista') renderLista(); if (VIEW === 'pres') updAprobarBtn(); if (VIEW === 'ped' && !PED && !escribiendo('view-ped')) renderCompras(); }));
+  StoreP.listen(safe(list => { PROYS = list; PROYS_OK = true; updTabs(); if (VIEW === 'inicio') renderInicio(); if (VIEW === 'proy' && !PR) renderProyLista(); if (VIEW === 'lista') renderLista(); if (VIEW === 'pres') updAprobarBtn(); if (VIEW === 'ped' && !PED && !escribiendo('view-ped')) renderCompras(); }));
   StoreS.listen(safe(list => { MOVS = list; if (VIEW === 'ped' && !escribiendo('view-ped')) renderPed(); }));
   StorePed.listen(safe(list => { PEDS = list; updTabs(); if (VIEW === 'inicio') renderInicio(); if (VIEW === 'ped' && !PED && !escribiendo('view-ped')) renderCompras(); if (VIEW === 'proy' && !PR) renderProyLista(); }));
   if (DB && typeof DB.doc === 'function') { try { const s = await DB.doc('config/listas').get(); if (s.exists && Array.isArray(s.data().melaminas)) { MEL_EXTRA = [...new Set([...MEL_EXTRA, ...s.data().melaminas])]; LS.set('mueler_mel_extra', MEL_EXTRA); } } catch (e) { } }
