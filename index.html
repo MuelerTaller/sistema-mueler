@@ -202,6 +202,7 @@ button.chip{cursor:pointer}
 .pcard .avn{font:500 11.5px var(--f-mono);color:var(--muted)}
 .mat{display:grid;gap:1px;min-width:180px} .mat span:first-child{font-weight:600}
 .ficha{display:grid;gap:12px;scroll-margin-top:120px;border-left:3px solid var(--accent);padding-left:12px}
+details.recuento.pfplan>summary{cursor:pointer;font:600 13px var(--f-body);color:var(--ink);text-transform:none;letter-spacing:0}.pfrow{display:grid;grid-template-columns:52px minmax(0,1fr) 90px;gap:8px;align-items:center;margin-top:6px}.pfbar{display:flex;height:26px;border:1px solid var(--ink);border-radius:3px;overflow:hidden;background:var(--panel)}.pfseg{background:color-mix(in srgb,var(--accent) 45%,var(--panel));display:flex;align-items:center;justify-content:center;font:600 11px var(--f-mono);color:var(--ink);overflow:hidden;white-space:nowrap;border-right:0}.pfcut{flex:0 0 2px;background:var(--ink)}.pfsob{background:repeating-linear-gradient(45deg,var(--panel2),var(--panel2) 4px,var(--line) 4px,var(--line) 8px);display:flex;align-items:center;justify-content:center;font:500 11px var(--f-mono);color:var(--muted)}.pfsl{text-align:right}
 .ficha>.fhead{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--barh,56px) + var(--sth,58px));z-index:14;background:var(--bg);padding:8px 0;margin-block:-8px 0;box-shadow:-16px 0 0 var(--bg);border-bottom:1px solid var(--line)}
 .fhead{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:flex-end}
 .csvdrop{border:2px dashed var(--line);border-radius:var(--r);padding:22px;display:grid;gap:4px;justify-items:center;cursor:pointer;text-align:center}
@@ -825,7 +826,8 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
   /* Kit estándar Mueler LED (skill electricista-led-mueler, precios c/IVA 22/11/2026). ver: al subirla, la config guardada vieja se reemplaza (se conserva la instalación por circuito) */
   const LED_DEF = { ver: 5, margen: 135, instCirc: 0, desp: 20, wm: 11, kFuente: 1.2, maxMInterr: 9, maxMTramo: 5, corteMm: 3, cableBase: 2, cableAmp075: 3,
     tira: { c: 'TCOB-01WW-24V', n: 'Tira LED COB 24V blanco cálido 3000K · rollo 5 m', p: 20279, rollo: 5 },
-    perfiles: [{ c: 'PER-60-2.5M', n: 'Perfil aluminio Flat 13×7 opal · barra 2,5 m (trae tapas y clips)', p: 8760, L: 2.5 }, { c: 'PER-60-2M', n: 'Perfil aluminio Flat 13×7 opal · barra 2 m (trae tapas y clips)', p: 7008, L: 2 }],
+    perfiles: [{ c: 'PER-60-2.5M', n: 'Perfil aluminio Flat 13×7 opal · barra 2,5 m', p: 8760, L: 2.5 }, { c: 'PER-60-2M', n: 'Perfil aluminio Flat 13×7 opal · barra 2 m', p: 7008, L: 2 }],
+    encendidos: { interruptor: { c: '', n: 'Interruptor en mueble', p: 0 }, sensor: { c: '', n: 'Sensor de apertura de puerta', p: 0 } },
     interr: { c: 'SEN-08BL', n: 'Interruptor táctil oculto Ø52 mm 24V (máx. 120 W)', p: 10208 },
     cable075: { c: 'CAB-2X075', n: 'Cable bipolar 2×0,75 mm²', p: 1200 },
     cable15: { c: 'CAB-2X15', n: 'Cable bipolar 2×1,5 mm²', p: 1200 },
@@ -838,8 +840,12 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
       { c: 'FAX-100-24V', n: 'Fuente Demasled FAX estanca IP67 24V 100 W', w: 100, p: 40114, ip67: true },
       { c: 'FAX-150-24V', n: 'Fuente Demasled FAX estanca IP67 24V 151 W', w: 151, p: 50321, ip67: true },
       { c: 'FAX-200-24V', n: 'Fuente Demasled FAX estanca IP67 24V 199 W', w: 199, p: 56231, ip67: true }] };
-  function ledBase(CFG) { const c = CFG && CFG.led; if (!c) return LED_DEF; if ((N(c.ver) || 0) < LED_DEF.ver) return Object.assign({}, LED_DEF, { instCirc: c.instCirc != null ? c.instCirc : LED_DEF.instCirc }, N(c.ver) >= 4 && c.margen != null ? { margen: c.margen } : {}); return Object.assign({}, LED_DEF, c); }
-  function fuenteAuto(L, need, humedo) { const ok = L.fuentes.filter(f => N(f.w) >= need && (!humedo || f.ip67)); return ok.sort((a, b) => N(a.p) - N(b.p) || N(a.w) - N(b.w))[0] || null; }
+  const ENC = [['llave', 'Llave de punto existente en obra'], ['interruptor', 'Interruptor en mueble'], ['tactil', 'Táctil dimerizable'], ['sensor', 'Sensor apertura de puertas'], ['otro', 'Otro']];
+  const encDe = c => c.enc || (c.interr === false ? 'llave' : 'tactil');
+  const limpiarLed = L => Object.assign({}, L, { encendidos: Object.assign({}, LED_DEF.encendidos, L.encendidos || {}), perfiles: (L.perfiles || []).map(pf => Object.assign({}, pf, { n: String(pf.n || '').replace(/\s*\(trae tapas y clips\)/i, '') })) });
+  function ledBase(CFG) { return limpiarLed(ledBase0(CFG)); }
+  function ledBase0(CFG) { const c = CFG && CFG.led; if (!c) return LED_DEF; if ((N(c.ver) || 0) < LED_DEF.ver) return Object.assign({}, LED_DEF, { instCirc: c.instCirc != null ? c.instCirc : LED_DEF.instCirc }, N(c.ver) >= 4 && c.margen != null ? { margen: c.margen } : {}); return Object.assign({}, LED_DEF, c); }
+  function fuenteAuto(L, need, humedo) { const ok = L.fuentes.filter(f => N(f.w) >= need && (humedo ? f.ip67 : !f.ip67)); return ok.sort((a, b) => N(a.p) - N(b.p) || N(a.w) - N(b.w))[0] || null; }
   // Empaqueta piezas (m) en barras de largo L (FFD); las piezas más largas que la barra usan barras enteras + resto
   // Optimizador de perfiles LED: corta los tramos (m) en barras de 2 m / 2,5 m. modo: 'auto' (menor costo, mezcla si conviene) o el código de un perfil
   function planPerfiles(piezas, perfiles, kerf, modo) {
@@ -857,17 +863,17 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
   function ledCalc(M, CFG) {
     const L = ledBase(CFG), cs = ((M.led || {}).circuitos || []), out = { circuitos: [], items: [], costo: 0, inst: 0, venta: 0, metros: 0, avisos: [] };
     if (!cs.length) return out;
-    const piezas = []; let nInt = 0;
+    const piezas = []; let nInt = 0, nSw = 0, nSen = 0;
     cs.forEach((c, i) => {
       const ts = (c.tramos || []).filter(t => N(t.cant) && N(t.largo));
       const m = ts.reduce((s, t) => s + N(t.cant) * N(t.largo) / 100, 0); const w = m * N(L.wm), need = w * N(L.kFuente);
       ts.forEach(t => { for (let k = 0; k < N(t.cant); k++) piezas.push(N(t.largo) / 100); if (N(t.largo) / 100 > N(L.maxMTramo)) out.avisos.push(`${c.nombre || 'Circuito ' + (i + 1)}: un tramo de ${fmtN(N(t.largo) / 100)} m pasa los ${L.maxMTramo} m; alimentarlo por los dos extremos.`); });
-      const sel = c.fuente ? L.fuentes.find(f => f.c === c.fuente) : null; const auto = fuenteAuto(L, need, c.humedo); const fu = m ? (sel || auto) : null;
+      const sel = c.fuente ? L.fuentes.find(f => f.c === c.fuente) : null; const auto = fuenteAuto(L, need, false); const fu = m ? (sel || auto) : null;
       if (m && !fu) out.avisos.push(`${c.nombre || 'Circuito ' + (i + 1)}: ninguna fuente de la lista alcanza ${Math.ceil(need)} W; dividir el circuito.`);
       if (m && sel && N(sel.w) < need) out.avisos.push(`${c.nombre || 'Circuito ' + (i + 1)}: la fuente elegida (${sel.w} W) no alcanza; hacen falta ${Math.ceil(need)} W.`);
-      const interr = c.interr !== false; if (m && interr) { nInt++; if (m > N(L.maxMInterr)) out.avisos.push(`${c.nombre || 'Circuito ' + (i + 1)}: ${fmtN(m)} m en un solo interruptor (máx. ${L.maxMInterr} m); dividir en dos circuitos.`); }
+      const enc = encDe(c); const interr = enc === 'tactil'; if (m && enc === 'interruptor') nSw++; if (m && enc === 'sensor') nSen++; if (m && interr) { nInt++; if (m > N(L.maxMInterr)) out.avisos.push(`${c.nombre || 'Circuito ' + (i + 1)}: ${fmtN(m)} m en un solo interruptor (máx. ${L.maxMInterr} m); dividir en dos circuitos.`); }
       const nT = ts.reduce((s2, t) => s2 + N(t.cant), 0), amp = w / 24, cabM = m ? N(L.cableBase) + Math.max(0, nT - 1) : 0, sec = amp > N(L.cableAmp075) ? '1,5' : '0,75';
-      out.metros += m; out.circuitos.push({ id: c.id, nombre: c.nombre || 'Circuito ' + (i + 1), metros: m, w, need, fuente: fu, auto, interr, tramos: ts.length, cable: cabM, seccion: sec, amp });
+      out.metros += m; out.circuitos.push({ id: c.id, nombre: c.nombre || 'Circuito ' + (i + 1), metros: m, w, need, fuente: fu, auto, interr, enc, encOtro: c.encOtro || '', tramos: ts.length, cable: cabM, seccion: sec, amp });
     });
     if (!out.metros) return out;
     const tm = out.metros * (1 + N(L.desp) / 100), pm = N(L.tira.p) / (N(L.tira.rollo) || 5);
@@ -878,6 +884,7 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
     const fs = {}; out.circuitos.forEach(c => { if (c.fuente) { const k = c.fuente.c; fs[k] = fs[k] || { c: k, n: c.fuente.n, cant: 0, u: 'u.', p: N(c.fuente.p) }; fs[k].cant++; } });
     Object.values(fs).forEach(x => { x.total = x.cant * x.p; out.items.push(x); });
     if (nInt) out.items.push({ c: L.interr.c, n: L.interr.n, cant: nInt, u: 'u.', p: N(L.interr.p), total: nInt * N(L.interr.p) });
+    [['interruptor', nSw], ['sensor', nSen]].forEach(([k, q]) => { const e = (L.encendidos || {})[k]; if (q && e) out.items.push({ c: e.c || ('ENC-' + k.toUpperCase()), n: e.n, cant: q, u: 'u.', p: N(e.p), total: q * N(e.p) }); });
     ['0,75', '1,5'].forEach(sc => { const cm = out.circuitos.filter(c => c.seccion === sc).reduce((s2, c) => s2 + c.cable, 0); const cb = sc === '1,5' ? L.cable15 : L.cable075; if (cm && cb) out.items.push({ c: cb.c, n: cb.n + ' (aprox.)', cant: cm, u: 'm', p: N(cb.p), total: cm * N(cb.p) }); });
     out.costo = out.items.reduce((s, x) => s + x.total, 0); out.margenCfg = N(L.margen); const mm = (M.led || {}).margen; out.margen = mm != null && mm !== '' ? N(mm) : out.margenCfg; out.margenMonto = out.costo * out.margen / 100;
     out.inst = N(L.instCirc) * out.circuitos.filter(c => c.metros).length;
@@ -889,7 +896,7 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
     const t = tabla || [[900, 2], [1500, 3], [2000, 4], [99999, 5]];
     return (puertas || []).reduce((s, p) => { const r = t.find(x => p.alto <= x[0]) || t[t.length - 1]; return s + r[1]; }, 0);
   }
-  const api = { calc, calcVariante, ledCalc, ledBase, planPerfiles, LED_DEF, familiaCanto, espDeNombre, cantosAuto, cantosFinal, cortesTotal, bisagrasSugeridas, N };
+  const api = { calc, calcVariante, ledCalc, ledBase, planPerfiles, ENC, encDe, LED_DEF, familiaCanto, espDeNombre, cantosAuto, cantosFinal, cortesTotal, bisagrasSugeridas, N };
   root.Calc = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -1680,12 +1687,12 @@ function secHerrajes(M, R) {
 function esTelesc(art) { return /^CORREDERAS/i.test(art || '') || /^corredera telesc/i.test(art || ''); }
 function secLed(M, R) {
   const cs = (M.led && M.led.circuitos) || [], L = Calc.ledBase(PC()), RL = R.led;
-  const fopts = c => L.fuentes.filter(f => !c.humedo || f.ip67).map(f => ({ v: f.c, t: `${f.n} · ${money(f.p)}` }));
+  const fopts = c => L.fuentes.filter(f => !f.ip67).map(f => ({ v: f.c, t: `${f.n} · ${money(f.p)}` }));
   const cards = cs.map((c, i) => { const rc = RL.circuitos.find(x => x.id === c.id) || {};
     const filas = (c.tramos || []).map((t, k) => `<tr><td style="min-width:200px">${inp(`led.circuitos.${i}.tramos.${k}.donde`, t.donde || '', { ph: 'Ej: bajo alacena', label: 'Dónde va' })}</td><td class="n">${inp(`led.circuitos.${i}.tramos.${k}.cant`, t.cant, { num: 1, cls: 'q', label: 'Cantidad de tiras' })}</td><td class="n">${inp(`led.circuitos.${i}.tramos.${k}.largo`, t.largo, { num: 1, cls: 'q', label: 'Largo de cada tira en cm' })}</td><td class="n mono">${fmt(N(t.cant) * N(t.largo) / 100, 2)} m</td><td><button class="x" data-act="led-del-t" data-i="${i}" data-k="${k}" aria-label="Quitar tramo">✕</button></td></tr>`).join('');
     return `<div class="cotcard"><div class="row" style="justify-content:space-between"><div class="row">${inp(`led.circuitos.${i}.nombre`, c.nombre || '', { ph: 'Circuito ' + (i + 1), label: 'Nombre del circuito', style: 'width:200px' })}
-        <label class="row" style="gap:6px"><input type="checkbox" data-k="led.circuitos.${i}.interr" ${c.interr !== false ? 'checked' : ''}> Interruptor invisible</label>
-        <label class="row" style="gap:6px"><input type="checkbox" data-k="led.circuitos.${i}.humedo" ${c.humedo ? 'checked' : ''}> Zona húmeda (fuente estanca)</label></div>
+        <label class="row" style="gap:6px"><span class="lbl">Encendido</span><div style="min-width:240px">${sel(`led.circuitos.${i}.enc`, Calc.encDe(c), Calc.ENC.map(([v, t]) => ({ v, t })), { label: 'Encendido' })}</div></label>
+        ${Calc.encDe(c) === 'otro' ? inp(`led.circuitos.${i}.encOtro`, c.encOtro || '', { ph: '¿Cuál?', label: 'Otro encendido', style: 'width:180px' }) : ''}</div>
         <button class="x" data-act="led-del-c" data-i="${i}" aria-label="Quitar circuito">✕</button></div>
       <div class="tbox"><table class="t"><thead><tr><th>Dónde va</th><th class="n">Tiras</th><th class="n">Largo c/u (cm)</th><th class="n">Metros</th><th></th></tr></thead><tbody>${filas}</tbody></table></div>
       <div class="row"><button class="btn sm" data-act="led-add-t" data-i="${i}">+ Tramo</button>
@@ -1708,7 +1715,7 @@ function secLed(M, R) {
 }
 function ledProyecto(M, R) {
   const RL = R && R.led; if (!RL || !RL.metros) return null;
-  return { circuitos: ((M.led || {}).circuitos || []).map(c => { const rc = RL.circuitos.find(x => x.id === c.id) || {}; return { id: c.id, nombre: rc.nombre || c.nombre || '', interr: c.interr !== false, humedo: !!c.humedo,
+  return { circuitos: ((M.led || {}).circuitos || []).map(c => { const rc = RL.circuitos.find(x => x.id === c.id) || {}; return { id: c.id, nombre: rc.nombre || c.nombre || '', interr: c.interr !== false, enc: Calc.encDe(c), encOtro: c.encOtro || '', humedo: !!c.humedo,
       tramos: (c.tramos || []).filter(t => N(t.cant) && N(t.largo)).map(t => ({ donde: t.donde || '', cant: N(t.cant), largo: N(t.largo) })), metros: rc.metros || 0, w: rc.w || 0, need: rc.need || 0,
       fuenteSug: rc.fuente ? { c: rc.fuente.c, n: rc.fuente.n, w: rc.fuente.w } : null, voltaje: '24V', fuenteDef: '' }; }).filter(c => c.metros),
     items: RL.items.map(x => ({ c: x.c, n: x.n, cant: x.cant, u: x.u, rollos: x.rollos || 0 })), notas: '' };
@@ -1716,7 +1723,7 @@ function ledProyecto(M, R) {
 /* LED en la ficha del proyecto: editable, se recalcula con la base LED actual (Configuración) y toma los tramos del CSV definitivo */
 function ledRecalcMod(m) {
   const L = m.led; if (!L) return;
-  const RL = Calc.ledCalc({ led: { barra: L.barra || 'auto', circuitos: (L.circuitos || []).map(c => ({ id: c.id || (c.id = uid()), nombre: c.nombre, interr: c.interr !== false, humedo: !!c.humedo, fuente: '', tramos: (c.tramos || []).map(t => ({ cant: N(t.cant), largo: N(t.largo) })) })) } }, CFG);
+  const RL = Calc.ledCalc({ led: { barra: L.barra || 'auto', circuitos: (L.circuitos || []).map(c => ({ id: c.id || (c.id = uid()), nombre: c.nombre, interr: c.interr !== false, enc: Calc.encDe(c), encOtro: c.encOtro || '', fuente: '', tramos: (c.tramos || []).map(t => ({ cant: N(t.cant), largo: N(t.largo) })) })) } }, CFG);
   (L.circuitos || []).forEach(c => { const rc = RL.circuitos.find(x => x.id === c.id) || {}; Object.assign(c, { metros: rc.metros || 0, w: rc.w || 0, need: rc.need || 0, cable: rc.cable || 0, seccion: rc.seccion || '', fuenteSug: rc.fuente ? { c: rc.fuente.c, n: rc.fuente.n, w: rc.fuente.w } : null }); });
   L.items = RL.items.map(x => ({ c: x.c, n: x.n, cant: x.cant, u: x.u, rollos: x.rollos || 0 }));
   L.plan = (RL.plan || []).map(b => ({ c: b.c, L: b.L, piezas: b.piezas.map(x => Math.round(x * 1000)), sobra: Math.round(b.sobra * 1000) }));
@@ -1744,8 +1751,8 @@ function ledFichaHTML(m, b) {
   const cards = L.circuitos.map((c, k) => { const p = `led.circuitos.${k}.`;
     const filas = (c.tramos || []).map((t, j) => `<tr><td>${li(p + `tramos.${j}.donde`, t.donde, { ph: 'Ej: lateral izq.', label: 'Dónde va' })}</td><td class="n" style="width:80px">${li(p + `tramos.${j}.cant`, t.cant, { num: 1, label: 'Tiras' })}</td><td class="n" style="width:100px">${li(p + `tramos.${j}.largo`, t.largo, { num: 1, label: 'Largo en cm' })}</td><td class="n">${fmt(N(t.cant) * N(t.largo) / 100, 2)} m</td><td><button class="x" data-pa="led-t-del" data-k="${k}" data-j="${j}" aria-label="Quitar tramo">×</button></td></tr>`).join('');
     return `<div class="cotcard"><div class="row" style="justify-content:space-between"><div class="row">${li(p + 'nombre', c.nombre, { ph: 'Circuito ' + (k + 1), label: 'Nombre del circuito', style: 'width:220px' })}
-        <label class="row" style="gap:6px"><input type="checkbox" data-pl="${p}interr" ${c.interr !== false ? 'checked' : ''}> Interruptor invisible</label>
-        <label class="row" style="gap:6px"><input type="checkbox" data-pl="${p}humedo" ${c.humedo ? 'checked' : ''}> Zona húmeda</label></div>
+        <label class="row" style="gap:6px"><span class="lbl">Encendido</span><select data-pl="${p}enc" aria-label="Encendido">${Calc.ENC.map(([v, t]) => `<option value="${v}" ${Calc.encDe(c) === v ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
+        ${Calc.encDe(c) === 'otro' ? li(p + 'encOtro', c.encOtro, { ph: '¿Cuál?', label: 'Otro encendido', style: 'width:180px' }) : ''}</div>
         <button class="x" data-pa="led-c-del" data-k="${k}" aria-label="Quitar circuito">✕</button></div>
       <div class="tbox"><table class="t hert"><thead><tr><th>Dónde va</th><th class="n">Tiras</th><th class="n">Largo c/u (cm)</th><th class="n">Metros</th><th></th></tr></thead><tbody>${filas}</tbody></table></div>
       <div class="row"><button class="btn sm" data-pa="led-t-add" data-k="${k}">+ Tramo</button><span class="note">${c.metros ? `${fmt(c.metros, 2)} m · ${fmt(c.w, 0)} W → fuente de ${Math.ceil(c.need)} W o más · cable ${fmt(c.cable, 0)} m de 2×${esc(c.seccion)}` : 'Cargá los tramos.'}</span></div>
@@ -1753,7 +1760,9 @@ function ledFichaHTML(m, b) {
         <div class="field"><label class="lbl">Fuente definida (modelo)</label>${li(p + 'fuenteDef', c.fuenteDef, { ph: c.fuenteSug ? c.fuenteSug.n : 'Modelo de la fuente', label: 'Fuente definida' })}</div>
         <div class="field"><label class="lbl">Voltaje</label>${li(p + 'voltaje', c.voltaje || '24V', { ph: '24V', label: 'Voltaje' })}</div></div></div>`; }).join('');
   const pfs = (Calc.ledBase(CFG).perfiles || []);
-  const plan = (L.plan || []).length ? `<div class="recuento"><span class="lbl">Corte de perfiles</span>${L.plan.map((x, k) => `<div class="row" style="gap:10px"><span class="mono">Barra ${k + 1} · ${fmt(x.L, 1).replace(',0', '')} m</span><span>${x.piezas.map(v => fmt(v / 10, 1).replace(',0', '') + ' cm').join(' + ')}</span><span class="note">sobra ${fmt(x.sobra / 10, 0)} cm</span></div>`).join('')}<span class="note">Corte de ${fmt(Calc.ledBase(CFG).corteMm)} mm por pieza. Los tramos más largos que la barra se arman con dos barras.</span></div>` : '';
+  const barraVis = x => { const tot = x.L * 1000; const seg = x.piezas.map(v => `<span class="pfseg" style="flex:0 0 ${(v / tot * 100).toFixed(2)}%" title="${fmt(v / 10, 1).replace(',0', '')} cm">${fmt(v / 10, 1).replace(',0', '')}</span>`).join('<span class="pfcut"></span>');
+    return `<div class="pfrow"><span class="mono pflbl">${fmt(x.L, 1).replace(',0', '')} m</span><div class="pfbar">${seg}${x.sobra > 0 ? `<span class="pfsob" style="flex:1 1 auto" title="Sobra ${fmt(x.sobra / 10, 0)} cm">${x.sobra >= 100 ? fmt(x.sobra / 10, 0) : ''}</span>` : ''}</div><span class="note pfsl">sobra ${fmt(x.sobra / 10, 0)} cm</span></div>`; };
+  const plan = (L.plan || []).length ? `<details class="recuento pfplan"><summary>Corte de perfiles · ${L.plan.length} barra${L.plan.length > 1 ? 's' : ''} (${[...new Set(L.plan.map(x => fmt(x.L, 1).replace(',0', '') + ' m'))].join(' y ')}) · sobra ${fmt(L.plan.reduce((s2, x) => s2 + x.sobra, 0) / 10, 0)} cm</summary>${L.plan.map(barraVis).join('')}<span class="note">Medidas en cm. Corte de ${fmt(Calc.ledBase(CFG).corteMm)} mm por pieza; los tramos más largos que la barra se arman con dos barras. Lo rayado es lo que sobra.</span></details>` : '';
   const tot = L.circuitos.reduce((s, c) => s + N(c.metros), 0);
   const le = estadoT(m, 'led'); const pedidos = [...new Set((m.ledL || []).filter(h => h.ped && pedDe(h.ped)).map(h => numPed(pedDe(h.ped))))];
   return `<details class="panel fsec" open><summary><h3>5 · Iluminación LED</h3><div class="row"><span class="sum">${fmt(tot, 2)} m · ${L.circuitos.length} circuito${L.circuitos.length > 1 ? 's' : ''}</span>${chip(le)}</div></summary>
@@ -1763,7 +1772,7 @@ function ledFichaHTML(m, b) {
     ${cards}
     <div class="row"><button class="btn sm" data-pa="led-c-add">+ Circuito (encendido)</button>
       <label class="row" style="gap:6px"><span class="lbl">Perfiles</span><select data-pl="led.barra" aria-label="Barras de perfil"><option value="auto" ${!L.barra || L.barra === 'auto' ? 'selected' : ''}>Automático (mezcla 2 m y 2,5 m, lo más barato)</option>${pfs.map(pf => `<option value="${esc(pf.c)}" ${L.barra === pf.c ? 'selected' : ''}>Solo barras de ${fmt(N(pf.L), 1).replace(',0', '')} m</option>`).join('')}</select></label></div>
-    <div class="tbox"><table class="t hert"><thead><tr><th>Material LED</th><th>Código</th><th class="n">Cantidad</th></tr></thead><tbody>${(L.items || []).map(x => `<tr><td>${esc(x.n)}</td><td class="mono">${esc(x.c)}</td><td class="n">${x.rollos ? `${x.rollos} rollo${x.rollos > 1 ? 's' : ''} <span class="note">(${fmt(x.cant, 2)} m)</span>` : (x.u === 'm' ? fmt(x.cant, 0) + ' m' : x.cant)}</td></tr>`).join('')}</tbody></table></div>
+    <div class="tbox"><table class="t hert"><thead><tr><th>Material LED</th><th>Código</th><th class="n">Cantidad</th></tr></thead><tbody>${(L.items || []).map(x => `<tr><td>${esc(String(x.n || '').replace(/\s*\(trae tapas y clips\)/i, ''))}</td><td class="mono">${esc(x.c)}</td><td class="n">${x.rollos ? `${x.rollos} rollo${x.rollos > 1 ? 's' : ''} <span class="note">(${fmt(x.cant, 2)} m)</span>` : (x.u === 'm' ? fmt(x.cant, 0) + ' m' : x.cant)}</td></tr>`).join('')}</tbody></table></div>
     ${plan}
     <span class="note">Se recalcula con la base LED de Configuración. Tira COB 24V: la fuente tiene que ser de 24V. Cuando el diseño está <b>Listo</b>, estos materiales pasan a Compras › LED (pedido L-n a Demasled).</span></details>`;
 }
@@ -2122,7 +2131,7 @@ VP.addEventListener('click', e => {
     case 'adj-add': ADJ_J = j; $('f-adj').value = ''; $('f-adj').click(); break;
     case 'adj-del': { const t = M.terceros[j], a = t.adj[+b.dataset.k]; t.adj.splice(+b.dataset.k, 1); redo(); if (ASSETS && a) ASSETS.delete(a.id).catch(() => { }); break; }
     case 'add-v': (M.variantes = M.variantes || []).push({ nombre: '', map: {} }); redo(); break;
-    case 'led-add-c': { M.led = M.led || { circuitos: [], opcion: true }; M.led.circuitos.push({ id: uid(), nombre: '', interr: true, humedo: false, fuente: '', tramos: [{ id: uid(), donde: '', cant: 1, largo: '' }] }); OPENSEC['sec-led'] = true; redo(); break; }
+    case 'led-add-c': { M.led = M.led || { circuitos: [], opcion: true }; M.led.circuitos.push({ id: uid(), nombre: '', enc: 'tactil', interr: true, humedo: false, fuente: '', tramos: [{ id: uid(), donde: '', cant: 1, largo: '' }] }); OPENSEC['sec-led'] = true; redo(); break; }
     case 'led-del-c': M.led.circuitos.splice(+b.dataset.i, 1); redo(); break;
     case 'led-add-t': M.led.circuitos[+b.dataset.i].tramos.push({ id: uid(), donde: '', cant: 1, largo: '' }); redo(); break;
     case 'led-del-t': M.led.circuitos[+b.dataset.i].tramos.splice(+b.dataset.k, 1); redo(); break;
@@ -2478,7 +2487,9 @@ function renderPrecios() {
     <h3>Tira, interruptor y cable</h3><div class="grid3">
       <div class="field"><span class="lbl">Tira (rollo)</span>${cin('led.tira.n', Ld.tira.n, { label: 'Tira' })}<div class="row">${cin('led.tira.c', Ld.tira.c, { label: 'Código', style: 'width:140px' })}${cin('led.tira.p', Ld.tira.p, { num: 1, label: 'Precio del rollo', style: 'width:110px' })}${cin('led.tira.rollo', Ld.tira.rollo, { num: 1, label: 'Metros del rollo', style: 'width:60px' })}</div></div>
       <div class="field"><span class="lbl">Cable 2×0,75 (hasta 3 A) · $/m</span>${cin('led.cable075.p', Ld.cable075.p, { num: 1, label: 'Precio por metro cable 2x0,75' })}<span class="lbl">Cable 2×1,5 · $/m</span>${cin('led.cable15.p', Ld.cable15.p, { num: 1, label: 'Precio por metro cable 2x1,5' })}</div>
-      <div class="field"><span class="lbl">Interruptor (1 por circuito)</span>${cin('led.interr.n', Ld.interr.n, { label: 'Interruptor' })}<div class="row">${cin('led.interr.c', Ld.interr.c, { label: 'Código', style: 'width:140px' })}${cin('led.interr.p', Ld.interr.p, { num: 1, label: 'Precio', style: 'width:110px' })}</div></div></div>
+      <div class="field"><span class="lbl">Interruptor en mueble</span>${cin('led.encendidos.interruptor.n', ((Ld.encendidos || {}).interruptor || {}).n || 'Interruptor en mueble', { label: 'Interruptor en mueble' })}<div class="row">${cin('led.encendidos.interruptor.c', ((Ld.encendidos || {}).interruptor || {}).c || '', { label: 'Código', style: 'width:140px' })}${cin('led.encendidos.interruptor.p', ((Ld.encendidos || {}).interruptor || {}).p || 0, { num: 1, label: 'Precio', style: 'width:110px' })}</div></div>
+      <div class="field"><span class="lbl">Sensor de apertura de puertas</span>${cin('led.encendidos.sensor.n', ((Ld.encendidos || {}).sensor || {}).n || 'Sensor de apertura de puerta', { label: 'Sensor' })}<div class="row">${cin('led.encendidos.sensor.c', ((Ld.encendidos || {}).sensor || {}).c || '', { label: 'Código', style: 'width:140px' })}${cin('led.encendidos.sensor.p', ((Ld.encendidos || {}).sensor || {}).p || 0, { num: 1, label: 'Precio', style: 'width:110px' })}</div></div>
+      <div class="field"><span class="lbl">Táctil dimerizable (1 por circuito)</span>${cin('led.interr.n', Ld.interr.n, { label: 'Interruptor' })}<div class="row">${cin('led.interr.c', Ld.interr.c, { label: 'Código', style: 'width:140px' })}${cin('led.interr.p', Ld.interr.p, { num: 1, label: 'Precio', style: 'width:110px' })}</div></div></div>
     <h3>Perfiles (se elige la barra que menos cuesta)</h3>` + tabla('led.perfiles', [{ k: 'n', t: 'Perfil', w: 300 }, { k: 'c', t: 'Código', w: 120 }, { k: 'L', t: 'Barra (m)', num: 1, nw: 70 }, { k: 'p', t: 'Precio barra', num: 1 }], Ld.perfiles) +
     `<h3>Fuentes 24V (se elige la más barata que alcanza)</h3>` + tabla('led.fuentes', [{ k: 'n', t: 'Fuente', w: 300 }, { k: 'c', t: 'Código', w: 130 }, { k: 'w', t: 'Watts', num: 1, nw: 70 }, { k: 'p', t: 'Precio', num: 1 }, { k: 'ip67', t: 'Estanca IP67', chk: 1 }], Ld.fuentes, { note: 'Las estancas se usan solo en circuitos marcados como zona húmeda.' }); }
   if (CTAB === 'import') body = `<h3>Material de OpenCutList → placa</h3><p class="note" style="margin:0">Cómo se precarga cada material del modelo. En cada mueble se puede cambiar.</p>
@@ -2720,7 +2731,7 @@ const ledRollos = it => { const a = ledArt(it.cod); return a && a.rollo && N(it.
 function ledLineas(m) {
   const its = (m.led && m.led.items) || []; const prev = m.ledL || [];
   if (!its.length && !prev.length) return prev;
-  const out = its.map(x => { const hid = m.id + '·' + x.c; const pv = prev.find(h => h.hid === hid); if (pv && pv.ped && pedDe(pv.ped)) return pv; return { hid, cod: x.c, n: x.n, u: x.u, cant: x.u === 'm' ? Math.round(N(x.cant) * 100) / 100 : N(x.cant), com: pv ? pv.com || '' : '' }; });
+  const out = its.map(x => { const hid = m.id + '·' + x.c; const pv = prev.find(h => h.hid === hid); if (pv && pv.ped && pedDe(pv.ped)) return pv; return { hid, cod: x.c, n: String(x.n || '').replace(/\s*\(trae tapas y clips\)/i, ''), u: x.u, cant: x.u === 'm' ? Math.round(N(x.cant) * 100) / 100 : N(x.cant), com: pv ? pv.com || '' : '' }; });
   prev.filter(h => h.ped && pedDe(h.ped) && !out.some(o => o.hid === h.hid)).forEach(h => out.push(h));
   m.ledL = out; return out;
 }
@@ -3159,7 +3170,7 @@ $('view-proy').addEventListener('click', async e => {
   if (a === 'cerrar-ficha') { PSEL = null; renderProyDet(); }
   if (/^led-/.test(a) && m) {
     if (a === 'led-csv') { let F = FICHAS[m.id]; if (!F || !F.R) { await cargarPiezas(m); F = FICHAS[m.id]; } if (F && F.R && ledDesdeCSV(m, F.R)) toast('Tramos de LED tomados del CSV.'); }
-    if (a === 'led-c-add') { m.led = m.led || { circuitos: [], notas: '' }; m.led.circuitos.push({ id: uid(), nombre: (m.cod || '') + '-C' + (m.led.circuitos.length + 1), interr: true, humedo: false, voltaje: '24V', fuenteDef: '', tramos: [{ donde: '', cant: 1, largo: '' }] }); }
+    if (a === 'led-c-add') { m.led = m.led || { circuitos: [], notas: '' }; m.led.circuitos.push({ id: uid(), nombre: (m.cod || '') + '-C' + (m.led.circuitos.length + 1), enc: 'tactil', interr: true, humedo: false, voltaje: '24V', fuenteDef: '', tramos: [{ donde: '', cant: 1, largo: '' }] }); }
     if (a === 'led-c-del') { m.led.circuitos.splice(+b.dataset.k, 1); }
     if (a === 'led-t-add') { m.led.circuitos[+b.dataset.k].tramos.push({ donde: '', cant: 1, largo: '' }); }
     if (a === 'led-t-del') { m.led.circuitos[+b.dataset.k].tramos.splice(+b.dataset.j, 1); }
