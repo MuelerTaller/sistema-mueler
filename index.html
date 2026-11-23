@@ -793,8 +793,8 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
     R.factor = (1 + R.recargos.reduce((s, r) => s + r.pct, 0) / 100) * (1 + R.comision.pct / 100); // I44
     R.kits.forEach(h => { h.venta = h.total + h.refCosto * (R.factor - 1); });
     R.totalKits = R.kits.reduce((s, x) => s + x.venta, 0);
-    R.led = ledCalc(M, CFG); R.avisos.push(...R.led.avisos);
-    R.final = R.subtotal + R.comision.monto + R.totalAcc + R.totalKits + R.led.venta;
+    R.led = ledCalc(M, CFG); R.avisos.push(...R.led.avisos); R.led.opcion = !!(M.led && M.led.opcion && R.led.venta);
+    R.final = R.subtotal + R.comision.monto + R.totalAcc + R.totalKits + (R.led.opcion ? 0 : R.led.venta);
     R.redondeo = N(CFG.redondeo);
     const rnd = v => R.redondeo > 0 ? Math.ceil(Math.round(v * 100) / 100 / R.redondeo) * R.redondeo : Math.round(v);
     R.precio = rnd(R.final);
@@ -987,7 +987,7 @@ body.taller [data-pi$=".precioF"],body.taller .adm{display:none!important}
       ocl: { cajones: R.cajones, puertas: R.puertas, bisagras: R.bisagras, pares: R.paresCorrederas, accesorios: R.accesorios, filas: R.filas },
       grupos, cantosOv: {}, cantosExtra: [], cortesOv: null, herrajes, mecanizados: {}, fleteMat: 1, terceros: [], variantes: [],
       venta: { instalacion: '', flete: '' }, textos: { frentes: txt.frentes, estructura: txt.estructura, cantos: '', herrajes: '' },
-      led: (R.leds || []).length ? { circuitos: [{ id: uid(), nombre: '', interr: true, humedo: false, fuente: '', tramos: R.leds.map(l => ({ id: uid(), donde: 'Del modelo', cant: l.cant, largo: Math.round(l.largo / 10) })) }] } : undefined,
+      led: (R.leds || []).length ? { opcion: true, circuitos: [{ id: uid(), nombre: '', interr: true, humedo: false, fuente: '', tramos: R.leds.map(l => ({ id: uid(), donde: 'Del modelo', cant: l.cant, largo: Math.round(l.largo / 10) })) }] } : undefined,
       avisos,
     };
   }
@@ -1677,13 +1677,19 @@ function secLed(M, R) {
         <span class="note">${rc.metros ? `${fmt(rc.metros, 2)} m · ${fmt(rc.w, 0)} W → fuente de ${Math.ceil(rc.need)} W o más${rc.cable ? ` · ${fmt(rc.amp, 1)} A · cable ${fmt(rc.cable, 0)} m de 2×${rc.seccion}` : ''}` : 'Cargá los tramos de tira de este encendido.'}</span>
         <div style="min-width:260px">${sel(`led.circuitos.${i}.fuente`, c.fuente || '', fopts(c), { empty: rc.auto ? `Automática: ${rc.auto.n} · ${money(rc.auto.p)}` : 'Automática', label: 'Fuente' })}</div></div></div>`; }).join('');
   const mats = RL.items.length ? `<div class="tbox"><table class="t"><thead><tr><th>Material</th><th>Código</th><th class="n">Cant.</th><th class="n">Precio</th><th class="n">Subtotal</th></tr></thead><tbody>${RL.items.map(x => `<tr><td>${esc(x.n)}${x.rollos ? ` <span class="note">(${fmt(x.cant, 2)} m con ${fmt(L.desp)}% de desperdicio · se compran ${x.rollos} rollo${x.rollos > 1 ? 's' : ''})</span>` : ''}</td><td class="mono">${esc(x.c)}</td><td class="n">${x.u === 'm' ? fmt(x.cant, 2) + ' m' : x.cant}</td><td class="n">${money(x.p)}</td><td class="n">${money(x.total)}</td></tr>`).join('')}</tbody></table></div>
-    <div class="row adm" style="gap:8px;align-items:center"><label class="lbl" for="k-led-factor">Margen Mueler sobre LED (×)</label>${inp('led.factor', (M.led && M.led.factor) || '', { num: 1, ph: fmt(RL.factorCfg || 1.35, 2), label: 'Margen Mueler sobre LED (multiplicador)', style: 'width:80px' })}<span class="note">Vacío = el de Configuración (× ${fmt(RL.factorCfg || 1.35, 2)}).</span></div>
-    <span class="note">Costo ${money(RL.costo)} × ${fmt(RL.factor, 2)}${RL.inst ? ` + instalación ${money(RL.inst)}` : ''} = <b>${money(RL.venta)}</b>. Se suma aparte al mueble, sin recargos del taller. Fuente: metros × ${fmt(L.wm)} W × ${fmt(L.kFuente, 1)}.</span>` : '';
+    <div class="cotcard adm"><div class="row" style="justify-content:space-between"><b>Precio del LED</b><span class="mono"><b>${money(RL.venta)}</b></span></div>
+      <div class="grid4">
+        <div class="field"><span class="lbl">Costo materiales LED</span><span class="mono" style="padding:6px 0">${money(RL.costo)}</span></div>
+        <div class="field"><label class="lbl" for="k-led-factor">Margen Mueler (×)</label>${inp('led.factor', (M.led && N(M.led.factor)) ? M.led.factor : RL.factorCfg, { num: 1, label: 'Margen Mueler sobre LED (multiplicador)' })}</div>
+        <div class="field"><span class="lbl">Margen $</span><span class="mono" style="padding:6px 0">${money(RL.costo * (RL.factor - 1))}</span></div>
+        <div class="field"><span class="lbl">Venta LED</span><span class="mono" style="padding:6px 0"><b>${money(RL.venta)}</b></span></div></div>
+      <span class="note">Costo ${money(RL.costo)} × ${fmt(RL.factor, 2)}${RL.inst ? ` + instalación ${money(RL.inst)}` : ''} = <b>${money(RL.venta)}</b>. El margen cubre ranurado, armado e instalación del LED. En Configuración el margen por defecto es × ${fmt(RL.factorCfg, 2)}. No lleva recargos del taller.</span>
+      <label class="row" style="gap:6px"><input type="checkbox" data-k="led.opcion" ${M.led && M.led.opcion ? 'checked' : ''}> Mostrar el LED como opción a sumar en el presupuesto (el cliente elige). Destildado: va incluido en el precio del mueble.</label></div>` : '';
   const mRan = RL.items.find(x => /^PER-/.test(x.c)); const ran = (PC().mecanizados || []).find(m => /ranurado led/i.test(m.n));
   return `<details class="panel sec" id="sec-led" ${secOpen('sec-led', cs.length) ? 'open' : ''}><summary><h3>Iluminación LED</h3><span class="sum mono">${RL.venta ? money(RL.venta) : (cs.length ? '' : 'Sin LED')}</span></summary>
     ${cards}
     ${mats}
-    <div class="row"><button class="btn sm" data-act="led-add-c">+ Circuito (encendido)</button>${RL.metros && ran && ESADMIN() ? `<button class="btn sm" data-act="led-ran">Cargar ${fmt(RL.metros, 2)} m de ${esc(ran.n)} en Mecanizados</button>` : ''}<span class="note">Cada circuito es un encendido con su fuente. Un mueble puede tener varios. Tira COB 24V: no usar fuentes de 12V.</span></div></details>`;
+    <div class="row"><button class="btn sm" data-act="led-add-c">+ Circuito (encendido)</button><span class="note">Cada circuito es un encendido con su fuente. Un mueble puede tener varios. Tira COB 24V: no usar fuentes de 12V.</span></div></details>`;
 }
 function ledProyecto(M, R) {
   const RL = R && R.led; if (!RL || !RL.metros) return null;
@@ -1762,7 +1768,7 @@ function sugHerrajes(M) {
   const g = new Map();
   M.herrajes.filter(h => h.tipo !== 'OPCIÓN' && h.art && N(h.cant) && h.auto !== 'soporte-barral' && !/^soporte .*ca[ñn]o oval/i.test(h.art)).forEach(h => { const k = humano(h.art, 0), cuenta = /^(CORREDERAS|GUIA)/i.test(h.art); g.set(k, { cuenta, q: (g.has(k) ? g.get(k).q : 0) + N(h.cant) }); });
   const out = [...g].map(([k, x]) => x.cuenta ? `(${x.q}) ${k}` : k);
-  const nl = ((M.led && M.led.circuitos) || []).filter(c => (c.tramos || []).some(t => N(t.cant) && N(t.largo))).length; if (nl) out.push(`Iluminación LED (tira COB 24V)${nl > 1 ? ` · ${nl} encendidos` : ''}`);
+  const nl = ((M.led && M.led.circuitos) || []).filter(c => (c.tramos || []).some(t => N(t.cant) && N(t.largo))).length; if (nl && !(M.led && M.led.opcion)) out.push(`Iluminación LED (tira COB 24V)${nl > 1 ? ` · ${nl} encendidos` : ''}`);
   return out.join('\n');
 }
 // Opciones de herraje agrupadas por tipo (ej. todas las guías ocultas que reemplazan correderas = una sola fila, un solo redondeo)
@@ -1773,8 +1779,11 @@ function opcionesAgrupadas(M, R) {
     const x = g.get(k) || { nombre: o.nombre, art: o.art, base: o.base, cant: 0, deltaRec: 0, filas: 0 };
     x.cant += N(o.cant); x.deltaRec += o.deltaRec; x.filas++; g.set(k, x);
   });
-  return [...g.values()].map(x => Object.assign(x, { deltaRnd: x.deltaRec > 0 ? R.rnd(x.deltaRec) : Math.round(x.deltaRec) }));
+  const out = [...g.values()].map(x => Object.assign(x, { deltaRnd: x.deltaRec > 0 ? R.rnd(x.deltaRec) : Math.round(x.deltaRec) }));
+  if (R.led && R.led.opcion) out.push({ nombre: ledTextoCliente(M) + ' (se suma)', art: 'LED', base: '', cant: 1, deltaRec: R.led.venta, deltaRnd: R.rnd(R.led.venta), filas: 1, led: true });
+  return out;
 }
+function ledTextoCliente(M) { const nl = ((M.led && M.led.circuitos) || []).filter(c => (c.tramos || []).some(t => N(t.cant) && N(t.largo))).length; return `Iluminación LED (tira COB 24V + fuente + instalación)${nl > 1 ? ` · ${nl} encendidos` : ''}`; }
 function sugCantos(R) { const c = R.cantos.filter(x => x.m > 0); if (!c.length) return ''; const s = new Set(); c.forEach(x => { if (/enchap/i.test(x.art)) s.add('Enchapado'); else if (/2mm/i.test(x.art)) s.add('ABS 2 mm'); else s.add('ABS 045'); }); return [...s].join(' + '); }
 function sugField(path, stored, sug, o = {}) {
   const id = kid(path), has = stored != null && stored !== '';
@@ -1817,12 +1826,12 @@ function renderSide(M, R) {
       <i class="sep"></i><i hidden></i><span class="strong">Precio madera</span><span class="strong">${money(R.precioMadera)}</span>
       ${R.totalTerceros ? `<span>Terceros</span><span>${money(R.totalTerceros)}</span>` : ''}
       <span>Comisión ${fmt(R.comision.pct, 1).replace(',0', '')}%</span><span>${money(R.comision.monto)}</span>
-      ${R.led && R.led.venta ? `<span>LED (costo × ${fmt(R.led.factor, 2)})</span><span>${money(R.led.venta)}</span>` : ''}
+      ${R.led && R.led.venta && !R.led.opcion ? `<span>LED (costo × ${fmt(R.led.factor, 2)})</span><span>${money(R.led.venta)}</span>` : ''}
       ${R.totalKits ? `<span>Cajones Slim (margen solo en lateral)</span><span>${money(R.totalKits)}</span>` : ''}
       ${R.totalAcc ? `<span>Accesorios (costo + ${fmt(R.accPct)}%)</span><span>${money(R.totalAcc)}</span>` : ''}
       <i class="sep"></i><i hidden></i><span class="strong">Precio final</span><span class="strong">${money(R.final)}</span>
     </div></div>
-    ${R.opciones.length || vars.length ? `<div class="panel"><span class="eyebrow">Opciones</span><div class="kv">
+    ${R.opciones.length || vars.length || (R.led && R.led.opcion) ? `<div class="panel"><span class="eyebrow">Opciones</span><div class="kv">
       ${vars.map(x => `<span>Frente ${esc(x.v.nombre || 'alternativo')}</span><span>${P.opDif ? difTxt(x.R.precio - R.precio) : money(x.R.precio)}</span>`).join('')}
       ${opcionesAgrupadas(M, R).map(o => `<span>${esc(textoOpcion(o))}</span><span>${difTxt(o.deltaRnd)}</span>`).join('')}</div>
       <span class="note">Recargo de opciones × ${fmt(R.factor, 4)}</span>${vars.length ? `<label class="row" style="gap:6px;margin-top:6px"><input type="checkbox" id="side-dif" ${P.opDif ? 'checked' : ''}> Ver frentes como diferencia (+ $)</label>` : ''}</div>` : ''}
@@ -2054,7 +2063,7 @@ VP.addEventListener('click', e => {
     case 'adj-add': ADJ_J = j; $('f-adj').value = ''; $('f-adj').click(); break;
     case 'adj-del': { const t = M.terceros[j], a = t.adj[+b.dataset.k]; t.adj.splice(+b.dataset.k, 1); redo(); if (ASSETS && a) ASSETS.delete(a.id).catch(() => { }); break; }
     case 'add-v': (M.variantes = M.variantes || []).push({ nombre: '', map: {} }); redo(); break;
-    case 'led-add-c': { M.led = M.led || { circuitos: [] }; M.led.circuitos.push({ id: uid(), nombre: '', interr: true, humedo: false, fuente: '', tramos: [{ id: uid(), donde: '', cant: 1, largo: '' }] }); OPENSEC['sec-led'] = true; redo(); break; }
+    case 'led-add-c': { M.led = M.led || { circuitos: [], opcion: true }; M.led.circuitos.push({ id: uid(), nombre: '', interr: true, humedo: false, fuente: '', tramos: [{ id: uid(), donde: '', cant: 1, largo: '' }] }); OPENSEC['sec-led'] = true; redo(); break; }
     case 'led-del-c': M.led.circuitos.splice(+b.dataset.i, 1); redo(); break;
     case 'led-add-t': M.led.circuitos[+b.dataset.i].tramos.push({ id: uid(), donde: '', cant: 1, largo: '' }); redo(); break;
     case 'led-del-t': M.led.circuitos[+b.dataset.i].tramos.splice(+b.dataset.k, 1); redo(); break;
