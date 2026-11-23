@@ -2566,7 +2566,7 @@ const EST_K = Object.keys(EST);
 const estCls = (k, v) => { const l = EST[k].l, i = l.indexOf(v); return i <= 0 ? 'e0' : i === l.length - 1 ? 'e4' : 'e2'; };
 const normEst = (k, v) => EST[k].l.includes(v) ? v : ({ 'En diseño': 'En curso', 'Listo para producir': 'Listo', 'Pedido': 'Pedida', 'En proceso': k === 'estDiseno' ? 'En curso' : 'En proceso', 'Terminado': k === 'estDiseno' ? 'Listo' : k === 'estInstal' ? 'Pendiente' : 'Terminado', 'Instalado': k === 'estInstal' ? 'Instalado' : EST[k].l[EST[k].l.length - 1], 'En taller': k === 'estMadera' ? 'En taller' : EST[k].l[0] }[v] || EST[k].l[0]);
 let PROYS = [], PROYS_OK = false, PR = null, PSEL = null, PQ = '', PSAVE = null, PSAVING = false;
-let PEDS = [], PED = null, PEDSAVE = null, LTAB = 'abiertos', CATQ = '';
+let PEDS = [], PEDS_OK = false, PED = null, PEDSAVE = null, LTAB = 'abiertos', CATQ = '';
 let MEL_EXTRA = LS.get('mueler_mel_extra', []);
 const MAT_DB = [
  ['P632','Melamina Faplac Aglo 18mm 135 BLANCO',2750,1830,18,0,'T240'],['P3','Melamina Faplac Aglo 18mm 137 BLANCO TUNDRA',2750,1830,18,0,'T240'],
@@ -4224,6 +4224,7 @@ function materialesOK(m) { return ['placas', 'cantos', 'herrajes', 'led'].every(
 function faltaMod(m) { const out = []; if (!m.csv) out.push('Falta el CSV'); [['placas', 'Madera'], ['cantos', 'Cantos'], ['herrajes', 'Herrajes']].forEach(([T, n]) => { const e = estadoT(m, T); if (e.c === 'e2' && /definir|catálogo|Definir/.test(e.t)) out.push(`${n}: ${e.t.toLowerCase()}`); }); return out; }
 function renderInicio() {
   const v = $('view-inicio');
+  if (!PROYS_OK || !PEDS_OK) { v.innerHTML = `<div class="row stickhead"><h2>Inicio</h2></div><div class="empty"><b>Cargando proyectos y pedidos…</b></div>`; return; }
   const sumar = [['placas', 'Madera'], ['cantos', 'Cantos'], ['herrajes', 'Herrajes'], ['led', 'LED']].map(([T, n]) => ({ T, n, ls: porPedir(T) })).filter(x => x.ls.length);
   const mad = PEDS.filter(p => tipoDe(p) === 'placas' && p.estado !== 'recibido').flatMap(p => (p.items || []).filter(it => N(it.pedir) > 0).map(it => ({ p, it, e: itEst(it, p) })));
   const madPedir = mad.filter(x => x.e === 'armado'), madConf = mad.filter(x => x.e === 'pedido'), madLlega = mad.filter(x => x.e === 'confirmado');
@@ -4309,7 +4310,7 @@ async function autoSumar(prId, modId) {
   const escribiendo = id => { const a = document.activeElement; return a && a.closest && a.closest('#' + id) && /INPUT|TEXTAREA|SELECT/.test(a.tagName); };
   StoreP.listen(safe(list => { PROYS = list; PROYS_OK = true; updTabs(); if (VIEW === 'inicio') renderInicio(); if (VIEW === 'proy' && !PR) renderProyLista(); if (VIEW === 'lista') renderLista(); if (VIEW === 'pres') updAprobarBtn(); if (VIEW === 'ped' && !PED && !escribiendo('view-ped')) renderCompras(); }));
   StoreS.listen(safe(list => { MOVS = list; if (VIEW === 'ped' && !escribiendo('view-ped')) renderPed(); }));
-  StorePed.listen(safe(list => { PEDS = list; updTabs(); if (VIEW === 'inicio') renderInicio(); if (VIEW === 'ped' && !PED && !escribiendo('view-ped')) renderCompras(); if (VIEW === 'proy' && !PR) renderProyLista(); }));
+  StorePed.listen(safe(list => { PEDS = list; PEDS_OK = true; updTabs(); if (VIEW === 'inicio') renderInicio(); if (VIEW === 'ped' && !PED && !escribiendo('view-ped')) renderCompras(); if (VIEW === 'proy' && !PR) renderProyLista(); }));
   if (DB && typeof DB.doc === 'function') { try { const s = await DB.doc('config/listas').get(); if (s.exists && Array.isArray(s.data().melaminas)) { MEL_EXTRA = [...new Set([...MEL_EXTRA, ...s.data().melaminas])]; LS.set('mueler_mel_extra', MEL_EXTRA); } } catch (e) { } }
   show('inicio');
 })();
