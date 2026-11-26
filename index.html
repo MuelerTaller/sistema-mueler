@@ -1832,10 +1832,16 @@ function humano(art, q) {
   return String(art || '').charAt(0) + String(art || '').slice(1).toLowerCase();
 }
 function textoOpcion(o) { if (o.nombre) return o.nombre; return o.base ? `${humano(o.art, o.cant)} en vez de ${humano(o.base).replace(/^\(\d+\) /, '').split(' ')[0].toLowerCase()}` : `${humano(o.art, o.cant)} (se suma)`; }
+// Herrajes de cajones y bandejas (correderas, guías ocultas, doble pared): en el texto del presupuesto llevan la cantidad entre paréntesis
+function esHerrCajon(art) {
+  const a = String(art || ''); const h = (PC().herrajes || []).find(x => x.n === a); const c = (h && h.cat) || '';
+  if (/CAJONES\/BANDEJAS|Correderas telesc|Guías ocultas|Cajones doble pared/i.test(c)) return true;
+  return /^(CORREDERA|GU[IÍ]A|CAJ[OÓ]N|BANDEJA)/i.test(a) || /^LATERAL .*CAJ[OÓ]N/i.test(a);
+}
 function sugHerrajes(M) {
   const g = new Map();
-  M.herrajes.filter(h => h.tipo !== 'OPCIÓN' && h.art && N(h.cant) && h.auto !== 'soporte-barral' && !/^soporte .*ca[ñn]o oval/i.test(h.art)).forEach(h => { const k = humano(h.art, 0), cuenta = /^(CORREDERAS|GUIA)/i.test(h.art); g.set(k, { cuenta, q: (g.has(k) ? g.get(k).q : 0) + N(h.cant) }); });
-  const out = [...g].map(([k, x]) => x.cuenta ? `(${x.q}) ${k}` : k);
+  M.herrajes.filter(h => h.tipo !== 'OPCIÓN' && h.art && N(h.cant) && h.auto !== 'soporte-barral' && !/^soporte .*ca[ñn]o oval/i.test(h.art)).forEach(h => { const k = humano(h.art, 0), cuenta = esHerrCajon(h.art); g.set(k, { cuenta, q: (g.has(k) ? g.get(k).q : 0) + N(h.cant) }); });
+  const out = [...g].map(([k, x]) => x.cuenta ? `${k} (${x.q})` : k);
   const nl = ((M.led && M.led.circuitos) || []).filter(c => (c.tramos || []).some(t => N(t.cant) && N(t.largo))).length; if (nl && !(M.led && M.led.opcion)) out.push(`Iluminación LED (tira COB 24V)${nl > 1 ? ` · ${nl} encendidos` : ''}`);
   return out.join('\n');
 }
