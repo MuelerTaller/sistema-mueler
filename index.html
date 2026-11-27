@@ -75,6 +75,7 @@ input.edited{background:var(--accent-soft);border-color:var(--accent)}
 .badge.man{background:var(--accent-soft);border-color:transparent;color:var(--ink)}
 .badge.borrador{} .badge.enviado{background:color-mix(in srgb,var(--t2) 15%,transparent);color:var(--ink);border-color:transparent}
 .badge.aprobado{background:color-mix(in srgb,var(--ok) 20%,transparent);color:var(--ink);border-color:transparent}
+.badge.perdido{color:var(--muted);text-decoration:line-through} .segcom{display:grid;gap:10px} .segcom .segs{display:grid;gap:4px;font-size:13px} .segcom .segs div{display:flex;gap:8px} .segcom .segs b{min-width:84px}
 .alert{border-radius:6px;padding:10px 12px;font-size:13px;background:color-mix(in srgb,var(--warn) 14%,transparent)}
 .alert ul{margin:4px 0 0;padding-left:18px}
 .empty{padding:36px 16px;text-align:center;color:var(--muted);background:var(--panel);border:1px dashed var(--line);border-radius:var(--r);display:grid;gap:10px;justify-items:center}
@@ -1289,7 +1290,7 @@ function unpackMueble(doc) {
 }
 function packPres() {
   const tot = resumen().totBase;
-  return { num: P.num || '', obra: P.obra || '', cliente: P.cliente || '', arq: P.arq || '', fecha: P.fecha || '', estado: P.estado || 'borrador', final: P.final || null, comEst: P.comEst || null, opDif: !!P.opDif, orden: P.orden.slice(), sectores: (P.sectores || []).map(s => ({ id: s.id, nombre: s.nombre || '' })), version: P.version || '', notas: P.notas || '', cfg: JSON.stringify(P.cfg), cfgFecha: P.cfgFecha || Date.now(), total: tot, nMuebles: P.orden.length, upd: Date.now(), creado: P.creado || Date.now() };
+  return { num: P.num || '', obra: P.obra || '', cliente: P.cliente || '', arq: P.arq || '', fecha: P.fecha || '', estado: P.estado || 'borrador', final: P.final || null, comEst: P.comEst || null, opDif: !!P.opDif, orden: P.orden.slice(), sectores: (P.sectores || []).map(s => ({ id: s.id, nombre: s.nombre || '' })), version: P.version || '', notas: P.notas || '', com: P.com || null, cfg: JSON.stringify(P.cfg), cfgFecha: P.cfgFecha || Date.now(), total: tot, nMuebles: P.orden.length, upd: Date.now(), creado: P.creado || Date.now() };
 }
 let dirtyP = false, dirtyM = new Set(), saveT = null, saving = false;
 function touch(mid) { if (mid) dirtyM.add(mid); dirtyP = true; setSave('Cambios sin guardar'); clearTimeout(saveT); saveT = setTimeout(flush, 900); }
@@ -1343,21 +1344,22 @@ function show(v) {
   if (v === 'lista') renderLista(); if (v === 'pres') renderPres(); if (v === 'precios') renderPrecios(); if (v === 'proy') renderProy(); if (v === 'ped') renderPed(); if (v === 'cat') renderCat(); if (v === 'inicio') renderInicio(); if (v === 'usuarios') renderUsuarios(); if (v === 'opti') ensureOpti(); $('b-config').classList.toggle('on', v === 'cat' || v === 'precios' || v === 'usuarios'); $('cfgpop').hidden = true; $('b-config').setAttribute('aria-expanded', 'false'); $('b-nuevo').hidden = v !== 'lista'; $('b-abrir').hidden = v !== 'lista';
   window.scrollTo(0, 0);
 }
-document.querySelector('nav.tabs').addEventListener('click', e => { const b = e.target.closest('button[data-view]'); if (b && !b.disabled) show(b.dataset.view); });
+document.querySelector('nav.tabs').addEventListener('click', async e => { const b = e.target.closest('button[data-view]'); if (!b || b.disabled) return; if (P && (dirtyP || dirtyM.size) && ['inicio', 'lista'].includes(b.dataset.view)) { clearTimeout(saveT); try { await flush(); } catch (er) { } } show(b.dataset.view); });
 
 /* ---------------- Lista de presupuestos ---------------- */
 let QUERY = '';
 function renderLista() {
   const v = $('view-lista'); const q = QUERY.toLowerCase();
-  const nApr = PRES.filter(p => p.estado === 'aprobado').length;
-  const list = PRES.filter(p => (LTAB === 'aprobados') === (p.estado === 'aprobado')).filter(p => !q || [p.num, p.version, p.obra, p.cliente, p.arq].join(' ').toLowerCase().includes(q));
-  v.innerHTML = `<div class="row" style="justify-content:space-between"><div class="row"><h2>Presupuestos</h2><div class="seg" role="tablist"><button data-act="ltab" data-v="abiertos" aria-pressed="${LTAB === 'abiertos'}">En curso · ${PRES.length - nApr}</button><button data-act="ltab" data-v="aprobados" aria-pressed="${LTAB === 'aprobados'}">Aprobados · ${nApr}</button></div></div>
+  const nApr = PRES.filter(p => p.estado === 'aprobado').length, nPer = PRES.filter(p => p.estado === 'perdido').length;
+  const tabDe = p => p.estado === 'aprobado' ? 'aprobados' : p.estado === 'perdido' ? 'perdidos' : 'abiertos';
+  const list = PRES.filter(p => tabDe(p) === LTAB).sort((a, b) => LTAB === 'abiertos' ? segOrden(a) - segOrden(b) : 0).filter(p => !q || [p.num, p.version, p.obra, p.cliente, p.arq].join(' ').toLowerCase().includes(q));
+  v.innerHTML = `<div class="row" style="justify-content:space-between"><div class="row"><h2>Presupuestos</h2><div class="seg" role="tablist"><button data-act="ltab" data-v="abiertos" aria-pressed="${LTAB === 'abiertos'}">En curso · ${PRES.length - nApr - nPer}</button><button data-act="ltab" data-v="aprobados" aria-pressed="${LTAB === 'aprobados'}">Aprobados · ${nApr}</button><button data-act="ltab" data-v="perdidos" aria-pressed="${LTAB === 'perdidos'}">No salieron · ${nPer}</button></div></div>
     <div class="row"><input type="search" id="l-q" placeholder="Buscar por número, obra o cliente" value="${esc(QUERY)}" style="width:260px" aria-label="Buscar presupuesto"><button class="btn" data-act="imp-json">Abrir archivo guardado</button></div></div>
     ${!DB ? `<div class="alert">Esta vista guarda los presupuestos solo en este navegador. Abrí la página en claude.ai para que queden guardados en la cuenta y los vea el equipo.</div>` : ''}
     ${list.length ? `<div class="list">${list.map(p => `<button class="pcard" data-act="abrir" data-id="${esc(p.id)}">
       <span class="num">${esc(p.num || 's/n')}${p.version ? `<small class="note" style="font-size:12px"> ${esc(p.version)}</small>` : ''}</span>
       <span style="display:grid;gap:2px;min-width:0"><span class="t">${esc(p.obra || 'Sin nombre de obra')}${p.estado === 'aprobado' && PROYS.find(x => x.presId === p.id) ? ` <span class="chip e4">Proyecto ${esc(PROYS.find(x => x.presId === p.id).num)}</span>` : ''}</span><span class="s">${esc([p.cliente, p.arq].filter(Boolean).join(' · ') || '—')} · ${p.nMuebles || 0} mueble${p.nMuebles === 1 ? '' : 's'} · ${esc(p.fecha || fdate(p.creado))}</span></span>
-      <span class="badge ${esc(p.estado || 'borrador')}">${esc({ borrador: 'Borrador', enviado: 'Enviado', aprobado: 'Aprobado' }[p.estado] || 'Borrador')}</span>
+      <span class="row" style="gap:6px">${segChip(p)}<span class="badge ${esc(p.estado || 'borrador')}">${esc({ borrador: 'Borrador', enviado: 'Enviado', aprobado: 'Aprobado', perdido: 'No salió' }[p.estado] || 'Borrador')}</span></span>
       <span class="tot">${money(p.total)}</span></button>`).join('')}</div>`
       : `<div class="empty"><b>${PRES.length ? 'No hay presupuestos que coincidan con la búsqueda.' : 'Todavía no hay presupuestos.'}</b><span>Creá uno con “Nuevo presupuesto” y cargá el CSV que exporta OpenCutList para cada mueble, o cargá los datos a mano.</span>${PRES.length ? '' : '<button class="btn primary" data-act="nuevo">+ Nuevo presupuesto</button>'}</div>`}`;
   const s = $('l-q'); s.oninput = e => { QUERY = e.target.value; const pos = e.target.selectionStart; renderLista(); const n = $('l-q'); n.focus(); n.setSelectionRange(pos, pos); };
@@ -1384,7 +1386,7 @@ async function abrirPres(id) {
   await flush();
   const doc = PRES.find(p => p.id === id); if (!doc) return;
   setSave('Abriendo…');
-  P = { id, final: doc.final || null, comEst: doc.comEst || null, opDif: !!doc.opDif, num: doc.num, version: doc.version || '', sectores: (doc.sectores || []).map(s => Object.assign({}, s)), obra: doc.obra, cliente: doc.cliente, arq: doc.arq, fecha: doc.fecha, estado: doc.estado || 'borrador', orden: (doc.orden || []).slice(), notas: doc.notas || '', creado: doc.creado, cfgFecha: doc.cfgFecha };
+  P = { id, final: doc.final || null, comEst: doc.comEst || null, opDif: !!doc.opDif, num: doc.num, version: doc.version || '', sectores: (doc.sectores || []).map(s => Object.assign({}, s)), obra: doc.obra, cliente: doc.cliente, arq: doc.arq, fecha: doc.fecha, estado: doc.estado || 'borrador', orden: (doc.orden || []).slice(), notas: doc.notas || '', com: doc.com || null, creado: doc.creado, cfgFecha: doc.cfgFecha };
   try { P.cfg = doc.cfg ? mergeCfg(JSON.parse(doc.cfg)) : clone(CFG); } catch (e) { P.cfg = clone(CFG); }
   MS = {};
   try { const ms = await Store.getMuebles(id); ms.forEach(d => { const M = unpackMueble(d); if (M) MS[M.id] = M; }); } catch (e) { toast('No se pudieron leer los muebles de este presupuesto'); }
@@ -1457,7 +1459,7 @@ $('combo-pop').addEventListener('mousedown', e => { e.preventDefault(); const o 
 window.addEventListener('scroll', () => { if (CB.el) cbPos(); }, true);
 window.addEventListener('resize', () => { if (CB.el) cbPos(); });
 /* ---------------- Presupuesto ---------------- */
-const ESTADOS = [{ v: 'borrador', t: 'Borrador' }, { v: 'enviado', t: 'Enviado' }, { v: 'aprobado', t: 'Aprobado' }];
+const ESTADOS = [{ v: 'borrador', t: 'Borrador' }, { v: 'enviado', t: 'Enviado' }, { v: 'aprobado', t: 'Aprobado' }, { v: 'perdido', t: 'No salió' }];
 function nombreMueble(M) { return (M.cod || 'Mueble') + (M.desc ? ' · ' + M.desc : ''); }
 const OPENSEC = {};
 function secOpen(id, def) { return OPENSEC[id] != null ? OPENSEC[id] || !!def : !!def; }
@@ -1481,6 +1483,7 @@ function renderPres() {
     </div>
     <div class="row"><button class="btn primary" data-act="save-file">Guardar archivo del presupuesto</button><button class="btn" data-act="dup-version">Duplicar como versión nueva</button><button class="btn" data-act="linea-h">Marca de herrajes</button><span id="p-aprobar">${aprobarBtnHTML()}</span><span class="note">Excel con el resumen para tu carpeta 01-CALCULADOR. Se vuelve a abrir en el calculador con “Abrir archivo” para revisarlo o modificarlo.</span></div>
     ${comEstHTML()}
+    <div id="p-segcom">${segComHTML()}</div>
     <div id="p-avisos">${dupHTML()}</div>
     ${viejo ? `<div class="hint">Este presupuesto usa los precios guardados el ${fdate(P.cfgFecha)}. Los precios del taller cambiaron desde entonces. <button class="btn sm" data-act="upd-precios">Pasar a los precios actuales</button></div>` : ''}
     <div class="panel"><header><h2>Muebles</h2><span class="note">Separá el presupuesto en sectores (cocina, placares, lavadero…). Cada sector numera sus muebles desde M01.</span></header>
@@ -1918,6 +1921,52 @@ function renderSide(M, R) {
    El documento "Para el estudio" muestra base, comisión y flete + instalación. */
 const comEstPct = () => (P && P.comEst && P.comEst.on) ? N(P.comEst.pct) : 0;
 const cliB = v => { const p = comEstPct(); return p ? Math.round(N(v) * (1 + p / 100)) : N(v); };
+/* ---------------- Seguimiento comercial (presupuestos enviados) ---------------- */
+const MOTIVOS = ['Precio', 'Plazo de entrega', 'Eligió otro proveedor', 'No respondió', 'Cambió o suspendió la obra', 'Otro'];
+const SEG_DIAS = [3, 10];
+function parseF(t) { const m = String(t || '').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null; }
+function fmtF(d) { return d ? `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}` : ''; }
+function addHab(t, n) { const d = parseF(t); if (!d) return ''; let k = 0; while (k < n) { d.setDate(d.getDate() + 1); const w = d.getDay(); if (w !== 0 && w !== 6) k++; } return fmtF(d); }
+function hoyD() { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }
+function segOrden(p) { if (p.estado !== 'enviado') return p.estado === 'borrador' ? 2e13 : 3e13; const d = parseF(p.com && p.com.prox); return d ? d.getTime() : 1e13; }
+function segChip(p) {
+  if (p.estado === 'perdido') return p.com && p.com.motivo ? `<span class="note" style="font-size:12px">${esc(p.com.motivo)}</span>` : '';
+  if (p.estado !== 'enviado') return '';
+  const c = p.com || {}; const d = parseF(c.prox);
+  if (!c.fEnvio) return '<span class="chip e2">Falta fecha de envío</span>';
+  if (!d) return (c.segs || []).length >= SEG_DIAS.length ? '<span class="chip e2">Sin respuesta: ¿cerrar?</span>' : '';
+  return d <= hoyD() ? `<span class="chip e2">Seguir${d < hoyD() ? ' (desde ' + esc(c.prox.slice(0, 5)) + ')' : ' hoy'}</span>` : `<span class="chip e1">Seguir ${esc(c.prox.slice(0, 5))}</span>`;
+}
+function segComHTML() {
+  if (!P || !['enviado', 'perdido', 'aprobado'].includes(P.estado) && !(P.com && P.com.fEnvio) && !P.notas) return P ? `<details class="panel"><summary class="note">Notas del presupuesto</summary><textarea data-p="notas" rows="2" placeholder="Lo que pidió el cliente, dudas, qué falta para mandarlo…" aria-label="Notas del presupuesto">${esc(P.notas || '')}</textarea></details>` : '';
+  const c = P.com || {}; const segs = c.segs || [];
+  const prox = P.estado === 'enviado' ? (c.prox ? `Próximo seguimiento: <b>${esc(c.prox)}</b>` : segs.length >= SEG_DIAS.length ? '<b>Ya se hicieron los dos seguimientos.</b> Si no responde, pasalo a “No salió” con el motivo.' : '') : '';
+  return `<div class="panel segcom"><header><h2>Seguimiento comercial</h2><span class="note">Se sigue a los ${SEG_DIAS[0]} y a los ${SEG_DIAS[1]} días hábiles de enviado.</span></header>
+    <div class="grid2"><div class="field"><label class="lbl" for="c-fEnvio">Enviado el</label><input type="text" id="c-fEnvio" data-com="fEnvio" value="${esc(c.fEnvio || '')}" placeholder="${esc(today())}"></div>
+    <div class="field"><label class="lbl" for="c-prox">Próximo seguimiento</label><input type="text" id="c-prox" data-com="prox" value="${esc(c.prox || '')}" placeholder="—"></div></div>
+    ${prox ? `<div class="note">${prox}</div>` : ''}
+    ${segs.length ? `<div class="segs">${segs.map(x => `<div><b>${esc(x.f)}</b><span>${esc(x.t || '')}</span></div>`).join('')}</div>` : ''}
+    ${P.estado === 'enviado' ? `<div class="row"><input type="text" id="c-segtxt" placeholder="Qué se habló (ej: le escribí por WhatsApp, pide cambiar la melamina)" style="flex:1" aria-label="Seguimiento"><button class="btn" data-act="seg-add">Registrar seguimiento</button></div>` : ''}
+    ${P.estado === 'perdido' ? `<div class="grid2"><div class="field"><label class="lbl" for="c-motivo">Por qué no salió</label><select id="c-motivo" data-com="motivo"><option value="">Elegí…</option>${MOTIVOS.map(m => `<option ${c.motivo === m ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select></div>
+      <div class="field"><label class="lbl" for="c-motivoTxt">Detalle</label><input type="text" id="c-motivoTxt" data-com="motivoTxt" value="${esc(c.motivoTxt || '')}"></div></div>` : ''}
+    <div class="field"><label class="lbl" for="c-notas">Notas del presupuesto</label><textarea id="c-notas" data-p="notas" rows="2" placeholder="Lo que pidió el cliente, correcciones pedidas, qué falta…" aria-label="Notas del presupuesto">${esc(P.notas || '')}</textarea></div></div>`;
+}
+function updSegCom() { const el = $('p-segcom'); if (el) el.innerHTML = segComHTML(); }
+function segSet(k, v) { P.com = Object.assign({ segs: [] }, P.com || {}); P.com[k] = String(v).trim(); if (k === 'fEnvio' && P.estado === 'enviado' && parseF(P.com.fEnvio)) P.com.prox = addHab(P.com.fEnvio, SEG_DIAS[Math.min((P.com.segs || []).length, SEG_DIAS.length - 1)]); touch(); }
+function segAlCambiarEstado() {
+  if (!P) return; P.com = Object.assign({ segs: [] }, P.com || {});
+  if (P.estado === 'enviado') { if (!P.com.fEnvio) P.com.fEnvio = today(); if (!P.com.prox && (P.com.segs || []).length < SEG_DIAS.length) P.com.prox = addHab(P.com.fEnvio, SEG_DIAS[(P.com.segs || []).length]); }
+  else P.com.prox = '';
+  if (P.estado === 'aprobado' && !P.com.fAprob) P.com.fAprob = today();
+  if (P.estado === 'perdido' && !P.com.fCierre) P.com.fCierre = today();
+  touch(); updSegCom();
+}
+function segAdd() {
+  const inpT = $('c-segtxt'); const t = inpT ? inpT.value.trim() : ''; if (!t) { toast('Escribí qué se habló con el cliente.'); inpT && inpT.focus(); return; }
+  P.com = Object.assign({ segs: [] }, P.com || {}); P.com.segs = (P.com.segs || []).concat([{ f: today(), t }]);
+  const n = P.com.segs.length; P.com.prox = n < SEG_DIAS.length && P.com.fEnvio ? addHab(P.com.fEnvio, SEG_DIAS[n]) : '';
+  touch(); updSegCom(); toast(P.com.prox ? `Seguimiento registrado. El próximo: ${P.com.prox}.` : 'Seguimiento registrado. Si no responde, pasalo a “No salió”.');
+}
 function comEstHTML() {
   if (!ESADMIN()) return '';
   const c = P.comEst || { on: false, pct: 10 };
@@ -2065,12 +2114,14 @@ const VP = $('view-pres');
 VP.addEventListener('toggle', e => { if (e.target.id && e.target.id.startsWith('sec-')) OPENSEC[e.target.id] = e.target.open; }, true);
 VP.addEventListener('input', e => {
   const t = e.target;
+  if (t.dataset.com) { segSet(t.dataset.com, t.value); return; }
   if (t.dataset.p != null) { P[t.dataset.p] = t.value; touch(); if (t.dataset.p === 'num' || t.dataset.p === 'version') updDup(); return; }
   if (t.dataset.sn) { sectorDe(SECT).nombre = t.value; touch(); return; }
   if (t.dataset.k != null && !t.dataset.combo && t.type !== 'checkbox' && t.tagName !== 'SELECT') { const M = MS[SEL]; if (!M) return; setField(M, t.dataset.k, t); light(M); }
 });
 VP.addEventListener('change', e => {
   const t = e.target;
+  if (t.dataset.com) { segSet(t.dataset.com, t.value); if (t.dataset.com === 'fEnvio' || t.dataset.com === 'motivo') updSegCom(); return; }
   if (t.dataset.ce) { const c = Object.assign({ on: false, pct: 10 }, P.comEst || {}); if (t.dataset.ce === 'on') c.on = t.checked; else c.pct = N(t.value) || 0; P.comEst = c; touch(); const box = document.querySelector('#view-pres .comest'); if (box) box.outerHTML = comEstHTML(); renderResumen(); return; }
   if (t.dataset.combo && e.isTrusted) return;
   if (t.dataset.p != null) { P[t.dataset.p] = t.value; touch(); if (t.dataset.p === 'num' || t.dataset.p === 'version') updDup(); renderResumen(); return; }
@@ -2297,7 +2348,7 @@ function duplicarVersion() {
     await flush();
     const viejo = P, viejos = MS, map = {};
     P = clone(Object.assign({}, viejo, { cfg: undefined })); P.cfg = clone(viejo.cfg);
-    P.id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); P.version = vn; P.estado = 'borrador'; P.creado = Date.now(); P.fecha = today();
+    P.id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); P.version = vn; P.estado = 'borrador'; P.com = null; P.creado = Date.now(); P.fecha = today();
     MS = {};
     viejo.orden.forEach(id => { const M = viejos[id]; if (!M) return; const C = clone(M); C.id = uid(); C.grupos.forEach((g, k) => { g.piezas = M.grupos[k].piezas; }); map[id] = C.id; MS[C.id] = C; dirtyM.add(C.id); });
     P.orden = viejo.orden.map(id => map[id]).filter(Boolean);
@@ -2357,7 +2408,7 @@ $('f-json').addEventListener('change', async e => {
     if (r === 2) copia = true; else if (r !== 3) return;
   }
   const map = {};
-  P = { id: copia || !d.id ? 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5) : d.id, final: d.final || null, num: d.num, version: d.version || '', sectores: (d.sectores || []).map(s => Object.assign({}, s)), obra: d.obra, cliente: d.cliente, arq: d.arq, fecha: d.fecha, estado: d.estado || 'borrador', notas: d.notas || '', orden: [], creado: d.creado || Date.now(), cfgFecha: d.cfgFecha || Date.now() };
+  P = { id: copia || !d.id ? 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5) : d.id, final: d.final || null, num: d.num, version: d.version || '', sectores: (d.sectores || []).map(s => Object.assign({}, s)), obra: d.obra, cliente: d.cliente, arq: d.arq, fecha: d.fecha, estado: d.estado || 'borrador', notas: d.notas || '', com: d.com || null, orden: [], creado: d.creado || Date.now(), cfgFecha: d.cfgFecha || Date.now() };
   try { P.cfg = mergeCfg(JSON.parse(d.cfg)); } catch (er) { P.cfg = clone(CFG); }
   MS = {};
   (j.muebles || []).forEach(md => { const M = unpackMueble(md); if (!M) return; if (copia) M.id = uid(); map[md.id] = M.id; MS[M.id] = M; });
@@ -3685,8 +3736,8 @@ function aprobarBtnHTML() {
   return pr ? `<button class="btn" data-act="aprobar">Ver proyecto ${esc(pr.num)} →</button>` : `<button class="btn primary" data-act="aprobar">Crear proyecto →</button>`;
 }
 function updAprobarBtn() { const el = $('p-aprobar'); if (el) el.innerHTML = aprobarBtnHTML(); }
-$('view-pres').addEventListener('click', e => { const b = e.target.closest('[data-act="aprobar"]'); if (b) aprobarDlg(); const c = e.target.closest('[data-act="linea-h"]'); if (c) lineaHerrajesDlg(); });
-$('view-pres').addEventListener('change', e => { if (e.target.id === 'p-estado') setTimeout(() => { updAprobarBtn(); if (P && P.estado === 'aprobado' && !PROYS.some(p => p.presId === P.id)) toast('Presupuesto aprobado. Ya podés crear el proyecto.'); }, 0); });
+$('view-pres').addEventListener('click', e => { if (e.target.closest('[data-act="seg-add"]')) { segAdd(); return; } const b = e.target.closest('[data-act="aprobar"]'); if (b) aprobarDlg(); const c = e.target.closest('[data-act="linea-h"]'); if (c) lineaHerrajesDlg(); });
+$('view-pres').addEventListener('change', e => { if (e.target.id === 'p-estado') setTimeout(() => { segAlCambiarEstado(); updAprobarBtn(); if (P && P.estado === 'aprobado' && !PROYS.some(p => p.presId === P.id)) toast('Presupuesto aprobado. Ya podés crear el proyecto.'); }, 0); });
 function lineaHerrajesDlg() {
   const d = modal(`${H('Marca de los herrajes All Sur')}<p class="note" style="margin:0">Cambia de una vez todos los herrajes del catálogo All Sur de este presupuesto. Después podés cambiar uno por uno eligiendo otra marca en el buscador.</p>
     <div class="row" style="justify-content:flex-end"><button class="btn" data-l="eco">Línea económica (Eurohard / Grupo Euro)</button><button class="btn primary" data-l="cara">Línea más cara (Häfele)</button></div>`);
@@ -5072,9 +5123,12 @@ function renderInicio() {
   const fila = (izq, der, attrs, btn) => `<div class="infila"><div style="min-width:0">${izq}</div><div class="row" style="gap:8px">${der || ''}<button class="btn sm" ${attrs}>${btn}</button></div></div>`;
   const modTxt = ({ pr, m }) => `<b>${esc(pr.num)}</b> ${esc(pr.obra || '')} · <b>${esc(m.cod || '—')}</b> ${esc(m.desc || '')}`;
   const cortar = paraCortar();
-  const tot = cortar.length + sumar.length + madPedir.length + madConf.length + madLlega.length + armando.length + llegar.length + definir.length + armar.length;
+  const seguir = PRES.filter(p => p.estado === 'enviado' && (!(p.com && p.com.fEnvio) || (parseF(p.com.prox) && parseF(p.com.prox) <= hoyD()) || (!(p.com && p.com.prox) && ((p.com && p.com.segs) || []).length >= SEG_DIAS.length))).sort((a, b) => segOrden(a) - segOrden(b));
+  const tot = seguir.length + cortar.length + sumar.length + madPedir.length + madConf.length + madLlega.length + armando.length + llegar.length + definir.length + armar.length;
   v.innerHTML = `<div class="row stickhead" style="justify-content:space-between"><h2>Inicio</h2><span class="note">${USR ? 'Hola, ' + esc(USR.nombre) + '. ' : ''}Lo que hay que hacer hoy, de lo más urgente a lo que espera.</span></div>
-    <div class="tiles">${tile(sumar.reduce((s, x) => s + x.ls.length, 0) + madPedir.length + armando.length, 'Para pedir', 'módulos y pedidos sin mandar', 'sec-pedir')}${tile(madConf.length, 'Esperando presupuesto', 'pedidas, falta confirmar', 'sec-conf')}${tile(madLlega.length + llegar.length, 'Por llegar', 'confirmado, sin recibir', 'sec-llega')}${tile(definir.length, 'Para definir', 'módulos con diseño abierto', 'sec-def')}${tile(cortar.length, 'Para cortar en taller', 'placas enteras listas para cortar', 'sec-cortar')}${tile(armar.length, 'Listos para armar', 'con todo el material', 'sec-armar')}</div>
+    <div class="tiles">${tile(seguir.length, 'Presupuestos para seguir', 'enviados sin respuesta', 'sec-seguir')}${tile(sumar.reduce((s, x) => s + x.ls.length, 0) + madPedir.length + armando.length, 'Para pedir', 'módulos y pedidos sin mandar', 'sec-pedir')}${tile(madConf.length, 'Esperando presupuesto', 'pedidas, falta confirmar', 'sec-conf')}${tile(madLlega.length + llegar.length, 'Por llegar', 'confirmado, sin recibir', 'sec-llega')}${tile(definir.length, 'Para definir', 'módulos con diseño abierto', 'sec-def')}${tile(cortar.length, 'Para cortar en taller', 'placas enteras listas para cortar', 'sec-cortar')}${tile(armar.length, 'Listos para armar', 'con todo el material', 'sec-armar')}</div>
+    ${seguir.length ? `<div class="panel" id="sec-seguir"><header><h2>Presupuestos para seguir</h2><span class="note">Enviados que toca volver a contactar (a los ${SEG_DIAS[0]} y ${SEG_DIAS[1]} días hábiles).</span></header>
+      ${cap(seguir, p => fila(`<b>${esc(p.num || 's/n')}${p.version ? ' ' + esc(p.version) : ''}</b> ${esc(p.obra || '')} <span class="note">· ${esc([p.cliente, p.arq].filter(Boolean).join(' · '))} · ${money(p.total)}${p.com && p.com.fEnvio ? ' · enviado ' + esc(p.com.fEnvio) : ''}</span>`, segChip(p), `data-in="pres" data-id="${esc(p.id)}"`, 'Abrir'), 12)}</div>` : ''}
     ${!tot ? '<div class="empty"><b>Todo al día.</b><span>No hay nada pendiente.</span></div>' : ''}
     ${sumar.length || madPedir.length || armando.length ? `<div class="panel" id="sec-pedir"><header><h2>Para pedir</h2></header>
       ${cap(sumar, x => fila(`<b>${x.n}</b> · ${x.ls.length} módulo${x.ls.length === 1 ? '' : 's'} con diseño Listo sin sumar a un pedido <span class="note">${x.ls.map(y => esc(y.p.num + ' ' + y.m.cod)).join(', ')}</span>`, '', `data-in="compras" data-t="${x.T}"`, 'Ir a Compras'))}
@@ -5099,6 +5153,7 @@ $('view-inicio').addEventListener('click', e => {
   if (a === 'cortar') { CTIPO = 'placas'; MVISTA = 'cortar'; PED = null; show('ped'); return; }
   if (a === 'ped') { const p = PEDS.find(x => x.id === b.dataset.id); if (!p) return; CTIPO = tipoDe(p); PED = clone(p); show('ped'); }
   if (a === 'mod') abrirProy(b.dataset.pr, b.dataset.id);
+  if (a === 'pres') abrirPres(b.dataset.id);
 });
 
 /* ---------------- Proyectos sin presupuesto (obras anteriores al sistema) ---------------- */
